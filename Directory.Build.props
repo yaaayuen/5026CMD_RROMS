@@ -1,0 +1,22 @@
+<!--
+  Shared build settings applied to every project in this solution.
+  Keeping them here means the web project and the test project can never drift apart.
+-->
+<Project>
+  <PropertyGroup>
+    <!-- .NET 10 is the version that ships with Visual Studio 2026. -->
+    <TargetFramework>net10.0</TargetFramework>
+
+    <!-- Nullable reference types: the compiler warns when something could be null. -->
+    <Nullable>enable</Nullable>
+
+    <!-- Common namespaces (System, System.Linq, ...) are imported automatically. -->
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Produce XML documentation from the /// comments so they show up in IntelliSense. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- CS1591 = "missing XML comment". Razor-generated classes have none, so this is silenced. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+</Project>

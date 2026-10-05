@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>Rroms.Web</RootNamespace>
+    <!-- User secrets keep passwords (admin, Gmail) out of source control. -->
+    <UserSecretsId>three-grills-rroms</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- ASP.NET Core Identity stored in our SQL Server database through Entity Framework Core. -->
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.12" />
+
+    <!-- EF Core provider for SQL Server (managed with SQL Server Management Studio). -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.12" />
+
+    <!-- Design + Tools enable Add-Migration / Update-Database in the Package Manager Console. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.12">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>
