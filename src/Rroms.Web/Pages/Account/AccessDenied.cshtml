@@ -1,0 +1,19 @@
+﻿@page
+@model Rroms.Web.Pages.Account.AccessDeniedModel
+@{
+	ViewData["Title"] = "Access Denied"; 
+}
+
+<div class="row justify-content-center">
+	<section class="col-md-8 col-lg-6">
+		<div class="tg-card text-center">
+			<span class="tg-icon gold"><partial name="_Icon" model='"settings"' /></span>
+			<h1 class="h2">This page isn't for your account</h1>
+			<p class="text-secondary">
+				You are signed in, but your role does not have access to that page.
+				If you think this is a mistake, please ask an administrator.
+			</p>
+			<a class="btn btn-primary" asp-area="" asp-page="/Index">Back to home</a>
+		</div>
+	</section>
+</div>

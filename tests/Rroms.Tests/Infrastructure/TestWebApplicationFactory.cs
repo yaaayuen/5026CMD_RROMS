@@ -1,6 +1,6 @@
 ﻿using System.Data.Common;
-
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -8,8 +8,8 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-
 using Rroms.Web.Data;
+using Rroms.Web.Models;
 
 namespace Rroms.Tests.Infrastructure;
 
@@ -55,7 +55,8 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["BootstrapAdmin:Email"] = AdminEmail,
-                ["BootstrapAdmin:Password"] = AdminPassword
+                ["BootstrapAdmin:Password"] = AdminPassword,
+                ["RateLimiting:PermitLimit"] = "1000"
             });
         });
 
@@ -75,6 +76,50 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
                 options.UseSqlite(connection);
             });
         });
+    }
+
+    /// <summary>
+    /// Creates an HTTP client that talks to the app over HTTPS and does not follow redirects.
+    /// </summary>
+    /// <remarks>
+    /// HTTPS is needed because the auth cookie is marked Secure and would not be sent over HTTP.
+    /// Not following redirects lets tests assert where the app redirected to.
+    /// The client keeps cookies between requests, like a browser.
+    /// </remarks>
+    public HttpClient CreateSecureClient()
+    {
+        return CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost"),
+            AllowAutoRedirect = false
+        });
+    }
+
+    /// <summary>
+    /// Creates a user directly in the test database, for tests that need an existing account.
+    /// </summary>
+
+    public async Task<ApplicationUser> CreateUserAsync(string email, string password, string roleName, bool isActive = true)
+    {
+        using IServiceScope scope = Services.CreateScope();
+        UserManager<ApplicationUser> userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+        var user = new ApplicationUser
+        {
+            UserName = email,
+            Email = email,
+            FullName = "Test User",
+            IsActive = isActive
+        };
+
+        IdentityResult createResult = await userManager.CreateAsync(user, password);
+        if (!createResult.Succeeded)
+        {
+            throw new InvalidOperationException(string.Join(" ", createResult.Errors.Select(e => e.Description)));
+        }
+
+        await userManager.AddToRoleAsync(user, roleName);
+        return user;
     }
 
     /// <summary>Closes the in-memory database when the factory is disposed.</summary>
