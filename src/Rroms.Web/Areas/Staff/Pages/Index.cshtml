@@ -1,0 +1,23 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Staff";
+}
+
+<section class="hero hero-compact mb-4" aria-labelledby="dashboard-heading">
+    <span class="hero-bubble one" aria-hidden="true"></span>
+    <div class="position-relative">
+        <span class="eyebrow">Staff</span>
+        <h1 id="dashboard-heading" class="mb-2">Today at Three Grills</h1>
+        <p class="lead mb-0">Handle today's bookings, keep orders moving and settle bills.</p>
+    </div>
+</section>
+
+<div class="row g-4">
+    @foreach (ModuleTileViewModel tile in Model.Tiles)
+    {
+        <div class="col-sm-6 col-lg-4">
+            <partial name="_ModuleTile" model="tile" />
+        </div>
+    }
+</div>

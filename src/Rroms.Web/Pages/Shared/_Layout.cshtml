@@ -1,0 +1,157 @@
+﻿@*
+    Shared layout for every page (customer, staff, admin)
+	@RenderBody() is where the page content is inserted.
+*@
+@{
+	//Which area/page is being shown, so the matching nav link can be highlighted.
+	string currentArea = ViewContext.RouteData.Values["area"] as string ?? string.Empty;
+	string currentPage = ViewContext.RouteData.Values["page"] as string ?? string.Empty;
+
+	bool isSignedIn = User.Identity?.IsAuthenticated == true;
+	bool isAdministrator = User.IsInRole(RoleNames.Administrator);
+	bool isStaff = User.IsInRole(RoleNames.Staff);
+	bool isCustomer = User.IsInRole(RoleNames.Customer);
+
+	//Label shown next to the user's name. Admin takes priority if the user has multiple roles.
+	string roleLabel = string.Empty;
+	if (isAdministrator)
+	{
+		roleLabel = RoleNames.Administrator;
+	}
+	else if (isStaff)
+	{
+		roleLabel = RoleNames.Staff;
+	}
+	else if (isCustomer)
+	{
+		roleLabel = RoleNames.Customer;
+	}
+
+	string pageTitle = ViewData["Title"] as string ?? "Welcome";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>@pageTitle | @SiteInfo.RestaurantName</title>
+	<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+	@* Fonts: Fraunces (headings) and Nunito (body)*@
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />	
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@@9..144,700;9..144,800&family=Nunito:wght@@400;600;700;800&display=swap" />
+
+	<link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+
+<body>
+	<a class="skip-link" href="#main-content">Skip to main content</a>
+
+	<header>
+		<nav class="navbar navbar-expand-lg site-navbar sticky-top" aria-label="Main navigation">
+            <div class="container">
+                <a class="brand navbar-brand" asp-area="" asp-page="/Index">
+                    <span class="brand-mark" aria-hidden="true">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22c4 0 7-3 7-7 0-5-5-7-5-12-3 2-5 5-5 8-1-1-2-2-2-4-2 2-2 5-2 8 0 4 3 7 7 7z" />
+                        </svg>
+                    </span>
+                    <span class="brand-name">Three <span>Grills</span></span>
+                </a>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main-nav"
+                        aria-controls="main-nav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="main-nav">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-lg-1">
+                        <li class="nav-item">
+                            @{ bool homeActive = currentArea == string.Empty && currentPage == "/Index"; }
+                            <a class="nav-link @(homeActive ? "active" : "")" aria-current="@(homeActive ? "page" : null)"
+                               asp-area="" asp-page="/Index">Home</a>
+                        </li>
+						
+						@* Each role only sees the link it is allowed to use.
+						The server still checks permissions on every page Hiding links is for convenience, not security*@
+						@if (isCustomer)
+							{
+							bool customerActive = currentArea == "Customer";
+							<li class ="nav-item">
+                                <a class="nav-link @(customerActive ? "active" : "")" aria-current="@(customerActive ? "page" : null)"
+                                   asp-area="Customer" asp-page="/Index">My dining</a>
+                            </li>
+							}
+
+						@if (isStaff)
+							{
+							bool staffActive = currentArea == "Staff";
+							<li class ="nav-item">
+								<a class="nav-link @(staffActive ? "active" : "")" aria-current="@(staffActive ? "page" : null)"
+								   asp-area="Staff" asp-page="/Index">Staff</a>
+							</li>
+							}
+
+						@if (isAdministrator)
+							{
+								bool adminActive = currentArea == "Admin";
+								<li class ="nav-item">
+									<a class="nav-link @(adminActive ? "active" : "")" aria-current="@(adminActive ? "page" : null)"
+									asp-area="Admin" asp-page="/Index">Administrator</a>
+								</li>
+							}
+					</ul>
+					<div class="d-flex flex-column flex-lg-row align-items-lg-center gap-2">
+                        @if (isSignedIn)
+                        {
+                            if (roleLabel != string.Empty)
+                            {
+                                <span class="role-chip align-self-start align-self-lg-center">@roleLabel</span>
+                            }
+                            <span class="fw-semibold">@User.Identity?.Name</span>
+
+                            @* Sign-out is a POST with an antiforgery token, so another site cannot log users out with a link. *@
+                            <form method="post" asp-area="" asp-page="/Account/Logout" class="d-inline">
+                                <button type="submit" class="btn btn-outline-primary btn-sm">Sign out</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <a class="btn btn-outline-primary btn-sm" asp-area="" asp-page="/Account/Login">Sign in</a>
+                            <a class="btn btn-primary btn-sm" asp-area="" asp-page="/Account/Register">Create account</a>
+                        }
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+	<main id="main-content" class="site-main" tabindex="-1">
+        <div class="container">
+            <partial name="_StatusMessages" />
+            @RenderBody()
+        </div>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <div class="row gy-3 align-items-center">
+                <div class="col-md-6">
+                    <div class="footer-brand">@SiteInfo.RestaurantName</div>
+                    <small>@SiteInfo.Tagline</small>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <small>&copy; @DateTime.UtcNow.Year @SiteInfo.RestaurantName. 5026CMD coursework project.</small>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
