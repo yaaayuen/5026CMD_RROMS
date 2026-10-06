@@ -15,23 +15,20 @@
    Change a colour here and it changes everywhere.
    ----------------------------------------------------------------------------- */
 :root {
-    --tg-raspberry: #d81159;      /* primary: buttons, links, brand */
+    --tg-raspberry: #d81159; /* primary: buttons, links, brand */
     --tg-raspberry-dark: #a50d44; /* hover/pressed state, footer */
-    --tg-coral: #ff8c42;          /* secondary accent */
-    --tg-gold: #ffbc42;           /* highlights, badges */
-    --tg-teal: #12867a;           /* success: confirmed, paid */
-    --tg-ink: #2b2d42;            /* main text */
-    --tg-muted: #5c5f77;          /* secondary text (passes WCAG AA on cream) */
-    --tg-cream: #fffdf7;          /* page background */
-    --tg-blush: #ffe8ef;          /* soft raspberry tint for panels */
-    --tg-peach: #fff1e6;          /* soft coral tint for panels */
+    --tg-coral: #ff8c42; /* secondary accent */
+    --tg-gold: #ffbc42; /* highlights, badges */
+    --tg-teal: #12867a; /* success: confirmed, paid */
+    --tg-ink: #2b2d42; /* main text */
+    --tg-muted: #5c5f77; /* secondary text (passes WCAG AA on cream) */
+    --tg-cream: #fffdf7; /* page background */
+    --tg-blush: #ffe8ef; /* soft raspberry tint for panels */
+    --tg-peach: #fff1e6; /* soft coral tint for panels */
     --tg-white: #ffffff;
-
     --tg-gradient: linear-gradient(135deg, var(--tg-raspberry) 0%, var(--tg-coral) 60%, var(--tg-gold) 100%);
-
     --tg-font-heading: "Fraunces", Georgia, "Times New Roman", serif;
     --tg-font-body: "Nunito", "Segoe UI", Roboto, Arial, sans-serif;
-
     --tg-radius: 1rem;
     --tg-radius-pill: 999px;
     --tg-shadow: 0 10px 30px rgba(216, 17, 89, 0.10);
@@ -131,23 +128,23 @@ h1, h2, h3, h4, .display-heading {
     box-shadow: 0 2px 12px rgba(43, 45, 66, 0.06);
 }
 
-.site-navbar .nav-link {
-    color: var(--tg-ink);
-    font-weight: 700;
-    border-radius: var(--tg-radius-pill);
-    padding: 0.45rem 0.95rem !important;
-}
+    .site-navbar .nav-link {
+        color: var(--tg-ink);
+        font-weight: 700;
+        border-radius: var(--tg-radius-pill);
+        padding: 0.45rem 0.95rem !important;
+    }
 
-.site-navbar .nav-link:hover,
-.site-navbar .nav-link:focus-visible {
-    background-color: var(--tg-blush);
-    color: var(--tg-raspberry-dark);
-}
+        .site-navbar .nav-link:hover,
+        .site-navbar .nav-link:focus-visible {
+            background-color: var(--tg-blush);
+            color: var(--tg-raspberry-dark);
+        }
 
-.site-navbar .nav-link.active {
-    background-color: var(--tg-raspberry);
-    color: var(--tg-white);
-}
+        .site-navbar .nav-link.active {
+            background-color: var(--tg-raspberry);
+            color: var(--tg-white);
+        }
 
 .brand {
     display: inline-flex;
@@ -157,9 +154,9 @@ h1, h2, h3, h4, .display-heading {
     text-decoration: none;
 }
 
-.brand:hover {
-    color: var(--tg-ink);
-}
+    .brand:hover {
+        color: var(--tg-ink);
+    }
 
 .brand-mark {
     display: inline-grid;
@@ -178,9 +175,9 @@ h1, h2, h3, h4, .display-heading {
     line-height: 1;
 }
 
-.brand-name span {
-    color: var(--tg-raspberry);
-}
+    .brand-name span {
+        color: var(--tg-raspberry);
+    }
 
 .role-chip {
     font-size: 0.75rem;
@@ -206,20 +203,20 @@ h1, h2, h3, h4, .display-heading {
     padding: 2.5rem 0 1.5rem;
 }
 
-.site-footer a {
-    color: var(--tg-gold);
-}
+    .site-footer a {
+        color: var(--tg-gold);
+    }
 
-.site-footer .footer-brand {
-    font-family: var(--tg-font-heading);
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: var(--tg-white);
-}
+    .site-footer .footer-brand {
+        font-family: var(--tg-font-heading);
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--tg-white);
+    }
 
-.site-footer small {
-    color: #ffd0de;
-}
+    .site-footer small {
+        color: #ffd0de;
+    }
 
 /* -----------------------------------------------------------------------------
    4. COMPONENTS
@@ -243,8 +240,20 @@ h1, h2, h3, h4, .display-heading {
     background: rgba(255, 255, 255, 0.14);
 }
 
-.hero-bubble.one { width: 18rem; height: 18rem; right: -4rem; top: -5rem; }
-.hero-bubble.two { width: 10rem; height: 10rem; right: 9rem; bottom: -4rem; background: rgba(255, 188, 66, 0.35); }
+    .hero-bubble.one {
+        width: 18rem;
+        height: 18rem;
+        right: -4rem;
+        top: -5rem;
+    }
+
+    .hero-bubble.two {
+        width: 10rem;
+        height: 10rem;
+        right: 9rem;
+        bottom: -4rem;
+        background: rgba(255, 188, 66, 0.35);
+    }
 
 .hero h1 {
     font-size: clamp(2.2rem, 5vw, 3.6rem);
@@ -261,9 +270,9 @@ h1, h2, h3, h4, .display-heading {
     padding: 2rem 2rem;
 }
 
-.hero-compact h1 {
-    font-size: clamp(1.8rem, 4vw, 2.6rem);
-}
+    .hero-compact h1 {
+        font-size: clamp(1.8rem, 4vw, 2.6rem);
+    }
 
 .eyebrow {
     display: inline-block;
@@ -288,10 +297,10 @@ h1, h2, h3, h4, .display-heading {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.tg-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--tg-shadow-hover);
-}
+    .tg-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--tg-shadow-hover);
+    }
 
 .tg-icon {
     display: inline-grid;
@@ -302,10 +311,25 @@ h1, h2, h3, h4, .display-heading {
     margin-bottom: 1rem;
 }
 
-.tg-icon.raspberry { background-color: var(--tg-blush); color: var(--tg-raspberry); }
-.tg-icon.coral { background-color: var(--tg-peach); color: #d4621a; }
-.tg-icon.gold { background-color: #fff5d9; color: #b77d00; }
-.tg-icon.teal { background-color: #dff5f2; color: var(--tg-teal); }
+    .tg-icon.raspberry {
+        background-color: var(--tg-blush);
+        color: var(--tg-raspberry);
+    }
+
+    .tg-icon.coral {
+        background-color: var(--tg-peach);
+        color: #d4621a;
+    }
+
+    .tg-icon.gold {
+        background-color: #fff5d9;
+        color: #b77d00;
+    }
+
+    .tg-icon.teal {
+        background-color: #dff5f2;
+        color: var(--tg-teal);
+    }
 
 .section-title {
     font-size: 1.9rem;
@@ -315,6 +339,24 @@ h1, h2, h3, h4, .display-heading {
 .section-subtitle {
     color: var(--tg-muted);
     margin-bottom: 1.6rem;
+}
+
+/* Sign-in and registration cards. */
+.auth-card {
+    padding: 2.2rem;
+}
+
+    .auth-card .form-control-lg {
+        border-radius: 0.75rem;
+    }
+
+/* The validation summary is only shown when there are errors to list. */
+.validation-summary-valid {
+    display: none;
+}
+
+.validation-summary-errors ul {
+    margin-bottom: 0;
 }
 
 /* Numbered step used in "How it works". */
@@ -366,9 +408,9 @@ h1, h2, h3, h4, .display-heading {
     border-radius: var(--tg-radius-pill);
 }
 
-.skip-link:focus {
-    top: 1rem;
-}
+    .skip-link:focus {
+        top: 1rem;
+    }
 
 /* Clear focus outline for keyboard users on every interactive element. */
 a:focus-visible,
@@ -384,9 +426,9 @@ button:focus-visible,
         transition: none;
     }
 
-    .tg-card:hover {
-        transform: none;
-    }
+        .tg-card:hover {
+            transform: none;
+        }
 }
 
 @media (max-width: 575.98px) {
