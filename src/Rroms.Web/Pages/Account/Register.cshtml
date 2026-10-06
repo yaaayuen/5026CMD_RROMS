@@ -1,0 +1,63 @@
+﻿@page
+@model Rroms.Web.Pages.Account.RegisterModel
+@{
+	ViewData["Title"] = "Create account";
+}
+
+<div class="row justify-content-center">
+	<div class="col-md-10 col-lg-6">
+		<section class="tg-card auth-card" aria-labelledby="register-heading">
+			<span class="tg-icon coral"><partial name="_Icon" model='"users"' /></span>
+			<h1 id="register-heading" class="h2 mb-1">Create your account</h1>
+			<p class="text-secondary mb-4">Book tables, order from your seat and collect your dining history.</p>
+
+			<form method="post" novalidate>
+				<input type="hidden" asp-for="ReturnUrl" />
+				<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+				<div class="mb-3">
+					<label asp-for="Input.FullName" class="form-label fw-semibold"></label>
+					<input asp-for="Input.FullName" class="form-control form-control-lg" autocomplete="name" autofocus />
+					<span asp-validation-for="Input.FullName" class="text-danger small"></span>
+				</div>
+
+				<div class="row g-3 mb-3">
+					<div class="col-sm-7">
+						<label asp-for="Input.Email" class="form-label fw-semibold"></label>
+						<input asp-for="Input.Email" class="form-control form-control-lg" autocomplete="email" />
+						<span asp-validation-for="Input.Email" class="text-danger small"></span>
+					</div>
+					<div class="col-sm-5">
+						<label asp-for="Input.PhoneNumber" class="form-label fw-semibold"></label>
+						<input asp-for="Input.PhoneNumber" class="form-control form-control-lg" autocomplete="tel" />
+						<span asp-validation-for="Input.PhoneNumber" class="text-danger small"></span>
+					</div>
+				</div>
+
+				<div class="mb-3">
+					<label asp-for="Input.Password" class="form-label fw-semibold"></label>
+					<input asp-for="Input.Password" class="form-control form-control-lg" autocomplete="new-password" aria-describedby="password-rules" />
+					<div id="password-rules" class="form-text">At least 10 characters, with an upper-case letter, a lower-case letter, a number and a symbol.</div>
+					<span asp-validation-for="Input.Password" class="text-danger small"></span>
+				</div>
+
+				<div class="mb-4">
+					<label asp-for="Input.ConfirmPassword" class="form-label fw-semibold"></label>
+					<input asp-for="Input.ConfirmPassword" class="form-control form-control-lg" autocomplete="new-password" />
+					<span asp-validation-for="Input.ConfirmPassword" class="text-danger small"></span>
+				</div>
+
+				<button type="submit" class="btn btn-primary btn-lg w-100">Create account</button>
+			</form>
+
+			<p class="text-center mt-4 mb-0">
+				Already have an account?
+				<a asp-page="/Account/Login" asp-route-returnUrl="@Model.ReturnUrl" class="fw-bold">Sign in</a>
+			</p>
+		</section>
+	</div>
+</div>
+
+@section Scripts {
+	<partial name="_ValidationScriptsPartial" />
+}
