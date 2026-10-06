@@ -1,0 +1,21 @@
+﻿@page
+@model ErrorModel
+@{
+    ViewData["Title"] = "Something went wrong";
+}
+
+<div class="row justify-content-center">
+    <section class="col-lg-6">
+        <div class="tg-card text-center">
+            <h1 class="h2 text-primary">Sorry, something went wrong.</h1>
+            <p class="text-secondary">Please try again in a moment. If the problem continues, let a member of staff know.</p>
+
+            @if (Model.ShowRequestId)
+            {
+                <p class="small mb-4">Reference: <code>@Model.RequestId</code></p>
+            }
+
+            <a class="btn btn-primary" asp-area="" asp-page="/Index">Back to home</a>
+        </div>
+    </section>
+</div>

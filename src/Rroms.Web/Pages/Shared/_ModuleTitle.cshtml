@@ -1,0 +1,28 @@
+﻿@* One dashboard tile. Rendered by the Admin, Staff and Customer home pages. *@
+@model ModuleTileViewModel
+
+@{
+	// Visual state: a finished module links somewhere; a planned one shows its sprint.
+	string stateClass = Model.IsReady ? "is-ready" : "is-planned";
+}
+
+<article class="tg-card module-tile @stateClass">
+	<div class="d-flex justify-content-between align-items-start">
+		<span class="tg-icon raspberry">
+			<partial name="_Icon" model="Model.IconName" />
+		</span>
+		<span class="sprint-badge">@Model.SprintLabel</span>
+	</div>
+
+	<h3 class="h5">
+		@if (Model.IsReady)
+		{
+			<a href="@Model.Url" class="stretched-link text-reset text-decoration-none">@Model.Title</a>
+		}
+		else
+		{
+			@Model.Title
+		}
+	</h3>
+	<p>@Model.Description</p>
+</article>

@@ -9,5 +9,5 @@
 public static class SiteInfo
 {
     public const string RestaurantName = "Three Grills";
-    public const string TagLine = "Western Cafe | Flame Grills | Freshly Made";
+    public const string Tagline = "Western Cafe | Flame Grills | Freshly Made";
 }

@@ -1,0 +1,95 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home";
+}
+
+@* ----- Hero ----- *@
+<section class="hero mb-5" aria-labelledby="hero-heading">
+    <span class="hero-bubble one" aria-hidden="true"></span>
+    <span class="hero-bubble two" aria-hidden="true"></span>
+
+    <div class="position-relative">
+        <span class="eyebrow">Western café-bistro</span>
+        <h1 id="hero-heading" class="mb-3">Flame-grilled.<br />Freshly made.<br />Booked in seconds.</h1>
+        <p class="lead mb-4">
+            Reserve your table at @SiteInfo.RestaurantName, order from your seat and
+            follow your food from the grill to your plate in real time.
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+            @if (User.IsInRole(RoleNames.Customer))
+            {
+                <a class="btn btn-gold btn-lg" asp-area="Customer" asp-page="/Index">Go to my dining</a>
+            }
+            else if (User.IsInRole(RoleNames.Staff) || User.IsInRole(RoleNames.Administrator))
+            {
+                <a class="btn btn-gold btn-lg" asp-area="Staff" asp-page="/Index">Open the staff desk</a>
+            }
+            else
+            {
+                <a class="btn btn-gold btn-lg" asp-page="/Account/Register">Create an account to book</a>
+                <a class="btn btn-outline-light btn-lg" asp-page="/Account/Login">Sign in</a>
+            }
+        </div>
+    </div>
+</section>
+
+@* ----- What we serve ----- *@
+<section class="mb-5" aria-labelledby="serve-heading">
+    <h2 id="serve-heading" class="section-title">What's on the grill</h2>
+    <p class="section-subtitle">Three kitchens of flavour, one cosy bistro.</p>
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            <article class="tg-card">
+                <span class="tg-icon raspberry"><partial name="_Icon" model='"flame"' /></span>
+                <h3 class="h5">From the grill</h3>
+                <p class="text-secondary mb-0">Ribeye, lamb chops and chicken thighs cooked over open flame, served with house sauces.</p>
+            </article>
+        </div>
+        <div class="col-md-4">
+            <article class="tg-card">
+                <span class="tg-icon coral"><partial name="_Icon" model='"sun"' /></span>
+                <h3 class="h5">All-day brunch</h3>
+                <p class="text-secondary mb-0">Eggs Benedict, buttermilk pancakes and grilled sourdough sandwiches until closing.</p>
+            </article>
+        </div>
+        <div class="col-md-4">
+            <article class="tg-card">
+                <span class="tg-icon gold"><partial name="_Icon" model='"coffee"' /></span>
+                <h3 class="h5">Coffee &amp; desserts</h3>
+                <p class="text-secondary mb-0">Specialty coffee, basque burnt cheesecake and seasonal tarts to finish.</p>
+            </article>
+        </div>
+    </div>
+</section>
+
+@* ----- How it works ----- *@
+<section aria-labelledby="how-heading">
+    <h2 id="how-heading" class="section-title">How it works</h2>
+    <p class="section-subtitle">From booking to bill, all in one place.</p>
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="tg-card">
+                <span class="step-number">1</span>
+                <h3 class="h5">Book a table</h3>
+                <p class="text-secondary mb-0">Pick a date, time and party size. Only free tables are shown, so there is no double booking.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="tg-card">
+                <span class="step-number">2</span>
+                <h3 class="h5">Order from your seat</h3>
+                <p class="text-secondary mb-0">Browse the live menu, get suggestions you will like, and track your order as it cooks.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="tg-card">
+                <span class="step-number">3</span>
+                <h3 class="h5">Pay and rate</h3>
+                <p class="text-secondary mb-0">Settle the bill, get an instant receipt and tell us how we did.</p>
+            </div>
+        </div>
+    </div>
+</section>

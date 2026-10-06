@@ -1,0 +1,10 @@
+﻿@*
+    Client-side validation (jQuery Validation + Microsoft's unobtrusive adapter).
+    It reads the data-val-* attributes that tag helpers generate from [Required], [StringLength], etc.
+    This only improves the user experience; the server ALWAYS validates again,
+    because anything running in the browser can be bypassed.
+    Include on form pages with: @section Scripts { <partial name="_ValidationScriptsPartial" /> }
+*@
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+<script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
