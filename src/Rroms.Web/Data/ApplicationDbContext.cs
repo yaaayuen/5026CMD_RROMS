@@ -25,6 +25,25 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     // ----- Sprint 2 (WL): restaurant setup and reservations -----
 
+    /// <summary>The restaurant's contact details (always one row).</summary>
+    public DbSet<RestaurantProfile> RestaurantProfiles => Set<RestaurantProfile>();
+
+    /// <summary>Normal opening hours, one row per day of the week.</summary>
+    public DbSet<OperatingHour> OperatingHours => Set<OperatingHour>();
+
+    /// <summary>Date ranges when the restaurant is closed, e.g. public holidays.</summary>
+    public DbSet<SpecialClosure> SpecialClosures => Set<SpecialClosure>();
+
+    /// <summary>Parts of the restaurant that contain tables.</summary>
+    public DbSet<DiningArea> DiningAreas => Set<DiningArea>();
+
+    /// <summary>Tables customers can book.</summary>
+    public DbSet<DiningTable> DiningTables => Set<DiningTable>();
+
+    /// <summary>Menu sections; YJ's menu items reference these.</summary>
+    public DbSet<MenuCategory> MenuCategories => Set<MenuCategory>();
+
+
     // ----- Sprint 3 (YJ): menu and orders -----
 
     // ----- Sprint 4 (Alex): announcements and feedback -----
@@ -64,5 +83,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             // Admin account lists filter by active status, so index it.
             user.HasIndex(u => u.IsActive);
         });
+
+        // Sprint 2 (WL): restaurant setup rules and seed data live in their own file.
+        RestaurantSetupConfiguration.Configure(builder);
     }
 }
