@@ -1,0 +1,17 @@
+# CODEOWNERS: a pull request that changes files in these folders needs approval from their owner.
+# Only module folders are listed. Shared files (Program.cs, _Layout.cshtml, ApplicationDbContext.cs)
+# are left out so no single member has to approve everyone's pull requests.
+# Replace @YY-GITHUB-USERNAME with the real GitHub username (keep the @).
+
+# ----- YY: Sprint 1 (accounts, roles, profiles, notifications) -----
+/src/Rroms.Web/Pages/Account/                 @yaaayuen
+/src/Rroms.Web/Pages/Notifications/           @yaaayuen
+/src/Rroms.Web/Areas/Admin/Pages/Accounts/    @yaaayuen
+/src/Rroms.Web/Security/                      @yaaayuen
+/src/Rroms.Web/Services/Email/                @yaaayuen
+/tests/Rroms.Tests/Accounts/                  @yaaayuen
+/tests/Rroms.Tests/Security/                  @yaaayuen
+/tests/Rroms.Tests/Admin/                     @yaaayuen
+/tests/Rroms.Tests/Notifications/             @yaaayuen
+
+# ----- WL, YJ, Alex, Darren: add your own module folders below when you create them -----
