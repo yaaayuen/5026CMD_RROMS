@@ -1,0 +1,396 @@
+/* =============================================================================
+   Three Grills - site-wide theme ("Berry Bistro")
+   One design direction for customer, staff and admin pages.
+
+   Structure:
+     1. Design tokens (colours, fonts, radii) as CSS custom properties
+     2. Bootstrap overrides (so normal Bootstrap classes pick up our palette)
+     3. Layout: navbar, main, footer
+     4. Reusable components: hero, cards, tiles, badges
+     5. Accessibility helpers
+   ============================================================================= */
+
+/* -----------------------------------------------------------------------------
+   1. DESIGN TOKENS
+   Change a colour here and it changes everywhere.
+   ----------------------------------------------------------------------------- */
+:root {
+    --tg-raspberry: #d81159;      /* primary: buttons, links, brand */
+    --tg-raspberry-dark: #a50d44; /* hover/pressed state, footer */
+    --tg-coral: #ff8c42;          /* secondary accent */
+    --tg-gold: #ffbc42;           /* highlights, badges */
+    --tg-teal: #12867a;           /* success: confirmed, paid */
+    --tg-ink: #2b2d42;            /* main text */
+    --tg-muted: #5c5f77;          /* secondary text (passes WCAG AA on cream) */
+    --tg-cream: #fffdf7;          /* page background */
+    --tg-blush: #ffe8ef;          /* soft raspberry tint for panels */
+    --tg-peach: #fff1e6;          /* soft coral tint for panels */
+    --tg-white: #ffffff;
+
+    --tg-gradient: linear-gradient(135deg, var(--tg-raspberry) 0%, var(--tg-coral) 60%, var(--tg-gold) 100%);
+
+    --tg-font-heading: "Fraunces", Georgia, "Times New Roman", serif;
+    --tg-font-body: "Nunito", "Segoe UI", Roboto, Arial, sans-serif;
+
+    --tg-radius: 1rem;
+    --tg-radius-pill: 999px;
+    --tg-shadow: 0 10px 30px rgba(216, 17, 89, 0.10);
+    --tg-shadow-hover: 0 16px 40px rgba(216, 17, 89, 0.18);
+}
+
+/* -----------------------------------------------------------------------------
+   2. BOOTSTRAP OVERRIDES
+   Bootstrap 5.3 reads these variables, so .btn-primary, .text-primary, links,
+   form focus rings etc. all use the Three Grills palette automatically.
+   ----------------------------------------------------------------------------- */
+:root {
+    --bs-primary: var(--tg-raspberry);
+    --bs-primary-rgb: 216, 17, 89;
+    --bs-success: var(--tg-teal);
+    --bs-success-rgb: 18, 134, 122;
+    --bs-warning: var(--tg-gold);
+    --bs-warning-rgb: 255, 188, 66;
+    --bs-body-color: var(--tg-ink);
+    --bs-body-bg: var(--tg-cream);
+    --bs-body-font-family: var(--tg-font-body);
+    --bs-link-color: var(--tg-raspberry);
+    --bs-link-color-rgb: 216, 17, 89;
+    --bs-link-hover-color: var(--tg-raspberry-dark);
+    --bs-link-hover-color-rgb: 165, 13, 68;
+    --bs-border-radius: 0.75rem;
+}
+
+body {
+    background-color: var(--tg-cream);
+    color: var(--tg-ink);
+    font-family: var(--tg-font-body);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+h1, h2, h3, h4, .display-heading {
+    font-family: var(--tg-font-heading);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.btn {
+    border-radius: var(--tg-radius-pill);
+    font-weight: 700;
+    padding: 0.6rem 1.4rem;
+}
+
+.btn-primary {
+    --bs-btn-bg: var(--tg-raspberry);
+    --bs-btn-border-color: var(--tg-raspberry);
+    --bs-btn-hover-bg: var(--tg-raspberry-dark);
+    --bs-btn-hover-border-color: var(--tg-raspberry-dark);
+    --bs-btn-active-bg: var(--tg-raspberry-dark);
+    --bs-btn-active-border-color: var(--tg-raspberry-dark);
+    --bs-btn-disabled-bg: var(--tg-raspberry);
+    --bs-btn-disabled-border-color: var(--tg-raspberry);
+    box-shadow: 0 6px 16px rgba(216, 17, 89, 0.25);
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--tg-raspberry);
+    --bs-btn-border-color: var(--tg-raspberry);
+    --bs-btn-hover-bg: var(--tg-raspberry);
+    --bs-btn-hover-border-color: var(--tg-raspberry);
+    --bs-btn-active-bg: var(--tg-raspberry-dark);
+    --bs-btn-active-border-color: var(--tg-raspberry-dark);
+}
+
+/* Gold call-to-action button with dark text for contrast. */
+.btn-gold {
+    --bs-btn-color: var(--tg-ink);
+    --bs-btn-bg: var(--tg-gold);
+    --bs-btn-border-color: var(--tg-gold);
+    --bs-btn-hover-color: var(--tg-ink);
+    --bs-btn-hover-bg: #ffaa14;
+    --bs-btn-hover-border-color: #ffaa14;
+    --bs-btn-active-bg: #ffaa14;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--tg-coral);
+    box-shadow: 0 0 0 0.25rem rgba(255, 140, 66, 0.30);
+}
+
+/* -----------------------------------------------------------------------------
+   3. LAYOUT
+   ----------------------------------------------------------------------------- */
+
+/* Navbar: white bar with a gradient stripe underneath. */
+.site-navbar {
+    background-color: var(--tg-white);
+    border-bottom: 4px solid transparent;
+    border-image: var(--tg-gradient) 1;
+    box-shadow: 0 2px 12px rgba(43, 45, 66, 0.06);
+}
+
+.site-navbar .nav-link {
+    color: var(--tg-ink);
+    font-weight: 700;
+    border-radius: var(--tg-radius-pill);
+    padding: 0.45rem 0.95rem !important;
+}
+
+.site-navbar .nav-link:hover,
+.site-navbar .nav-link:focus-visible {
+    background-color: var(--tg-blush);
+    color: var(--tg-raspberry-dark);
+}
+
+.site-navbar .nav-link.active {
+    background-color: var(--tg-raspberry);
+    color: var(--tg-white);
+}
+
+.brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--tg-ink);
+    text-decoration: none;
+}
+
+.brand:hover {
+    color: var(--tg-ink);
+}
+
+.brand-mark {
+    display: inline-grid;
+    place-items: center;
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 50%;
+    background: var(--tg-gradient);
+    box-shadow: 0 4px 12px rgba(216, 17, 89, 0.35);
+}
+
+.brand-name {
+    font-family: var(--tg-font-heading);
+    font-size: 1.45rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.brand-name span {
+    color: var(--tg-raspberry);
+}
+
+.role-chip {
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background-color: var(--tg-gold);
+    color: var(--tg-ink);
+    border-radius: var(--tg-radius-pill);
+    padding: 0.25rem 0.7rem;
+}
+
+.site-main {
+    flex: 1 0 auto;
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+}
+
+.site-footer {
+    background-color: var(--tg-raspberry-dark);
+    background-image: linear-gradient(160deg, var(--tg-raspberry-dark) 0%, #7d0a35 100%);
+    color: #ffe3ec;
+    padding: 2.5rem 0 1.5rem;
+}
+
+.site-footer a {
+    color: var(--tg-gold);
+}
+
+.site-footer .footer-brand {
+    font-family: var(--tg-font-heading);
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--tg-white);
+}
+
+.site-footer small {
+    color: #ffd0de;
+}
+
+/* -----------------------------------------------------------------------------
+   4. COMPONENTS
+   ----------------------------------------------------------------------------- */
+
+/* Hero banner used on the home page and role dashboards. */
+.hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: calc(var(--tg-radius) * 1.5);
+    background: var(--tg-gradient);
+    color: var(--tg-white);
+    padding: 3.5rem 2.5rem;
+    box-shadow: var(--tg-shadow);
+}
+
+/* Decorative soft circles. Purely visual, so they are hidden from screen readers in the markup. */
+.hero-bubble {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.hero-bubble.one { width: 18rem; height: 18rem; right: -4rem; top: -5rem; }
+.hero-bubble.two { width: 10rem; height: 10rem; right: 9rem; bottom: -4rem; background: rgba(255, 188, 66, 0.35); }
+
+.hero h1 {
+    font-size: clamp(2.2rem, 5vw, 3.6rem);
+    line-height: 1.05;
+}
+
+.hero .lead {
+    font-size: 1.2rem;
+    max-width: 36rem;
+    color: #fff4f7;
+}
+
+.hero-compact {
+    padding: 2rem 2rem;
+}
+
+.hero-compact h1 {
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+}
+
+.eyebrow {
+    display: inline-block;
+    font-weight: 800;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    background-color: rgba(255, 255, 255, 0.22);
+    border-radius: var(--tg-radius-pill);
+    padding: 0.3rem 0.8rem;
+    margin-bottom: 1rem;
+}
+
+/* Generic white card with a lift-on-hover effect. */
+.tg-card {
+    background-color: var(--tg-white);
+    border: 0;
+    border-radius: var(--tg-radius);
+    box-shadow: var(--tg-shadow);
+    padding: 1.6rem;
+    height: 100%;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tg-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--tg-shadow-hover);
+}
+
+.tg-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 3.2rem;
+    height: 3.2rem;
+    border-radius: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.tg-icon.raspberry { background-color: var(--tg-blush); color: var(--tg-raspberry); }
+.tg-icon.coral { background-color: var(--tg-peach); color: #d4621a; }
+.tg-icon.gold { background-color: #fff5d9; color: #b77d00; }
+.tg-icon.teal { background-color: #dff5f2; color: var(--tg-teal); }
+
+.section-title {
+    font-size: 1.9rem;
+    margin-bottom: 0.4rem;
+}
+
+.section-subtitle {
+    color: var(--tg-muted);
+    margin-bottom: 1.6rem;
+}
+
+/* Numbered step used in "How it works". */
+.step-number {
+    display: inline-grid;
+    place-items: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 50%;
+    background-color: var(--tg-gold);
+    color: var(--tg-ink);
+    font-weight: 800;
+    margin-bottom: 0.8rem;
+}
+
+/* Module tile on role dashboards. */
+.module-tile .sprint-badge {
+    font-size: 0.75rem;
+    font-weight: 800;
+    border-radius: var(--tg-radius-pill);
+    padding: 0.25rem 0.7rem;
+    background-color: var(--tg-peach);
+    color: #9a4a10;
+}
+
+.module-tile.is-ready .sprint-badge {
+    background-color: #dff5f2;
+    color: var(--tg-teal);
+}
+
+.module-tile p {
+    color: var(--tg-muted);
+    margin-bottom: 0;
+}
+
+/* -----------------------------------------------------------------------------
+   5. ACCESSIBILITY
+   ----------------------------------------------------------------------------- */
+
+/* "Skip to content" link: invisible until a keyboard user tabs to it. */
+.skip-link {
+    position: absolute;
+    left: 1rem;
+    top: -3rem;
+    z-index: 2000;
+    background-color: var(--tg-ink);
+    color: var(--tg-white);
+    padding: 0.5rem 1rem;
+    border-radius: var(--tg-radius-pill);
+}
+
+.skip-link:focus {
+    top: 1rem;
+}
+
+/* Clear focus outline for keyboard users on every interactive element. */
+a:focus-visible,
+button:focus-visible,
+.btn:focus-visible {
+    outline: 3px solid var(--tg-gold);
+    outline-offset: 2px;
+}
+
+/* Respect users who ask their operating system for less motion. */
+@media (prefers-reduced-motion: reduce) {
+    .tg-card {
+        transition: none;
+    }
+
+    .tg-card:hover {
+        transform: none;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .hero {
+        padding: 2.2rem 1.4rem;
+    }
+}
