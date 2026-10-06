@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.RateLimiting;
 using Microsoft.Extensions.Options;
+using Rroms.Web.Constants;
 using Rroms.Web.Security;
 using Rroms.Web.Data;
 using Rroms.Web.Models;
@@ -125,9 +126,30 @@ builder.Services.AddScoped<IAccountServices, AccountService>();
 // Temporary notification implementation; replaced by the real one in YY-6.
 builder.Services.AddScoped<INotificationService, LoggingNotificationService>();
 
+// ----- Authorization policies (YY-3) -----
+// Each policy names a rule once; folders and pages refer to it by name.
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(PolicyNames.AdministratorOnly, policy =>
+        policy.RequireRole(RoleNames.Administrator));
+
+    // RequireRole with several roles means "any one of these".
+    options.AddPolicy(PolicyNames.StaffOrAdministrator, policy =>
+        policy.RequireRole(RoleNames.Staff, RoleNames.Administrator));
+
+    options.AddPolicy(PolicyNames.CustomerOnly, policy =>
+        policy.RequireRole(RoleNames.Customer));
+});
+
 // ----- Razor Pages -----
-// Role-based folder authorization for /Admin, /Staff and /Customer is added in YY-3.
-builder.Services.AddRazorPages();
+builder.Services.AddRazorPages(options =>
+{
+    // Protect whole folders, so a new page added later is secure by default.
+    // Nobody can forget an [Authorize] attribute on an individual page.
+    options.Conventions.AuthorizeAreaFolder("Admin", "/", PolicyNames.AdministratorOnly);
+    options.Conventions.AuthorizeAreaFolder("Staff", "/", PolicyNames.StaffOrAdministrator);
+    options.Conventions.AuthorizeAreaFolder("Customer", "/", PolicyNames.CustomerOnly);
+});
 
 // -----------------------------------------------------------------------------
 // 2. HTTP REQUEST PIPELINE (middleware runs in this exact order)
