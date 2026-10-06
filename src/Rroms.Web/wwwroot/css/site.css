@@ -436,3 +436,48 @@ button:focus-visible,
         padding: 2.2rem 1.4rem;
     }
 }
+
+/* -----------------------------------------------------------------------------
+   Password show/hide toggle (added by site.js to every password box)
+   ----------------------------------------------------------------------------- */
+.password-field {
+    position: relative;
+}
+
+    .password-field .form-control {
+        padding-right: 3rem; /* leave room so typed text never runs under the button */
+    }
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 0.5rem;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    border: 0;
+    border-radius: var(--tg-radius-pill);
+    background: transparent;
+    color: var(--tg-muted);
+    cursor: pointer;
+}
+
+    .password-toggle:hover {
+        color: var(--tg-raspberry);
+        background: var(--tg-blush);
+    }
+
+    .password-toggle:focus-visible {
+        outline: 3px solid var(--tg-gold);
+        outline-offset: 2px;
+    }
+
+/* Edge shows its own built-in reveal eye; hide it so there are not two eyes. */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none;
+}
