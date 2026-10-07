@@ -111,7 +111,7 @@
                             {
                                 <span class="role-chip align-self-start align-self-lg-center">@roleLabel</span>
                             }
-                            <span class="fw-semibold">@User.Identity?.Name</span>
+							<a class="fw-semibold text-reset" asp-area="" asp-page="/Account/Profile" title="My profile">@User.Identity?.Name</a>
 
                             @* Sign-out is a POST with an antiforgery token, so another site cannot log users out with a link. *@
                             <form method="post" asp-area="" asp-page="/Account/Logout" class="d-inline">

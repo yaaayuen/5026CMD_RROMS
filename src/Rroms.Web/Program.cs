@@ -122,6 +122,7 @@ builder.Services.AddRateLimiter(options =>
 // Scoped = one instance per HTTP request, the same lifetime as the DbContext they use.
 builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<IAccountServices, AccountService>();
+builder.Services.AddScoped<IProfileService, ProfileService>();
 
 // Temporary notification implementation; replaced by the real one in YY-6.
 builder.Services.AddScoped<INotificationService, LoggingNotificationService>();
@@ -149,6 +150,9 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AuthorizeAreaFolder("Admin", "/", PolicyNames.AdministratorOnly);
     options.Conventions.AuthorizeAreaFolder("Staff", "/", PolicyNames.StaffOrAdministrator);
     options.Conventions.AuthorizeAreaFolder("Customer", "/", PolicyNames.CustomerOnly);
+    // Pages any signed-in user may use, whatever their role.
+    options.Conventions.AuthorizePage("/Account/Profile");
+    options.Conventions.AuthorizePage("/Account/ChangePassword");
 });
 
 // -----------------------------------------------------------------------------
