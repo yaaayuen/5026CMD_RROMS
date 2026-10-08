@@ -11,6 +11,12 @@ namespace Rroms.Web.Models;
 /// </remarks>
 public class MenuCategory
 {
+    /// <summary>Smallest allowed display order.</summary>
+    public const int MinDisplayOrder = 0;
+
+    /// <summary>Largest allowed display order.</summary>
+    public const int MaxDisplayOrder = 999;
+
     /// <summary>Primary key.</summary>
     public int Id { get; set; }
 
@@ -20,7 +26,7 @@ public class MenuCategory
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Position on the menu; lower numbers are shown first.</summary>
-    [Range(0, 999)]
+    [Range(MinDisplayOrder, MaxDisplayOrder)]
     public int DisplayOrder { get; set; }
 
     /// <summary>False hides the category (and its items) from the customer menu.</summary>
