@@ -237,6 +237,379 @@ namespace Rroms.Web.Data.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("Rroms.Web.Models.DiningArea", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("DiningAreas");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Description = "Indoor, air-conditioned",
+                            IsActive = true,
+                            Name = "Main Hall"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Description = "Outdoor, covered",
+                            IsActive = true,
+                            Name = "Patio"
+                        });
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.DiningTable", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Capacity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DiningAreaId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DiningAreaId");
+
+                    b.HasIndex("Label")
+                        .IsUnique();
+
+                    b.ToTable("DiningTables", t =>
+                        {
+                            t.HasCheckConstraint("CK_DiningTables_Capacity", "[Capacity] BETWEEN 1 AND 20");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Capacity = 2,
+                            DiningAreaId = 1,
+                            IsActive = true,
+                            Label = "T01"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Capacity = 2,
+                            DiningAreaId = 1,
+                            IsActive = true,
+                            Label = "T02"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Capacity = 4,
+                            DiningAreaId = 1,
+                            IsActive = true,
+                            Label = "T03"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Capacity = 4,
+                            DiningAreaId = 1,
+                            IsActive = true,
+                            Label = "T04"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Capacity = 6,
+                            DiningAreaId = 1,
+                            IsActive = true,
+                            Label = "T05"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Capacity = 8,
+                            DiningAreaId = 1,
+                            IsActive = true,
+                            Label = "T06"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Capacity = 2,
+                            DiningAreaId = 2,
+                            IsActive = true,
+                            Label = "P01"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Capacity = 4,
+                            DiningAreaId = 2,
+                            IsActive = true,
+                            Label = "P02"
+                        });
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.MenuCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("MenuCategories");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            DisplayOrder = 10,
+                            IsActive = true,
+                            Name = "Starters"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            DisplayOrder = 20,
+                            IsActive = true,
+                            Name = "Grills"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            DisplayOrder = 30,
+                            IsActive = true,
+                            Name = "Pasta"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            DisplayOrder = 40,
+                            IsActive = true,
+                            Name = "Desserts"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            DisplayOrder = 50,
+                            IsActive = true,
+                            Name = "Beverages"
+                        });
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.OperatingHour", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<TimeOnly>("ClosesAt")
+                        .HasColumnType("time");
+
+                    b.Property<string>("DayOfWeek")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<bool>("IsClosed")
+                        .HasColumnType("bit");
+
+                    b.Property<TimeOnly>("OpensAt")
+                        .HasColumnType("time");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DayOfWeek")
+                        .IsUnique();
+
+                    b.ToTable("OperatingHours", t =>
+                        {
+                            t.HasCheckConstraint("CK_OperatingHours_OpensBeforeCloses", "[IsClosed] = 1 OR [OpensAt] < [ClosesAt]");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            ClosesAt = new TimeOnly(22, 0, 0),
+                            DayOfWeek = "Monday",
+                            IsClosed = false,
+                            OpensAt = new TimeOnly(11, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 2,
+                            ClosesAt = new TimeOnly(22, 0, 0),
+                            DayOfWeek = "Tuesday",
+                            IsClosed = false,
+                            OpensAt = new TimeOnly(11, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 3,
+                            ClosesAt = new TimeOnly(22, 0, 0),
+                            DayOfWeek = "Wednesday",
+                            IsClosed = false,
+                            OpensAt = new TimeOnly(11, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 4,
+                            ClosesAt = new TimeOnly(22, 0, 0),
+                            DayOfWeek = "Thursday",
+                            IsClosed = false,
+                            OpensAt = new TimeOnly(11, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 5,
+                            ClosesAt = new TimeOnly(22, 0, 0),
+                            DayOfWeek = "Friday",
+                            IsClosed = false,
+                            OpensAt = new TimeOnly(11, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 6,
+                            ClosesAt = new TimeOnly(22, 0, 0),
+                            DayOfWeek = "Saturday",
+                            IsClosed = false,
+                            OpensAt = new TimeOnly(11, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 7,
+                            ClosesAt = new TimeOnly(22, 0, 0),
+                            DayOfWeek = "Sunday",
+                            IsClosed = false,
+                            OpensAt = new TimeOnly(11, 0, 0)
+                        });
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.RestaurantProfile", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("RestaurantProfiles");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Address = "1 Example Street, 50000 Kuala Lumpur (placeholder)",
+                            Email = "hello@threegrills.example",
+                            Name = "Three Grills",
+                            Phone = "+60 3-0000 0000",
+                            UpdatedAtUtc = new DateTime(2026, 10, 7, 0, 0, 0, 0, DateTimeKind.Utc)
+                        });
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.SpecialClosure", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StartDate");
+
+                    b.ToTable("SpecialClosures", t =>
+                        {
+                            t.HasCheckConstraint("CK_SpecialClosures_EndNotBeforeStart", "[EndDate] >= [StartDate]");
+                        });
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -286,6 +659,22 @@ namespace Rroms.Web.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.DiningTable", b =>
+                {
+                    b.HasOne("Rroms.Web.Models.DiningArea", "DiningArea")
+                        .WithMany("Tables")
+                        .HasForeignKey("DiningAreaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DiningArea");
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.DiningArea", b =>
+                {
+                    b.Navigation("Tables");
                 });
 #pragma warning restore 612, 618
         }

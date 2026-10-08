@@ -124,6 +124,9 @@ builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<IAccountServices, AccountService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
 
+// Restaurant setup: profile, hours, closures, areas, tables, menu categories (WL-1).
+builder.Services.AddScoped<IRestaurantService, RestaurantService>();
+
 // Temporary notification implementation; replaced by the real one in YY-6.
 builder.Services.AddScoped<INotificationService, LoggingNotificationService>();
 
