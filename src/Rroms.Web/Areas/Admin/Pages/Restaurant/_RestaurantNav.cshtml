@@ -1,0 +1,13 @@
+﻿@*
+    Side menu shared by the five restaurant setup pages (WL-1).
+    The page passes its own name (for example "Hours") so that link is highlighted.
+*@
+@model string
+
+<nav class="list-group" aria-label="Restaurant setup">
+	<a class="list-group-item list-group-item-action @(Model == "Details" ? "active" : "")" asp-page="/Restaurant/Index">Restaurant details</a>
+	<a class="list-group-item list-group-item-action @(Model == "Hours" ? "active" : "")" asp-page="/Restaurant/Hours">Opening hours and closures</a>
+	<a class="list-group-item list-group-item-action @(Model == "Areas" ? "active" : "")" asp-page="/Restaurant/Areas">Dining areas</a>
+	<a class="list-group-item list-group-item-action @(Model == "Tables" ? "active" : "")" asp-page="/Restaurant/Tables">Tables</a>
+	<a class="list-group-item list-group-item-action @(Model == "Categories" ? "active" : "")" asp-page="/Restaurant/Categories">Menu categories</a>
+</nav>

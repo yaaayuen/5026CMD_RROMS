@@ -14,8 +14,14 @@
 </section>
 
 <div class="row g-4">
-	<div class="col-lg-8">
-		<section class="tg-card" aria-labelledby="details-heading">
+	<div class="col-lg-3">
+		<div class="sticky-lg-top" style="top: calc(50vh - 8rem);">
+			<partial name="_RestaurantNav" model='"Details"' />
+		</div>
+	</div>
+	
+	<div class="col-lg-9">
+		<section class="tg-card h-auto" aria-labelledby="details-heading">
 			<h2 id="details-heading" class="h4 mb-3">Contact details</h2>
 
 			<form method="post" novalidate>

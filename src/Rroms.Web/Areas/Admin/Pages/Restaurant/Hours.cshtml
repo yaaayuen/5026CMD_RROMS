@@ -1,0 +1,128 @@
+﻿@page
+@model HoursModel
+@{
+	ViewData["Title"] = "Opening hours";
+}
+
+<section class="hero hero-compact mb-4" aria-labelledby="hours-heading">
+	<span class="hero-bubble one" aria-hidden="true"></span>
+	<div class="position-relative">
+		<span class="eyebrow">Restaurant setup</span>
+		<h1 id="hours-heading" class="mb-1">Opening hours and closures</h1>
+		<p class="lead mb-0">Customers can only book when the restaurant is open.</p>
+	</div>
+</section>
+
+<div class="row g-4">
+	<div class="col-lg-3">
+		<div class="sticky-lg-top" style="top: calc(50vh - 8rem);">
+			<partial name="_RestaurantNav" model='"Hours"' />
+		</div>
+	</div>
+
+	<div class="col-lg-9">
+		<section class="tg-card h-auto mb-4" aria-labelledby="week-heading">
+			<h2 id="week-heading" class="h4 mb-3">Weekly hours</h2>
+			<p class="text-secondary small">Malaysia time. Save each day separately.</p>
+
+			<div class="table-responsive">
+				<table class="table align-middle">
+					<thead>
+						<tr>
+							<th scope="col">Day</th>
+							<th scope="col">Opens</th>
+							<th scope="col">Closes</th>
+							<th scope="col">Closed all day</th>
+							<th scope="col"><span class="visually-hidden">Save</span></th>
+						</tr>
+					</thead>
+					<tbody>
+						@foreach (Rroms.Web.Models.OperatingHour hour in Model.Hours)
+						{
+							string formId = $"day-{hour.DayOfWeek}";
+							<tr>
+								<th scope="row">@hour.DayOfWeek</th>
+								<td>
+									<input form="@formId" type="time" name="day.OpensAt" class="form-control"
+										   value="@hour.OpensAt.ToString("HH:mm")" aria-label="@hour.DayOfWeek opens" />
+								</td>
+								<td>
+									<input form="@formId" type="time" name="day.ClosesAt" class="form-control"
+										   value="@hour.ClosesAt.ToString("HH:mm")" aria-label="@hour.DayOfWeek closes" />
+								</td>
+								<td>
+									<input form="@formId" type="checkbox" name="day.IsClosed" value="true" class="form-check-input"
+										   checked="@hour.IsClosed" aria-label="@hour.DayOfWeek closed all day" />
+								</td>
+								<td>
+									<form id="@formId" method="post" asp-page-handler="SaveDay">
+										<input type="hidden" name="day.DayOfWeek" value="@hour.DayOfWeek" />
+										<button type="submit" class="btn btn-sm btn-primary">Save</button>
+									</form>
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<section class="tg-card h-auto" aria-labelledby="closures-heading">
+			<h2 id="closures-heading" class="h4 mb-3">Special closures</h2>
+
+			@if (Model.Closures.Count == 0)
+			{
+				<p class="text-secondary">No closures planned.</p>
+			}
+			else
+			{
+				<ul class="list-group mb-4">
+					@foreach (Rroms.Web.Models.SpecialClosure closure in Model.Closures)
+					{
+						<li class="list-group-item d-flex justify-content-between align-items-center">
+							<span>
+								<strong>@closure.StartDate.ToString("d MMM yyyy")</strong>
+								@if (closure.EndDate != closure.StartDate)
+								{
+									<text> to <strong>@closure.EndDate.ToString("d MMM yyyy")</strong></text>
+								}
+								<span class="text-secondary">· @closure.Reason</span>
+							</span>
+							<form method="post" asp-page-handler="DeleteClosure" asp-route-id="@closure.Id">
+								<button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+							</form>
+						</li>
+					}
+				</ul>
+			}
+
+			<h3 class="h5">Add a closure</h3>
+			<form method="post" asp-page-handler="AddClosure" novalidate>
+				<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+				<div class="row">
+					<div class="col-md-6 mb-3">
+						<label asp-for="ClosureInput.StartDate" class="form-label fw-semibold"></label>
+						<input asp-for="ClosureInput.StartDate" type="date" class="form-control" />
+					</div>
+					<div class="col-md-6 mb-3">
+						<label asp-for="ClosureInput.EndDate" class="form-label fw-semibold"></label>
+						<input asp-for="ClosureInput.EndDate" type="date" class="form-control" />
+					</div>
+				</div>
+
+				<div class="mb-3">
+					<label asp-for="ClosureInput.Reason" class="form-label fw-semibold"></label>
+					<input asp-for="ClosureInput.Reason" class="form-control" placeholder="e.g. Chinese New Year" />
+					<span asp-validation-for="ClosureInput.Reason" class="text-danger small"></span>
+				</div>
+
+				<button type="submit" class="btn btn-primary">Add closure</button>
+			</form>
+		</section>
+	</div>
+</div>
+
+@section Scripts {
+	<partial name="_ValidationScriptsPartial" />
+}
