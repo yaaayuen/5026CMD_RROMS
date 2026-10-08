@@ -43,10 +43,11 @@ public class IndexModel : PageModel
                 "receipt",
                 "Sprint 3 · YJ"),
             new ModuleTileViewModel(
-                "Notifications",
-                "Booking confirmations, order updates and offers.",
-                "bell",
-                "Sprint 1 · YY"),
+                "My profile",
+                "Contact details and dining preferences.",
+                "users",
+                "Sprint 1 · YY",
+                "/Account/Profile"),
             new ModuleTileViewModel(
                 "Ask our assistant",
                 "Questions about the menu, hours or booking.",

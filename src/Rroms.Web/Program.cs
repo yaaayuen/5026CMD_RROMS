@@ -122,6 +122,7 @@ builder.Services.AddRateLimiter(options =>
 // Scoped = one instance per HTTP request, the same lifetime as the DbContext they use.
 builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<IAccountServices, AccountService>();
+builder.Services.AddScoped<IProfileService, ProfileService>();
 
 // Restaurant setup: profile, hours, closures, areas, tables, menu categories (WL-1).
 builder.Services.AddScoped<IRestaurantService, RestaurantService>();
@@ -152,6 +153,9 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AuthorizeAreaFolder("Admin", "/", PolicyNames.AdministratorOnly);
     options.Conventions.AuthorizeAreaFolder("Staff", "/", PolicyNames.StaffOrAdministrator);
     options.Conventions.AuthorizeAreaFolder("Customer", "/", PolicyNames.CustomerOnly);
+    // Pages any signed-in user may use, whatever their role.
+    options.Conventions.AuthorizePage("/Account/Profile");
+    options.Conventions.AuthorizePage("/Account/ChangePassword");
 });
 
 // -----------------------------------------------------------------------------
