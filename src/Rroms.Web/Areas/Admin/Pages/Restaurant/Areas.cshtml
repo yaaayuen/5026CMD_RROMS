@@ -1,0 +1,100 @@
+﻿@page "{id:int?}"
+@model AreasModel
+@{
+	ViewData["Title"] = "Dining areas";
+	bool isEditing = Model.EditingId.HasValue;
+}
+
+<section class="hero hero-compact mb-4" aria-labelledby="areas-heading">
+	<span class="hero-bubble one" aria-hidden="true"></span>
+	<div class="position-relative">
+		<span class="eyebrow">Restaurant setup</span>
+		<h1 id="areas-heading" class="mb-1">Dining areas</h1>
+		<p class="lead mb-0">Group tables into areas such as the main hall or the patio.</p>
+	</div>
+</section>
+
+<div class="row g-4">
+	<div class="col-lg-3">
+		<div class="sticky-lg-top" style="top: calc(50vh - 8rem);">
+			<partial name="_RestaurantNav" model='"Areas"' />
+		</div>
+	</div>
+
+	<div class="col-lg-9">
+		<section class="tg-card h-auto mb-4" aria-labelledby="list-heading">
+			<h2 id="list-heading" class="h4 mb-3">All areas</h2>
+
+			<div class="table-responsive">
+				<table class="table align-middle">
+					<thead>
+						<tr>
+							<th scope="col">Name</th>
+							<th scope="col">Description</th>
+							<th scope="col">Status</th>
+							<th scope="col"><span class="visually-hidden">Edit</span></th>
+						</tr>
+					</thead>
+					<tbody>
+						@foreach (Rroms.Web.Models.DiningArea area in Model.Areas)
+						{
+							<tr class="@(area.Id == Model.EditingId ? "table-warning" : "")">
+								<th scope="row">@area.Name</th>
+								<td class="text-secondary">@area.Description</td>
+								<td>
+									@if (area.IsActive)
+									{
+										<span class="badge text-bg-success">Open for bookings</span>
+									}
+									else
+									{
+										<span class="badge text-bg-secondary">Inactive</span>
+									}
+								</td>
+								<td class="text-end">
+									<a class="btn btn-sm btn-outline-primary" asp-page="/Restaurant/Areas" asp-route-id="@area.Id">Edit</a>
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<section class="tg-card h-auto" aria-labelledby="form-heading">
+			<h2 id="form-heading" class="h4 mb-3">@(isEditing ? $"Edit {Model.EditingName}" : "Add an area")</h2>
+
+			<form method="post" asp-route-id="@Model.EditingId" novalidate>
+				<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+				<div class="mb-3">
+					<label asp-for="Input.Name" class="form-label fw-semibold"></label>
+					<input asp-for="Input.Name" class="form-control" placeholder="e.g. Rooftop" />
+					<span asp-validation-for="Input.Name" class="text-danger small"></span>
+				</div>
+
+				<div class="mb-3">
+					<label asp-for="Input.Description" class="form-label fw-semibold"></label>
+					<input asp-for="Input.Description" class="form-control" placeholder="e.g. Outdoor, covered" />
+					<span asp-validation-for="Input.Description" class="text-danger small"></span>
+				</div>
+
+				<div class="form-check mb-3">
+					<input asp-for="Input.IsActive" class="form-check-input" />
+					<label asp-for="Input.IsActive" class="form-check-label"></label>
+					<div class="form-text">Untick to hide every table in this area from customer bookings.</div>
+				</div>
+
+				<button type="submit" class="btn btn-primary">@(isEditing ? "Save changes" : "Add area")</button>
+				@if (isEditing)
+				{
+					<a class="btn btn-link" asp-page="/Restaurant/Areas" asp-route-id="">Cancel</a>
+				}
+			</form>
+		</section>
+	</div>
+</div>
+
+@section Scripts {
+	<partial name="_ValidationScriptsPartial" />
+}
