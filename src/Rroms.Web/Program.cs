@@ -85,6 +85,14 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
 });
 
+// Re-check every signed-in user's security stamp each minute (default is 30 minutes).
+// When an administrator deactivates a user or changes their role (YY-5), the stamp changes,
+// so that user's existing cookie stops working within a minute.
+builder.Services.Configure<SecurityStampValidatorOptions>(options =>
+{
+    options.ValidationInterval = TimeSpan.FromMinutes(1);
+});
+
 // ----- Configuration objects (Options pattern) -----
 // Each class is filled from its appsettings.json section and injected as IOptions<T>.
 builder.Services.Configure<BootstrapAdminOptions>(
@@ -121,8 +129,9 @@ builder.Services.AddRateLimiter(options =>
 // ----- Application services -----
 // Scoped = one instance per HTTP request, the same lifetime as the DbContext they use.
 builder.Services.AddScoped<DatabaseSeeder>();
-builder.Services.AddScoped<IAccountServices, AccountService>();
-builder.Services.AddScoped<IProfileService, ProfileService>();
+builder.Services.AddScoped<IAccountServices, AccountService>(); //YY-2
+builder.Services.AddScoped<IProfileService, ProfileService>(); //YY-4
+builder.Services.AddScoped<IUserAdministrationService, UserAdministrationService>();  //YY-5
 
 // Restaurant setup: profile, hours, closures, areas, tables, menu categories (WL-1).
 builder.Services.AddScoped<IRestaurantService, RestaurantService>();
