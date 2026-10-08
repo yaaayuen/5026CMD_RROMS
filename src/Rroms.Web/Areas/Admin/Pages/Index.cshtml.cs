@@ -26,7 +26,8 @@ public class IndexModel : PageModel
                 "Restaurant setup",
                 "Dining areas, tables, opening hours and menu categories.",
                 "settings",
-                "Sprint 2 · WL"),
+                "Sprint 2 · WL",
+                "/Admin/Restaurant"),
             new ModuleTileViewModel(
                 "Menu items",
                 "Dishes, prices, availability, offers and photos.",
