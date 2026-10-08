@@ -1,0 +1,57 @@
+﻿@page
+@model IndexModel
+@{
+	ViewData["Title"] = "Restaurant setup";
+}
+
+<section class="hero hero-compact mb-4" aria-labelledby="restaurant-heading">
+	<span class="hero-bubble one" aria-hidden="true"></span>
+	<div class="position-relative">
+		<span class="eyebrow">Restaurant setup</span>
+		<h1 id="restaurant-heading" class="mb-1">Restaurant details</h1>
+		<p class="lead mb-0">The name and contact details customers see on the website.</p>
+	</div>
+</section>
+
+<div class="row g-4">
+	<div class="col-lg-8">
+		<section class="tg-card" aria-labelledby="details-heading">
+			<h2 id="details-heading" class="h4 mb-3">Contact details</h2>
+
+			<form method="post" novalidate>
+				<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+				<div class="mb-3">
+					<label asp-for="Input.Name" class="form-label fw-semibold"></label>
+					<input asp-for="Input.Name" class="form-control" />
+					<span asp-validation-for="Input.Name" class="text-danger small"></span>
+				</div>
+
+				<div class="mb-3">
+					<label asp-for="Input.Address" class="form-label fw-semibold"></label>
+					<textarea asp-for="Input.Address" class="form-control" rows="2"></textarea>
+					<span asp-validation-for="Input.Address" class="text-danger small"></span>
+				</div>
+
+				<div class="row">
+					<div class="col-md-6 mb-3">
+						<label asp-for="Input.Phone" class="form-label fw-semibold"></label>
+						<input asp-for="Input.Phone" class="form-control" autocomplete="tel" />
+						<span asp-validation-for="Input.Phone" class="text-danger small"></span>
+					</div>
+					<div class="col-md-6 mb-3">
+						<label asp-for="Input.Email" class="form-label fw-semibold"></label>
+						<input asp-for="Input.Email" class="form-control" autocomplete="email" />
+						<span asp-validation-for="Input.Email" class="text-danger small"></span>
+					</div>
+				</div>
+
+				<button type="submit" class="btn btn-primary">Save changes</button>
+			</form>
+		</section>
+	</div>
+</div>
+
+@section Scripts {
+	<partial name="_ValidationScriptsPartial" />
+}
