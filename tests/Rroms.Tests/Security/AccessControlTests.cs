@@ -45,6 +45,7 @@ public class AccessControlTests : IClassFixture<TestWebApplicationFactory>
     [InlineData("/Staff")]
     [InlineData("/Customer")]
     [InlineData("/Account/Profile")]
+    [InlineData("/Admin/Accounts")]
     public async Task Anonymous_IsSentToLogin(string url)
     {
         HttpClient client = await ClientForRoleAsync(null);
@@ -61,6 +62,8 @@ public class AccessControlTests : IClassFixture<TestWebApplicationFactory>
     [InlineData(RoleNames.Staff, "/Admin")]
     [InlineData(RoleNames.Staff, "/Customer")]
     [InlineData(RoleNames.Administrator, "/Customer")]
+    [InlineData(RoleNames.Customer, "/Admin/Accounts")]
+    [InlineData(RoleNames.Staff, "/Admin/Accounts/Create")]
     public async Task OtherRole_IsDenied(string roleName, string url)
     {
         HttpClient client = await ClientForRoleAsync(roleName);
