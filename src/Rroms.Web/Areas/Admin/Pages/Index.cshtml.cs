@@ -36,7 +36,8 @@ public class IndexModel : PageModel
                 "Accounts and roles",
                 "Create staff accounts, assign roles and deactivate users.",
                 "users",
-                "Sprint 1 · YY"),
+                "Sprint 1 · YY",
+                "/Admin/Accounts"),
             new ModuleTileViewModel(
                 "Announcements",
                 "Promotional campaigns and restaurant notices.",
