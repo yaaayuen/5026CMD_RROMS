@@ -16,7 +16,7 @@ namespace Rroms.Web.Areas.Admin.Pages.Restaurant;
 /// data as a parameter instead of [BindProperty], so saving one day does not also validate the
 /// empty "add closure" form.
 /// </remarks>
-/// 
+
 public class HoursModel : PageModel
 {
     private readonly IRestaurantService _restaurantService;
@@ -50,6 +50,12 @@ public class HoursModel : PageModel
     /// <param name="day">The posted row.</param>
     public async Task<IActionResult> OnPostSaveDayAsync(OperatingHourInput day)
     {
+        if (!ModelState.IsValid)
+        {
+            TempData["ErrorMessage"] = $"Enter both times for {day.DayOfWeek}.";
+            return RedirectToPage();    
+        }
+
         ServiceResult result = await _restaurantService.UpdateOperatingHourAsync(day);
 
         if (result.Succeeded)
