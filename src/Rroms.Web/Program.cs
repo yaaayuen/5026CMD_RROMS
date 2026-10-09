@@ -136,6 +136,9 @@ builder.Services.AddScoped<IUserAdministrationService, UserAdministrationService
 // Restaurant setup: profile, hours, closures, areas, tables, menu categories (WL-1).
 builder.Services.AddScoped<IRestaurantService, RestaurantService>();
 
+// Menu items: dishes, prices, availability and offers (YJ-1).
+builder.Services.AddScoped<IMenuService, MenuService>();
+
 // Temporary notification implementation; replaced by the real one in YY-6.
 builder.Services.AddScoped<INotificationService, LoggingNotificationService>();
 
