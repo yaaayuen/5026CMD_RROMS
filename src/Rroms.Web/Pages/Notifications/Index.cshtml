@@ -1,0 +1,88 @@
+﻿@page
+@model Rroms.Web.Pages.Notifications.IndexModel
+@using Rroms.Web.Common
+@using Rroms.Web.Contracts
+@using Rroms.Web.Security
+@{
+    ViewData["Title"] = "Notifications";
+}
+
+@functions {
+    // Picks an icon and colour for each notification category.
+    private static string IconFor(NotificationType type)
+    {
+        switch (type)
+        {
+            case NotificationType.ReservationConfirmed:
+            case NotificationType.ReservationUpdated:
+            case NotificationType.ReservationCancelled:
+                return "calendar";
+            case NotificationType.OrderUpdated:
+                return "flame";
+            case NotificationType.PaymentConfirmed:
+                return "receipt";
+            case NotificationType.Promotion:
+                return "megaphone";
+            default:
+                return "bell";
+        }
+    }
+}
+
+<a href="@User.GetHomePath()" class="d-inline-block mb-3">&larr; Back to dashboard</a>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="section-title mb-1">Notifications</h1>
+        <p class="section-subtitle mb-0">
+            @(Model.UnreadCount == 0 ? "You're all caught up." : $"{Model.UnreadCount} unread")
+        </p>
+    </div>
+    @if (Model.UnreadCount > 0)
+    {
+        <form method="post" asp-page-handler="MarkAllRead">
+            <button type="submit" class="btn btn-outline-primary">Mark all as read</button>
+        </form>
+    }
+</div>
+
+@if (Model.Notifications.Count == 0)
+{
+    <div class="tg-card text-center py-5">
+        <span class="tg-icon gold"><partial name="_Icon" model='"bell"' /></span>
+        <h2 class="h5">No notifications yet</h2>
+        <p class="text-secondary mb-0">Booking confirmations, order updates and offers will appear here.</p>
+    </div>
+}
+else
+{
+    <ul class="list-unstyled d-grid gap-3 mb-0" aria-label="Your notifications">
+        @foreach (var notification in Model.Notifications)
+        {
+            string stateClass = notification.IsRead ? "is-read" : "is-unread";
+            <li>
+                @* Each item is a small POST form: opening it marks it read on the server, then follows its link. *@
+                <form method="post" asp-page-handler="Open" asp-route-id="@notification.Id" class="tg-card notification-item @stateClass">
+                    <div class="d-flex gap-3 align-items-start">
+                        <span class="tg-icon raspberry flex-shrink-0 mb-0"><partial name="_Icon" model="IconFor(notification.Type)" /></span>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between gap-2">
+                                <h2 class="h6 mb-1">
+                                    @if (!notification.IsRead)
+                                    {
+                                        <span class="visually-hidden">Unread: </span>
+                                    }
+                                    @notification.Title
+                                </h2>
+                                <small class="text-secondary text-nowrap">@MalaysiaTime.FromUtc(notification.CreatedAtUtc).ToString("d MMM, h:mm tt")</small>
+                            </div>
+                            <p class="mb-2 text-secondary">@notification.Message</p>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">
+                                @(string.IsNullOrEmpty(notification.LinkUrl) ? "Mark as read" : "Open")
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </li>
+        }
+    </ul>
+}

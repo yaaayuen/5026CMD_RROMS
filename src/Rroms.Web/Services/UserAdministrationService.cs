@@ -6,6 +6,7 @@ using Rroms.Web.Constants;
 using Rroms.Web.Data;
 using Rroms.Web.Models;
 using Rroms.Web.Models.ViewModels;
+using Rroms.Web.Contracts;
 
 namespace Rroms.Web.Services;
 
@@ -29,16 +30,19 @@ public class UserAdministrationService : IUserAdministrationService
 
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<UserAdministrationService> _logger;
 
     //All depencies are supplied by dependency injection
     public UserAdministrationService(
         ApplicationDbContext context,
         UserManager<ApplicationUser> userManager,
+        INotificationService notificationService,
         ILogger<UserAdministrationService> logger)
     {
         _context = context;
         _userManager = userManager;
+        _notificationService = notificationService;
         _logger = logger;
     }
 
@@ -267,6 +271,13 @@ public class UserAdministrationService : IUserAdministrationService
         //Clear any lockout so the user can sign in with the new password straight away.
         await _userManager.SetLockoutEndDateAsync(user, null);
         await _userManager.ResetAccessFailedCountAsync(user);
+
+        // Security notice (YY-6): an unexpected reset should never go unnoticed by the account owner.
+        await _notificationService.NotifyUserAsync(
+            user.Id,
+            NotificationType.General,
+            "Your password was reset",
+            "An administrator has reset your password. If you did not ask for this, please contact the restaurant.");
 
         _logger.LogInformation("Password reset by administrator for account {UserId}.", userId);
         return ServiceResult.Success();

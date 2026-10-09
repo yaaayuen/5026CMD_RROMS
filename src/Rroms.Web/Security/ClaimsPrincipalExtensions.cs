@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.Security.Claims;
+using Rroms.Web.Constants;
 
 namespace Rroms.Web.Security;
 
@@ -19,5 +20,26 @@ public static class ClaimsPrincipalExtensions
         }
 
         return userId;
+    }
+
+    //Returns the dashboard for the signed-in user's role (YY-6), used by "Back to dashboard" links.
+    public static string GetHomePath(this ClaimsPrincipal user)
+    {
+        if (user.IsInRole(RoleNames.Administrator))
+        {
+            return "/Admin";
+        }
+
+        if (user.IsInRole(RoleNames.Staff))
+        {
+            return "/Staff";
+        }
+
+        if (user.IsInRole(RoleNames.Customer))
+        {
+            return "/Customer";
+        }
+
+        return "/";
     }
 }

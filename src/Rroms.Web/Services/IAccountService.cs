@@ -9,7 +9,7 @@ namespace Rroms.Web.Services;
 /// so the security rules live in one tested class.
 /// </summary>
 
-public interface IAccountServices
+public interface IAccountService
 {
     //Creates a new customer account, adds it to the Customer role and signs the user in.
     Task<ServiceResult<ApplicationUser>> RegisterCustomerAsync(string fullName, string email, string? phoneNumber, string password);

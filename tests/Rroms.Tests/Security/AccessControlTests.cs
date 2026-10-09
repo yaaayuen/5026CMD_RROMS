@@ -46,6 +46,7 @@ public class AccessControlTests : IClassFixture<TestWebApplicationFactory>
     [InlineData("/Customer")]
     [InlineData("/Account/Profile")]
     [InlineData("/Admin/Accounts")]
+    [InlineData("/Notifications")]
     public async Task Anonymous_IsSentToLogin(string url)
     {
         HttpClient client = await ClientForRoleAsync(null);

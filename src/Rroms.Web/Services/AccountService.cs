@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using Rroms.Web.Common;
 using Rroms.Web.Models;
 using Rroms.Web.Constants;
+using Rroms.Web.Contracts;
 
 namespace Rroms.Web.Services;
 
@@ -10,7 +11,7 @@ namespace Rroms.Web.Services;
 /// Handles user registration, sign-in, and sign-out. This service abstracts the underlying Identity framework, providing a centralized point for authentication logic and security rules. It ensures that all account-related operations are performed consistently and securely across the application.
 /// </summary>
 
-public class AccountService : IAccountServices 
+public class AccountService : IAccountService 
 {
     //Shown for every failed login attempt, only one same message to avoid revealing whether the email exists or not.
     public const string InvalidLoginMessage = "Invalid email or password.";
@@ -27,6 +28,7 @@ public class AccountService : IAccountServices
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly IdentityOptions _identityOptions;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<AccountService> _logger;
 
     //All dependencies are injected via constructor, following the Dependency Injection pattern.
@@ -34,11 +36,13 @@ public class AccountService : IAccountServices
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
         IOptions<IdentityOptions> identityOptions,
+        INotificationService notificationService,
         ILogger<AccountService> logger)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _identityOptions = identityOptions.Value;
+        _notificationService = notificationService;
         _logger = logger;
     }
 
@@ -77,6 +81,14 @@ public class AccountService : IAccountServices
 
         //isPersistent: false - the cookie ends when the browser closes, until the user chooses "remember me" at login.
         await _signInManager.SignInAsync(user, isPersistent: false);
+
+        // Welcome message (YY-6): appears in the new customer's inbox and is emailed to them.
+        await _notificationService.NotifyUserAsync(
+            user.Id,
+            NotificationType.General,
+            $"Welcome to {SiteInfo.RestaurantName}",
+            "Your account is ready. You can now book a table, order from your seat and follow your food live.",
+            "/Customer");
 
         _logger.LogInformation("New customer account {UserId} registered.", user.Id);
         return ServiceResult<ApplicationUser>.Success(user);

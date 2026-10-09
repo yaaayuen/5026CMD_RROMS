@@ -18,6 +18,8 @@ using Rroms.Web.Data;
 using Rroms.Web.Models;
 using Rroms.Web.Options;
 using Rroms.Web.Services;
+using Rroms.Web.Hubs;
+using Rroms.Web.Services.Email;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -101,6 +103,8 @@ builder.Services.Configure<ReservationRulesOptions>(
     builder.Configuration.GetSection(ReservationRulesOptions.SectionName));
 builder.Services.Configure<AuthRateLimitOptions>(
     builder.Configuration.GetSection(AuthRateLimitOptions.SectionName));
+builder.Services.Configure<SmtpOptions>(
+    builder.Configuration.GetSection(SmtpOptions.SectionName));
 
 // ----- Rate limiting for the login and registration forms (YY-2) -----
 // Each IP address gets its own fixed window of requests. Requests over the limit receive
@@ -129,15 +133,26 @@ builder.Services.AddRateLimiter(options =>
 // ----- Application services -----
 // Scoped = one instance per HTTP request, the same lifetime as the DbContext they use.
 builder.Services.AddScoped<DatabaseSeeder>();
-builder.Services.AddScoped<IAccountServices, AccountService>(); //YY-2
+builder.Services.AddScoped<IAccountService, AccountService>(); //YY-2
 builder.Services.AddScoped<IProfileService, ProfileService>(); //YY-4
 builder.Services.AddScoped<IUserAdministrationService, UserAdministrationService>();  //YY-5
 
 // Restaurant setup: profile, hours, closures, areas, tables, menu categories (WL-1).
 builder.Services.AddScoped<IRestaurantService, RestaurantService>();
 
-// Temporary notification implementation; replaced by the real one in YY-6.
-builder.Services.AddScoped<INotificationService, LoggingNotificationService>();
+// ----- Notifications (YY-6) -----
+// One class serves both interfaces: modules publish through INotificationService,
+// the inbox page and bell read through INotificationInbox.
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<INotificationInbox, NotificationService>();
+builder.Services.AddScoped<INotificationPusher, SignalRNotificationPusher>();
+builder.Services.AddSignalR();
+
+// Email: pages add to an in-memory queue (singleton, shared by all requests);
+// a background service sends from the queue through Gmail.
+builder.Services.AddSingleton<IEmailQueue, EmailQueue>();
+builder.Services.AddSingleton<IEmailDelivery, SmtpEmailDelivery>();
+builder.Services.AddHostedService<EmailBackgroundService>();
 
 // ----- Authorization policies (YY-3) -----
 // Each policy names a rule once; folders and pages refer to it by name.
@@ -165,6 +180,7 @@ builder.Services.AddRazorPages(options =>
     // Pages any signed-in user may use, whatever their role.
     options.Conventions.AuthorizePage("/Account/Profile");
     options.Conventions.AuthorizePage("/Account/ChangePassword");
+    options.Conventions.AuthorizeFolder("/Notifications");
 });
 
 // -----------------------------------------------------------------------------
@@ -194,6 +210,7 @@ app.UseAuthentication();     // Read the auth cookie and identify the user.
 app.UseAuthorization();      // Check the user is allowed to see that page.
 
 app.MapRazorPages();
+app.MapHub<NotificationHub>(NotificationHub.Path); // Live notifications (YY-6).
 
 // -----------------------------------------------------------------------------
 // 3. START-UP: prepare the database, then start listening for requests

@@ -16,10 +16,10 @@ namespace Rroms.Web.Pages.Account;
 [EnableRateLimiting(AuthRateLimitOptions.PolicyName)]
 public class LoginModel : PageModel
 {
-    private readonly IAccountServices _accountService;
+    private readonly IAccountService _accountService;
 
     //Receives the account service from dependency injection
-    public LoginModel(IAccountServices accountService)
+    public LoginModel(IAccountService accountService)
     {
         _accountService = accountService;
     }
