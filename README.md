@@ -24,6 +24,11 @@ Shared rules every member must follow: [docs/shared-contracts.md](docs/shared-co
      }
    }
    ```
+   To send real notification emails, also add (Gmail with 2-Step Verification and an **app password**):
+   ```json
+   "Smtp": { "FromAddress": "team@gmail.com", "Username": "team@gmail.com", "Password": "the-16-char-app-password" }
+   ```
+   Without these, email is skipped and logged; in-app notifications still work.
    The password needs 10+ characters with upper case, lower case, a digit and a symbol.
    Secrets are stored outside the project folder and are **never committed**.
 3. **Create the database** (once the initial migration is on `main`, see below). Running the app in Development applies migrations automatically
@@ -40,6 +45,10 @@ The initial migration must be generated on a machine with the EF tools:
 ```
 Add-Migration S1_YY_InitialIdentity -OutputDir Data/Migrations
 ```
+
+This one migration creates the Identity tables and the Notifications table (YY-6).
+If `S1_YY_InitialIdentity` was already created before YY-6, add a second one instead:
+`Add-Migration S1_YY_Notifications -OutputDir Data/Migrations`.
 
 Commit the generated `Data/Migrations` folder. Everyone else just pulls and runs.
 

@@ -21,7 +21,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     }
 
     // ----- Sprint 1 (YY): accounts and notifications -----
-    // Users and roles come from IdentityDbContext. Notification table is added in YY-6.
+    // Users and roles come from IdentityDbContext. 
+
+    /// <summary>Notification inbox rows (YY-6).</summary>
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     // ----- Sprint 2 (WL): restaurant setup and reservations -----
 
@@ -84,6 +87,20 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         {
             // Admin account lists filter by active status, so index it.
             user.HasIndex(u => u.IsActive);
+        });
+
+        // ----- Sprint 1 (YY): notifications -----
+        builder.Entity<Notification>(notification =>
+        {
+            // Each notification belongs to one user. Deleting a user deletes their notifications.
+            notification.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // The bell badge asks "how many unread for this user?" on every page load;
+            // this index answers it without scanning the table.
+            notification.HasIndex(n => new { n.UserId, n.IsRead, n.CreatedAtUtc });
         });
 
         // Sprint 2 (WL): restaurant setup rules and seed data live in their own file.

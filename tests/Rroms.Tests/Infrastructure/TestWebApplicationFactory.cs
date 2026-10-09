@@ -10,6 +10,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Rroms.Web.Data;
 using Rroms.Web.Models;
+using Rroms.Web.Services;
+using Rroms.Web.Services.Email;
 
 namespace Rroms.Tests.Infrastructure;
 
@@ -34,6 +36,12 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
     /// so the factory keeps it open until it is disposed.
     /// </summary>
     private readonly SqliteConnection _connection;
+
+    /// <summary>Records live pushes instead of using SignalR (YY-6 tests check it).</summary>
+    public RecordingNotificationPusher Pusher { get; } = new RecordingNotificationPusher();
+
+    /// <summary>Records queued emails instead of sending them through Gmail (YY-6 tests check it).</summary>
+    public RecordingEmailQueue EmailQueue { get; } = new RecordingEmailQueue();
 
     /// <summary>Opens the private in-memory database for this factory.</summary>
     public TestWebApplicationFactory()
@@ -75,6 +83,12 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
                 DbConnection connection = serviceProvider.GetRequiredService<DbConnection>();
                 options.UseSqlite(connection);
             });
+
+            // Replace live push and email with recording fakes, so tests never need a browser or Gmail.
+            services.RemoveAll<INotificationPusher>();
+            services.AddSingleton<INotificationPusher>(Pusher);
+            services.RemoveAll<IEmailQueue>();
+            services.AddSingleton<IEmailQueue>(EmailQueue);
         });
     }
 

@@ -22,10 +22,10 @@ public class RegisterModel : PageModel
     //Where a new customer lands after registering
     private const string CustomerHomePath = "/Customer";
 
-    private readonly IAccountServices _accountService;
+    private readonly IAccountService _accountService;
 
     //Receives the account service from dependency injection
-    public RegisterModel(IAccountServices accountService)
+    public RegisterModel(IAccountService accountService)
     {
         _accountService = accountService;
     }
