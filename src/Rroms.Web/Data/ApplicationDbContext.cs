@@ -45,6 +45,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
 
     // ----- Sprint 3 (YJ): menu and orders -----
+    /// <summary>Dishes and drinks on the menu; each belongs to one MenuCategory.</summary>
+    public DbSet<MenuItem> MenuItems => Set<MenuItem>();
 
     // ----- Sprint 4 (Alex): announcements and feedback -----
 
@@ -86,5 +88,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         // Sprint 2 (WL): restaurant setup rules and seed data live in their own file.
         RestaurantSetupConfiguration.Configure(builder);
+
+        // YJ (Sprint 3): menu rules
+        MenuConfiguration.Configure(builder);
     }
 }
