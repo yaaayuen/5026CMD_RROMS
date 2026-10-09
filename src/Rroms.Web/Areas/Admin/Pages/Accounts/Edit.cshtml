@@ -1,0 +1,95 @@
+﻿@page "{id}"
+@model Rroms.Web.Areas.Admin.Pages.Accounts.EditModel
+@using Rroms.Web.Common
+@{
+    ViewData["Title"] = "Edit account";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <a asp-page="Index" class="d-inline-block mb-3">&larr; Back to accounts</a>
+
+        <div class="row g-4">
+            <div class="col-md-7">
+                <section class="tg-card" aria-labelledby="edit-heading">
+                    <h1 id="edit-heading" class="h3 mb-1">@Model.Account.FullName</h1>
+                    <p class="text-secondary mb-4">@Model.Account.Email</p>
+
+                    <form method="post" novalidate>
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="Input.FullName" class="form-label fw-semibold"></label>
+                            <input asp-for="Input.FullName" class="form-control" />
+                            <span asp-validation-for="Input.FullName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Input.PhoneNumber" class="form-label fw-semibold"></label>
+                            <input asp-for="Input.PhoneNumber" class="form-control" />
+                            <span asp-validation-for="Input.PhoneNumber" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Input.RoleName" class="form-label fw-semibold"></label>
+                            @* Disabled controls are not posted, so for their own account the admin's current values are sent in hidden fields. *@
+                            @if (Model.IsOwnAccount)
+                            {
+                                <input type="hidden" asp-for="Input.RoleName" />
+                                <input class="form-control" value="@Model.Input.RoleName" disabled aria-describedby="own-account-help" />
+                            }
+                            else
+                            {
+                                <select asp-for="Input.RoleName" class="form-select">
+                                    @foreach (string roleName in RoleNames.All)
+                                    {
+                                        <option value="@roleName">@roleName</option>
+                                    }
+                                </select>
+                            }
+                            <span asp-validation-for="Input.RoleName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="form-check form-switch mb-4">
+                            @if (Model.IsOwnAccount)
+                            {
+                                <input type="hidden" name="Input.IsActive" value="true" />
+                                <input class="form-check-input" type="checkbox" id="active-locked" checked disabled aria-describedby="own-account-help" />
+                                <label class="form-check-label" for="active-locked">Account is active</label>
+                            }
+                            else
+                            {
+                                <input asp-for="Input.IsActive" class="form-check-input" role="switch" />
+                                <label asp-for="Input.IsActive" class="form-check-label"></label>
+                            }
+                        </div>
+
+                        @if (Model.IsOwnAccount)
+                        {
+                            <p id="own-account-help" class="form-text mb-3">You cannot change your own role or deactivate yourself. Ask another administrator.</p>
+                        }
+
+                        <button type="submit" class="btn btn-primary">Save changes</button>
+                    </form>
+                </section>
+            </div>
+
+            <div class="col-md-5">
+                <aside class="tg-card" aria-labelledby="account-info-heading">
+                    <h2 id="account-info-heading" class="h5">Account</h2>
+                    <dl class="mb-3">
+                        <dt class="small text-secondary">Joined</dt>
+                        <dd>@MalaysiaTime.FromUtc(Model.Account.CreatedAtUtc).ToString("d MMM yyyy, h:mm tt")</dd>
+                        <dt class="small text-secondary">Status</dt>
+                        <dd>@(Model.Account.IsActive ? "Active" : "Deactivated")</dd>
+                    </dl>
+                    <a class="btn btn-outline-primary w-100" asp-page="ResetPassword" asp-route-id="@Model.Account.Id">Reset password</a>
+                </aside>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
