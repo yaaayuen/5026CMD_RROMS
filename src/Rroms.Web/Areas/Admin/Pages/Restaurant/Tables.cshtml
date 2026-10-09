@@ -1,0 +1,114 @@
+﻿@page "{id:int?}"
+@model TablesModel
+@{
+	ViewData["Title"] = "Tables";
+	bool isEditing = Model.EditingId.HasValue;
+}
+
+<section class="hero hero-compact mb-4" aria-labelledby="tables-heading">
+	<span class="hero-bubble one" aria-hidden="true"></span>
+	<div class="position-relative">
+		<span class="eyebrow">Restaurant setup</span>
+		<h1 id="tables-heading" class="mb-1">Tables</h1>
+		<p class="lead mb-0">Every table customers can book, with its seats and area.</p>
+	</div>
+</section>
+
+<div class="row g-4">
+	<div class="col-lg-3">
+		<div class="sticky-lg-top" style="top: calc(50vh - 8rem);">
+			<partial name="_RestaurantNav" model='"Tables"' />
+		</div>
+	</div>
+
+	<div class="col-lg-9">
+		<section class="tg-card h-auto mb-4" aria-labelledby="list-heading">
+			<h2 id="list-heading" class="h4 mb-3">All tables</h2>
+
+			<div class="table-responsive">
+				<table class="table align-middle">
+					<thead>
+						<tr>
+							<th scope="col">Table</th>
+							<th scope="col">Area</th>
+							<th scope="col">Seats</th>
+							<th scope="col">Status</th>
+							<th scope="col"><span class="visually-hidden">Edit</span></th>
+						</tr>
+					</thead>
+					<tbody>
+						@foreach (Rroms.Web.Models.DiningTable table in Model.Tables)
+						{
+							<tr class="@(table.Id == Model.EditingId ? "table-warning" : "")">
+								<th scope="row">@table.Label</th>
+								<td>@table.DiningArea?.Name</td>
+								<td>@table.Capacity</td>
+								<td>
+									@if (TablesModel.IsBookable(table))
+									{
+										<span class="badge text-bg-success">Bookable</span>
+									}
+									else if (!table.IsActive)
+									{
+										<span class="badge text-bg-secondary">Inactive</span>
+									}
+									else
+									{
+										<span class="badge text-bg-warning">Area inactive</span>
+									}
+								</td>
+								<td class="text-end">
+									<a class="btn btn-sm btn-outline-primary" asp-page="/Restaurant/Tables" asp-route-id="@table.Id">Edit</a>
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<section class="tg-card h-auto" aria-labelledby="form-heading">
+			<h2 id="form-heading" class="h4 mb-3">@(isEditing ? $"Edit table {Model.EditingLabel}" : "Add a table")</h2>
+
+			<form method="post" asp-route-id="@Model.EditingId" novalidate>
+				<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+				<div class="row">
+					<div class="col-md-4 mb-3">
+						<label asp-for="Input.Label" class="form-label fw-semibold"></label>
+						<input asp-for="Input.Label" class="form-control" placeholder="e.g. T07" />
+						<span asp-validation-for="Input.Label" class="text-danger small"></span>
+					</div>
+					<div class="col-md-4 mb-3">
+						<label asp-for="Input.Capacity" class="form-label fw-semibold"></label>
+						<input asp-for="Input.Capacity" class="form-control"
+							   min="@Rroms.Web.Models.DiningTable.MinCapacity" max="@Rroms.Web.Models.DiningTable.MaxCapacity" />
+						<span asp-validation-for="Input.Capacity" class="text-danger small"></span>
+					</div>
+					<div class="col-md-4 mb-3">
+						<label asp-for="Input.DiningAreaId" class="form-label fw-semibold"></label>
+						<select asp-for="Input.DiningAreaId" asp-items="Model.AreaOptions" class="form-select">
+							<option value="0">Choose an area</option>
+						</select>
+						<span asp-validation-for="Input.DiningAreaId" class="text-danger small"></span>
+					</div>
+				</div>
+
+				<div class="form-check mb-3">
+					<input asp-for="Input.IsActive" class="form-check-input" />
+					<label asp-for="Input.IsActive" class="form-check-label"></label>
+				</div>
+
+				<button type="submit" class="btn btn-primary">@(isEditing ? "Save changes" : "Add table")</button>
+				@if (isEditing)
+				{
+					<a class="btn btn-link" asp-page="/Restaurant/Tables" asp-route-id="">Cancel</a>
+				}
+			</form>
+		</section>
+	</div>
+</div>
+
+@section Scripts {
+	<partial name="_ValidationScriptsPartial" />
+}
