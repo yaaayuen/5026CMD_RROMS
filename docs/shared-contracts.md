@@ -28,9 +28,24 @@ Razor Pages (UI)  →  Services (business rules)  →  ApplicationDbContext (EF 
 | `Options/` | Settings classes bound from `appsettings.json` |
 | `Data/` | `ApplicationDbContext`, seeder, migrations |
 
-## 3. Roles
+## 3. Roles, access and the current user
 
 Use `RoleNames.Administrator`, `RoleNames.Staff`, `RoleNames.Customer`. Never type the strings.
+
+**Access is already enforced by folder (YY-3)** in `Program.cs`, so you do not add `[Authorize]` to pages:
+
+| Folder | Who can open it |
+|---|---|
+| `Areas/Admin/Pages/**` | Administrator |
+| `Areas/Staff/Pages/**` | Staff or Administrator |
+| `Areas/Customer/Pages/**` | Customer |
+| `/Account/Profile`, `/Account/ChangePassword`, `/Notifications` | any signed-in user |
+| everything else in `Pages/` | everyone (public) |
+
+**Current user rule (ownership):** get the signed-in user's ID with `User.GetUserId()`
+(`using Rroms.Web.Security;`). Never take a user ID from a form, query string or hidden field.
+Pass it to your service and filter by it, e.g. `.Where(r => r.CustomerId == userId)`.
+If a record is not found **or belongs to someone else**, return 404 in both cases.
 
 ## 4. Status values (`Contracts/`)
 
@@ -57,7 +72,11 @@ await _notificationService.NotifyUserAsync(
     $"/Customer/Reservations/Details/{reservation.Id}");
 ```
 
-Until YY-6 merges, calls are only written to the log. **You do not need to change your code when the real version arrives.**
+What happens (YY-6): the notification is saved to the user's inbox, pushed live to any open tab
+(SignalR hub at `/hubs/notifications`), and emailed through a background queue. A Gmail failure never
+breaks your action. **Call it after your own `SaveChangesAsync`**, because it saves on the shared DbContext.
+`NotifyRoleAsync(RoleNames.Staff, ...)` reaches every active staff member.
+Live tracking (AL-3) can reuse `IHubContext<NotificationHub>` with its own message name.
 
 ## 6. Reservation rules (`Options/ReservationRulesOptions.cs`)
 

@@ -42,25 +42,7 @@ public class ProfileModel : PageModel
     //Where Cancel goes: the dashboard for the user's role, so they can leave without saving.
     public string HomePath
     {
-        get
-        {
-            if (Details.RoleName == RoleNames.Administrator)
-            {
-                return "/Admin";
-            }
-
-            if (Details.RoleName == RoleNames.Staff)
-            {
-                return "/Staff";
-            }
-
-            if (Details.RoleName == RoleNames.Customer)
-            {
-                return "/Customer";
-            }
-
-            return "/";
-        }
+        get { return User.GetHomePath(); }
     }
 
     //Loads the signed-in user's profile into the form

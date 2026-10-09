@@ -1,0 +1,15 @@
+﻿@*
+    Bell link with unread badge. The data-* attributes tell notifications.js where to connect
+    for live updates and where to poll if the live connection is unavailable.
+*@
+@model int
+
+<a class="notification-bell"
+   asp-area="" asp-page="/Notifications/Index"
+   data-notification-bell
+   data-hub-url="@Rroms.Web.Hubs.NotificationHub.Path"
+   data-count-url="@Url.Page("/Notifications/Index", "UnreadCount", new { area = "" })"
+   aria-label="Notifications, @Model unread">
+    <partial name="_Icon" model='"bell"' />
+    <span class="notification-badge @(Model == 0 ? "d-none" : "")" data-notification-count>@Model</span>
+</a>

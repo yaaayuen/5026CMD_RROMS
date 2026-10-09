@@ -1,10 +1,12 @@
 ﻿@page
 @model Rroms.Web.Pages.Account.ProfileModel
 @using Rroms.Web.Common
+@using Rroms.Web.Security
 @{
 	ViewData["Title"] = "My profile";
 }
 
+<a href="@User.GetHomePath()" class="d-inline-block mb-3">&larr; Back to dashboard</a>
 <section class="hero hero-compact mb-4" aria-labelledby="profile-heading">
 	<span class="hero-bubble one" aria-hidden="true"></span>
 	<div class="position-relative">
@@ -45,11 +47,7 @@
 						<span asp-validation-for="Input.DiningPreferences" class="text-danger small"></span>
 					</div>
 				}
-
-				<div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">Save changes</button>
-                    <a class="btn btn-outline-primary" href="@Model.HomePath">Back to Dashboard</a>
-                </div>
+				                <button type="submit" class="btn btn-primary">Save changes</button>
 			</form>
 		</section>
 	</div>

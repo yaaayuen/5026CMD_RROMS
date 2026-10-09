@@ -40,7 +40,8 @@ Razor Pages (UI)  →  Services (business rules)  →  ApplicationDbContext (EF 
 - Business-rule failures return `ServiceResult` / `ServiceResult<T>` (`Common/ServiceResult.cs`); the PageModel copies `Errors` into `ModelState`.
   Exceptions are only for unexpected failures.
 - Shared enums in `Contracts/`: `ReservationStatus`, `OrderStatus`, `PaymentStatus`, `PaymentMethod`, `NotificationType`. Stored as text.
-- Notifications: inject `INotificationService` and call `NotifyUserAsync(...)` / `NotifyRoleAsync(...)` after saving.
+- Notifications: inject `INotificationService` and call `NotifyUserAsync(...)` / `NotifyRoleAsync(...)` after saving (inbox + SignalR push + Gmail queue).
+- Access: Admin/Staff/Customer areas are already protected by folder policies. Current user ID: `User.GetUserId()` (never from form input); someone else's record → 404.
 - Booking rules: `IOptions<ReservationRulesOptions>` (120-min visit, 30-min slots, 90 days ahead, party 1–20). Never hard-code them.
 - Time: store UTC (`...Utc` properties), display with `MalaysiaTime.FromUtc`, read form input with `MalaysiaTime.ToUtc`.
 - Money: `decimal` only (stored as decimal(10,2) by convention). Never `double`.

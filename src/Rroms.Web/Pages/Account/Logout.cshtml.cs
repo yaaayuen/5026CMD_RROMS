@@ -12,10 +12,10 @@ namespace Rroms.Web.Pages.Account;
 
 public class LogoutModel : PageModel
 {
-    private readonly IAccountServices _accountService;
+    private readonly IAccountService _accountService;
 
     //Receives the account service from dependency injection
-    public LogoutModel(IAccountServices accountService)
+    public LogoutModel(IAccountService accountService)
     {
         _accountService = accountService;
     }
