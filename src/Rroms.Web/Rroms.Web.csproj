@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <RootNamespace>Rroms.Web</RootNamespace>
@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <!-- ASP.NET Core Identity stored in our SQL Server database through Entity Framework Core. -->
+    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="14.17.2" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.12" />
 
     <!-- EF Core provider for SQL Server (managed with SQL Server Management Studio). -->
@@ -22,7 +23,6 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="SixLabors.ImageSharp" Version="4.1.2" />
   </ItemGroup>
 
 </Project>

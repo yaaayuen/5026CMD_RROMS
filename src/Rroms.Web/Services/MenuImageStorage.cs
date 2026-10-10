@@ -1,11 +1,10 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿using ImageMagick;
+
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
 
 using Rroms.Web.Common;
 using Rroms.Web.Options;
-
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
 
 namespace Rroms.Web.Services;
 
@@ -14,10 +13,10 @@ namespace Rroms.Web.Services;
 /// wwwroot (the folder comes from <see cref="MenuImageOptions"/>).
 /// </summary>
 /// <remarks>
-/// Safety rules: the user's file name is never used (only its extension), 
-/// the file is decoded and saved again
-/// so a renamed non-image or an image with hidden data cannot be stored as it came, 
-/// and delete only ever touches the photo folder.
+/// Safety rules: the user's file name is never used (only its extension), the file must decode as exactly
+/// the format its extension claims, it is saved again without metadata (so hidden data and GPS locations
+/// are dropped), and delete only ever touches the photo folder.
+/// Uses Magick.NET (Apache 2.0 licence, no licence key needed).
 /// </remarks>
 public class MenuImageStorage : IMenuImageStorage
 {
@@ -33,8 +32,13 @@ public class MenuImageStorage : IMenuImageStorage
     /// <summary>Error shown when the content is not a real image, whatever the file name says.</summary>
     public const string NotAnImageMessage = "That file is not a valid image.";
 
-    /// <summary>ImageSharp scales proportionally when one of the two sizes is zero.</summary>
-    private const int KeepAspectRatio = 0;
+    private const string JpgExtension = ".jpg";
+    private const string JpegExtension = ".jpeg";
+    private const string PngExtension = ".png";
+    private const string WebpExtension = ".webp";
+
+    /// <summary>The smallest height a resized photo may have, so a very wide strip never becomes zero pixels high.</summary>
+    private const uint MinHeightPixels = 1;
 
     private readonly MenuImageOptions _options;
     private readonly IWebHostEnvironment _environment;
@@ -69,32 +73,45 @@ public class MenuImageStorage : IMenuImageStorage
             return ServiceResult<string>.Failure(InvalidTypeMessage);
         }
 
-        Image? loaded = await TryLoadImageAsync(content);
+        MagickFormat? format = GetFormat(extension);
+
+        if (format == null)
+        {
+            return ServiceResult<string>.Failure(InvalidTypeMessage);
+        }
+
+        MagickImage? loaded = TryLoadImage(content, format.Value);
 
         if (loaded == null)
         {
             return ServiceResult<string>.Failure(NotAnImageMessage);
         }
 
-        using Image image = loaded;
+        using MagickImage image = loaded;
+
+        // Phone photos are often stored sideways with a rotation note; apply it, then drop all metadata.
+        image.AutoOrient();
+        image.Strip();
 
         // Never enlarge a small photo, only shrink a wide one.
-        if (image.Width > _options.MaxWidthPixels)
+        if (image.Width > (uint)_options.MaxWidthPixels)
         {
-            int targetWidth = _options.MaxWidthPixels;
-            image.Mutate(operation => operation.Resize(targetWidth, KeepAspectRatio));
+            uint targetWidth = (uint)_options.MaxWidthPixels;
+            double scale = (double)targetWidth / image.Width;
+            uint targetHeight = Math.Max(MinHeightPixels, (uint)Math.Round(image.Height * scale));
+
+            image.Resize(targetWidth, targetHeight);
         }
 
         string folderPath = GetFolderPath();
         Directory.CreateDirectory(folderPath);
 
-        // A random name stops one upload overwriting another
-        // and keeps the user's text out of the file system.
+        // A random name stops one upload overwriting another and keeps the user's text out of the file system.
         string storedName = Guid.NewGuid().ToString("N") + extension;
         string fullPath = Path.Combine(folderPath, storedName);
 
-        // ImageSharp picks the encoder (JPEG, PNG or WebP) from the file extension.
-        await image.SaveAsync(fullPath);
+        // The encoder (JPEG, PNG or WebP) is chosen from the file extension.
+        await image.WriteAsync(fullPath);
 
         return ServiceResult<string>.Success(storedName);
     }
@@ -102,8 +119,7 @@ public class MenuImageStorage : IMenuImageStorage
     /// <inheritdoc />
     public void Delete(string fileName)
     {
-        // GetFileName removes any folder part,
-        // so "../../secret.txt" can only ever mean "secret.txt" in the photo folder.
+        // GetFileName removes any folder part, so "../../secret.txt" can only ever mean "secret.txt" in the photo folder.
         string safeName = Path.GetFileName(fileName);
 
         if (safeName.Length == 0)
@@ -134,33 +150,45 @@ public class MenuImageStorage : IMenuImageStorage
         return Path.Combine(_environment.WebRootPath, _options.RelativeFolder);
     }
 
-    /// <summary>
-    /// Tries to read the bytes as an image. 
-    /// Returns null when they are not one, which is a normal
-    /// bad-input case for the user to fix, not an application error.
-    /// </summary>
-    private static async Task<Image?> TryLoadImageAsync(Stream content)
+    /// <summary>Maps an allowed extension to the one image format it may contain, or null when it is not supported.</summary>
+    /// <param name="extension">A lower-case extension with its dot, for example ".png".</param>
+    private static MagickFormat? GetFormat(string extension)
     {
-        try
+        switch (extension)
         {
-            return await Image.LoadAsync(content);
-        }
-        catch (Exception exception) when (IsBadImageException(exception))
-        {
-            return null;
+            case JpgExtension:
+            case JpegExtension:
+                return MagickFormat.Jpeg;
+            case PngExtension:
+                return MagickFormat.Png;
+            case WebpExtension:
+                return MagickFormat.WebP;
+            default:
+                return null;
         }
     }
 
     /// <summary>
-    /// True for the errors ImageSharp throws when the bytes are not a readable image: an unknown format
-    /// (for example plain text), damaged content, or a format with no decoder.
+    /// Tries to read the bytes as the format the extension claims. Returns null when they are not that
+    /// kind of image, which is a normal bad-input case for the user to fix, not an application error.
     /// </summary>
-    /// <param name="exception">The error thrown while reading the upload.</param>
-    private static bool IsBadImageException(Exception exception)
+    /// <param name="content">The uploaded bytes.</param>
+    /// <param name="format">The only format the file is allowed to be.</param>
+    private static MagickImage? TryLoadImage(Stream content, MagickFormat format)
     {
-        return exception is UnknownImageFormatException
-            || exception is InvalidImageContentException
-            || exception is ImageProcessingException
-            || exception is NotSupportedException;
+        // Forcing one format means a renamed text file, or a file of another type, fails to decode.
+        MagickReadSettings settings = new MagickReadSettings
+        {
+            Format = format
+        };
+
+        try
+        {
+            return new MagickImage(content, settings);
+        }
+        catch (MagickException)
+        {
+            return null;
+        }
     }
 }

@@ -1,5 +1,7 @@
 ﻿using System.Text;
 
+using ImageMagick;
+
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.FileProviders;
 
@@ -7,17 +9,13 @@ using Rroms.Web.Common;
 using Rroms.Web.Options;
 using Rroms.Web.Services;
 
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-
 namespace Rroms.Tests.Menu;
 
 /// <summary>
 /// Unit tests for the YJ-1 photo rules in <see cref="MenuImageStorage"/>.
 /// </summary>
 /// <remarks>
-/// Every test follows Arrange (prepare data) - Act (call the method) 
-/// - Assert (check the result).
+/// Every test follows Arrange (prepare data) - Act (call the method) - Assert (check the result).
 /// Each test class instance saves into its own temporary folder, which is deleted afterwards,
 /// so tests never leave files behind and never touch the real wwwroot.
 /// </remarks>
@@ -61,12 +59,12 @@ public class MenuImageStorageTests : IDisposable
         return new MenuImageStorage(Microsoft.Extensions.Options.Options.Create(options), environment);
     }
 
-    /// <summary>Builds a real, blank PNG of the given size in memory.</summary>
+    /// <summary>Builds a real, plain white PNG of the given size in memory.</summary>
     private static MemoryStream CreatePngStream(int width, int height)
     {
-        using Image<Rgba32> image = new Image<Rgba32>(width, height);
+        using MagickImage image = new MagickImage(MagickColors.White, (uint)width, (uint)height);
         MemoryStream stream = new MemoryStream();
-        image.SaveAsPng(stream);
+        image.Write(stream, MagickFormat.Png);
         stream.Position = 0;
 
         return stream;
@@ -105,11 +103,12 @@ public class MenuImageStorageTests : IDisposable
         // Act
         ServiceResult<string> result = await _storage.SaveAsync(upload, "wide.png");
 
-        // Assert
+        // Assert: the width is at the limit and the shape is kept (1600x200 becomes 800x100).
         Assert.True(result.Succeeded);
         Assert.NotNull(result.Value);
-        using Image saved = await Image.LoadAsync(PhotoPath(result.Value));
-        Assert.Equal(_options.MaxWidthPixels, saved.Width);
+        using MagickImage saved = new MagickImage(PhotoPath(result.Value));
+        Assert.Equal(_options.MaxWidthPixels, (int)saved.Width);
+        Assert.Equal(ImageHeight / 2, (int)saved.Height);
     }
 
     [Fact]
@@ -124,8 +123,8 @@ public class MenuImageStorageTests : IDisposable
         // Assert
         Assert.True(result.Succeeded);
         Assert.NotNull(result.Value);
-        using Image saved = await Image.LoadAsync(PhotoPath(result.Value));
-        Assert.Equal(SmallImageWidth, saved.Width);
+        using MagickImage saved = new MagickImage(PhotoPath(result.Value));
+        Assert.Equal(SmallImageWidth, (int)saved.Width);
     }
 
     [Theory]
@@ -149,12 +148,26 @@ public class MenuImageStorageTests : IDisposable
     [Fact]
     public async Task Save_TextFileRenamedToJpg_IsRejected()
     {
-        // Arrange: an allowed extension is not enough, the content must decode as an image.
+        // Arrange: an allowed extension is not enough, the content must decode as that kind of image.
         byte[] notAnImage = Encoding.UTF8.GetBytes("This is just text, not a picture.");
         using MemoryStream upload = new MemoryStream(notAnImage);
 
         // Act
         ServiceResult<string> result = await _storage.SaveAsync(upload, "fake.jpg");
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains(MenuImageStorage.NotAnImageMessage, result.Errors);
+    }
+
+    [Fact]
+    public async Task Save_PngRenamedToJpg_IsRejected()
+    {
+        // Arrange: a real image, but of a different type than its name claims.
+        using MemoryStream upload = CreatePngStream(SmallImageWidth, ImageHeight);
+
+        // Act
+        ServiceResult<string> result = await _storage.SaveAsync(upload, "pretend.jpg");
 
         // Assert
         Assert.False(result.Succeeded);
