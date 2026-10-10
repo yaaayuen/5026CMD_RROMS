@@ -446,6 +446,66 @@ namespace Rroms.Web.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Rroms.Web.Models.MenuItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ImageFileName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsAvailable")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("MenuCategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime?>("PromoEndUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("PromoPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime?>("PromoStartUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MenuCategoryId");
+
+                    b.ToTable("MenuItems", t =>
+                        {
+                            t.HasCheckConstraint("CK_MenuItems_PricePositive", "[Price] > 0");
+
+                            t.HasCheckConstraint("CK_MenuItems_PromoConsistent", "[PromoPrice] IS NULL OR ([PromoPrice] > 0 AND [PromoPrice] < [Price] AND [PromoStartUtc] IS NOT NULL AND [PromoEndUtc] IS NOT NULL AND [PromoEndUtc] > [PromoStartUtc])");
+                        });
+                });
+
             modelBuilder.Entity("Rroms.Web.Models.Notification", b =>
                 {
                     b.Property<int>("Id")
@@ -718,6 +778,17 @@ namespace Rroms.Web.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("DiningArea");
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.MenuItem", b =>
+                {
+                    b.HasOne("Rroms.Web.Models.MenuCategory", "MenuCategory")
+                        .WithMany()
+                        .HasForeignKey("MenuCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("MenuCategory");
                 });
 
             modelBuilder.Entity("Rroms.Web.Models.Notification", b =>
