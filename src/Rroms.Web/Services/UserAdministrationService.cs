@@ -117,7 +117,7 @@ public class UserAdministrationService : IUserAdministrationService
     }
 
     public async Task<ServiceResult<string>> CreateUserAsync(
-        string fullName, string email, string? phoneNumber, string password, string roleName)
+        string fullName, string email, string? phoneNumber, string roleName)
     {
         if (!RoleNames.All.Contains(roleName))
         {
@@ -129,8 +129,8 @@ public class UserAdministrationService : IUserAdministrationService
         {
             UserName = cleanEmail,
             Email = cleanEmail,
-            // An administrator is vouching for this address, so it is treated as confirmed.
-            EmailConfirmed = true,
+            // Not confirmed yet: it becomes confirmed when the person proves they own the inbox by setting their password with an emailed code (YY-7).
+            EmailConfirmed = false,
             FullName = fullName.Trim(),
             PhoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber.Trim(),
             IsActive = true,
@@ -141,14 +141,16 @@ public class UserAdministrationService : IUserAdministrationService
         //transaction means we never end up with a user who has no role.
         //EnableRetryOnFailure is on, so a manual transaction must run inside the execution strategy.
         IExecutionStrategy strategy = _context.Database.CreateExecutionStrategy();
-        return await strategy.ExecuteAsync(async () =>
+        ServiceResult<string> result = await strategy.ExecuteAsync(async () =>
         {
             await using IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
 
-            IdentityResult createResult = await _userManager.CreateAsync(user, password);
+            // No password: the administrator never chooses or sees it (YY-7). Until the person sets one
+            // with an emailed code, nobody can sign in to this account.
+            IdentityResult createResult = await _userManager.CreateAsync(user);
             if (!createResult.Succeeded)
             {
-                //Returning without CommitAsync rolls the transaction back when it is disposed.
+                // Returning without CommitAsync rolls the transaction back when it is disposed.
                 return ServiceResult<string>.Failure(createResult.Errors.Select(error => error.Description).ToArray());
             }
 
@@ -162,6 +164,20 @@ public class UserAdministrationService : IUserAdministrationService
             _logger.LogInformation("Administrator created {Role} account {UserId}.", roleName, user.Id);
             return ServiceResult<string>.Success(user.Id);
         });
+
+        if (result.Succeeded)
+        {
+            //Invitation (YY-7), sent only after the commit so nobody is invited to an account that was rolled back.
+            //The link only pre-fills the email on the "Set or reset your password" page; the secret part is the 6-digit code the person requests there, which goes to this inbox and expires in minutes.
+            await _notificationService.NotifyUserAsync(
+                user.Id,
+                NotificationType.General,
+                $"You have been invited to {SiteInfo.RestaurantName}",
+                $"An administrator created a {roleName} account for you. Open the link, request a code and choose your own password.",
+                $"/Account/ForgotPassword?email={Uri.EscapeDataString(cleanEmail)}");
+        }
+
+        return result;
     }
 
     public async Task<ServiceResult> UpdateUserAsync(
@@ -249,38 +265,6 @@ public class UserAdministrationService : IUserAdministrationService
                 actingUserId, userId, roleName, isActive);
             return ServiceResult.Success();
         });
-    }
-
-    public async Task<ServiceResult> ResetPasswordAsync(string userId, string newPassword)
-    {
-        ApplicationUser? user = await _userManager.FindByIdAsync(userId);
-        if (user == null)
-        {
-            return ServiceResult.Failure(UserNotFoundMessage);
-        }
-
-        //Identity only resets a password with a one-time token, even for administrators.
-        //Generating and immediately using the token keeps Identity's normal checks (policy, security stamp).
-        string resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
-        IdentityResult result = await _userManager.ResetPasswordAsync(user, resetToken, newPassword);
-        if (!result.Succeeded)
-        {
-            return ServiceResult.Failure(result.Errors.Select(error => error.Description).ToArray());
-        }
-
-        //Clear any lockout so the user can sign in with the new password straight away.
-        await _userManager.SetLockoutEndDateAsync(user, null);
-        await _userManager.ResetAccessFailedCountAsync(user);
-
-        // Security notice (YY-6): an unexpected reset should never go unnoticed by the account owner.
-        await _notificationService.NotifyUserAsync(
-            user.Id,
-            NotificationType.General,
-            "Your password was reset",
-            "An administrator has reset your password. If you did not ask for this, please contact the restaurant.");
-
-        _logger.LogInformation("Password reset by administrator for account {UserId}.", userId);
-        return ServiceResult.Success();
     }
 
     //Returns the user's role, or an empty string if they have none.

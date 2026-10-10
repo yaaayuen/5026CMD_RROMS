@@ -40,7 +40,7 @@ public class CreateModel : PageModel
         }
 
         ServiceResult<string> result = await _userAdministration.CreateUserAsync(
-            Input.FullName, Input.Email, Input.PhoneNumber, Input.Password, Input.RoleName);
+            Input.FullName, Input.Email, Input.PhoneNumber, Input.RoleName);
 
         if (!result.Succeeded)
         {
@@ -82,12 +82,5 @@ public class CreateModel : PageModel
         [Required(ErrorMessage = "Choose a role.")]
         [Display(Name = "Role")]
         public string RoleName { get; set; } = string.Empty;
-
-        //Temporary password the administrator gives to the new user
-        [Required(ErrorMessage = "Set a temporary password.")]
-        [StringLength(100, MinimumLength = 10, ErrorMessage = "Password must be at least 10 characters.")]
-        [DataType(DataType.Password)]
-        [Display(Name = "Temporary password")]
-        public string Password { get; set; } = string.Empty;
     }
 }

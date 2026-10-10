@@ -136,6 +136,7 @@ builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<IAccountService, AccountService>(); //YY-2
 builder.Services.AddScoped<IProfileService, ProfileService>(); //YY-4
 builder.Services.AddScoped<IUserAdministrationService, UserAdministrationService>();  //YY-5
+builder.Services.AddScoped<IAccountSecurityService, AccountSecurityService>(); //YY-7
 
 // Restaurant setup: profile, hours, closures, areas, tables, menu categories (WL-1).
 builder.Services.AddScoped<IRestaurantService, RestaurantService>();
@@ -180,6 +181,7 @@ builder.Services.AddRazorPages(options =>
     // Pages any signed-in user may use, whatever their role.
     options.Conventions.AuthorizePage("/Account/Profile");
     options.Conventions.AuthorizePage("/Account/ChangePassword");
+    options.Conventions.AuthorizePage("/Account/TwoStep");
     options.Conventions.AuthorizeFolder("/Notifications");
 });
 

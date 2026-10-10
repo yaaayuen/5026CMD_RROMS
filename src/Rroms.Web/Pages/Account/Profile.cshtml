@@ -63,7 +63,10 @@
 				<dt class="small text-secondary">Member since</dt>
 				<dd>@MalaysiaTime.FromUtc(Model.Details.CreatedAtUtc).ToString("d MMM yyyy")</dd>
 			</dl>
-			<a class="btn btn-outline-primary w-100" asp-page="/Account/ChangePassword">Change password</a>
+				<a class="btn btn-outline-primary w-100 mb-2" asp-page="/Account/ChangePassword">Change password</a>
+				<a class="btn btn-outline-primary w-100" asp-page="/Account/TwoStep">
+					Two-step sign-in: @(Model.Details.TwoStepEnabled ? "On" : "Off")
+				</a>
 		</aside>
 	</div>
 </div>

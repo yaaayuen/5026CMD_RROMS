@@ -1,0 +1,43 @@
+﻿@page
+@model Rroms.Web.Pages.Account.LoginWithCodeModel
+@{
+    ViewData["Title"] = "Enter your code";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-5">
+        <a asp-page="/Account/Login" class="d-inline-block mb-3">&larr; Back to sign in</a>
+
+        <section class="tg-card auth-card" aria-labelledby="code-heading">
+            <span class="tg-icon coral"><partial name="_Icon" model='"lock"' /></span>
+            <h1 id="code-heading" class="h2 mb-1">Check your email</h1>
+            <p class="text-secondary mb-4">Two-step sign-in is on. Enter the 6-digit code we just emailed you.</p>
+
+            <form method="post" novalidate>
+                <input type="hidden" asp-for="ReturnUrl" />
+                <input type="hidden" asp-for="RememberMe" />
+
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                <div class="mb-4">
+                    <label asp-for="Code" class="form-label fw-semibold"></label>
+                    <input asp-for="Code" class="form-control form-control-lg" inputmode="numeric" maxlength="6" autocomplete="one-time-code" autofocus />
+                    <span asp-validation-for="Code" class="text-danger small"></span>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg w-100">Sign in</button>
+            </form>
+
+            @* A separate form, so "Resend" never needs a code to be typed. *@
+            <form method="post" asp-page-handler="Resend" class="text-center mt-3">
+                <input type="hidden" asp-for="ReturnUrl" />
+                <input type="hidden" asp-for="RememberMe" />
+                <button type="submit" class="btn btn-link p-0">Didn't get it? Send a new code</button>
+            </form>
+        </section>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
