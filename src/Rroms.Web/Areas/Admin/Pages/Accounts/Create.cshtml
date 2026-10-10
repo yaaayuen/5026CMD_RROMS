@@ -1,64 +1,61 @@
 ﻿@page
 @model Rroms.Web.Areas.Admin.Pages.Accounts.CreateModel
 @{
-    ViewData["Title"] = "New account";
+	ViewData["Title"] = "New account";
 }
 
 <div class="row justify-content-center">
-    <div class="col-lg-7">
-        <a asp-page="Index" class="d-inline-block mb-3">&larr; Back to accounts</a>
+	<div class="col-lg-7">
+		<a asp-page="Index" class="d-inline-block mb-3">&larr; Back to accounts</a>
 
-        <section class="tg-card" aria-labelledby="create-heading">
-            <h1 id="create-heading" class="h3 mb-1">New account</h1>
-            <p class="text-secondary mb-4">Use this for staff and administrators. Customers can also register themselves.</p>
+		<section class="tg-card" aria-labelledby="create-heading">
+			<h1 id="create-heading" class="h3 mb-1">New account</h1>
+			<p class="text-secondary mb-4">Use this for staff and administrators. Customers can also register themselves.</p>
 
-            <form method="post" novalidate>
-                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+			<form method="post" novalidate>
+				<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
-                <div class="mb-3">
-                    <label asp-for="Input.FullName" class="form-label fw-semibold"></label>
-                    <input asp-for="Input.FullName" class="form-control" />
-                    <span asp-validation-for="Input.FullName" class="text-danger small"></span>
-                </div>
+				<div class="mb-3">
+					<label asp-for="Input.FullName" class="form-label fw-semibold"></label>
+					<input asp-for="Input.FullName" class="form-control" />
+					<span asp-validation-for="Input.FullName" class="text-danger small"></span>
+				</div>
 
-                <div class="row g-3 mb-3">
-                    <div class="col-sm-7">
-                        <label asp-for="Input.Email" class="form-label fw-semibold"></label>
-                        <input asp-for="Input.Email" class="form-control" autocomplete="off" />
-                        <span asp-validation-for="Input.Email" class="text-danger small"></span>
-                    </div>
-                    <div class="col-sm-5">
-                        <label asp-for="Input.PhoneNumber" class="form-label fw-semibold"></label>
-                        <input asp-for="Input.PhoneNumber" class="form-control" />
-                        <span asp-validation-for="Input.PhoneNumber" class="text-danger small"></span>
-                    </div>
-                </div>
+				<div class="row g-3 mb-3">
+					<div class="col-sm-7">
+						<label asp-for="Input.Email" class="form-label fw-semibold"></label>
+						<input asp-for="Input.Email" class="form-control" autocomplete="off" />
+						<span asp-validation-for="Input.Email" class="text-danger small"></span>
+					</div>
+					<div class="col-sm-5">
+						<label asp-for="Input.PhoneNumber" class="form-label fw-semibold"></label>
+						<input asp-for="Input.PhoneNumber" class="form-control" />
+						<span asp-validation-for="Input.PhoneNumber" class="text-danger small"></span>
+					</div>
+				</div>
 
-                <div class="row g-3 mb-4">
-                    <div class="col-sm-5">
-                        <label asp-for="Input.RoleName" class="form-label fw-semibold"></label>
-                        <select asp-for="Input.RoleName" class="form-select">
-                            @foreach (string roleName in RoleNames.All)
-                            {
-                                <option value="@roleName">@roleName</option>
-                            }
-                        </select>
-                        <span asp-validation-for="Input.RoleName" class="text-danger small"></span>
-                    </div>
-                    <div class="col-sm-7">
-                        <label asp-for="Input.Password" class="form-label fw-semibold"></label>
-                        <input asp-for="Input.Password" class="form-control" autocomplete="new-password" aria-describedby="temp-password-help" />
-                        <div id="temp-password-help" class="form-text">10+ characters with upper case, lower case, a number and a symbol.</div>
-                        <span asp-validation-for="Input.Password" class="text-danger small"></span>
-                    </div>
-                </div>
+				<div class="mb-3" style="max-width: 16rem;">
+					<label asp-for="Input.RoleName" class="form-label fw-semibold"></label>
+					<select asp-for="Input.RoleName" class="form-select">
+						@foreach (string roleName in RoleNames.All)
+						{
+							<option value="@roleName">@roleName</option>
+						}
+					</select>
+					<span asp-validation-for="Input.RoleName" class="text-danger small"></span>
+				</div>
 
-                <button type="submit" class="btn btn-primary">Create account</button>
-            </form>
-        </section>
-    </div>
+				<p class="form-text mb-4">
+					No password is set here. The person receives an invitation email and chooses their own
+					password with a 6-digit code, so nobody else ever knows it.
+				</p>
+
+				<button type="submit" class="btn btn-primary">Create account</button>
+			</form>
+		</section>
+	</div>
 </div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
+	<partial name="_ValidationScriptsPartial" />
 }

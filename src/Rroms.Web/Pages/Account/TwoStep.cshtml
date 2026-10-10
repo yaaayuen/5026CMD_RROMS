@@ -1,0 +1,69 @@
+﻿@page
+@model Rroms.Web.Pages.Account.TwoStepModel
+@{
+    ViewData["Title"] = "Two-step sign-in";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <a asp-page="/Account/Profile" class="d-inline-block mb-3">&larr; Back to profile</a>
+
+        <section class="tg-card" aria-labelledby="twostep-heading">
+            <span class="tg-icon coral"><partial name="_Icon" model='"lock"' /></span>
+            <h1 id="twostep-heading" class="h2 mb-1">Two-step sign-in</h1>
+            <p class="text-secondary mb-3">
+                When it's on, signing in needs your password <strong>and</strong> a 6-digit code sent to your email.
+                Someone who learns your password still can't get in.
+            </p>
+
+            <p class="mb-4">
+                Status:
+                @if (Model.IsEnabled)
+                {
+                    <span class="badge text-bg-success">On</span>
+                }
+                else
+                {
+                    <span class="badge text-bg-secondary">Off</span>
+                }
+            </p>
+
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            @if (!Model.IsEnabled && !Model.CodeSent)
+            {
+                @* Step 1: prove the email address works before relying on it for sign-in. *@
+                <form method="post" asp-page-handler="SendCode">
+                    <button type="submit" class="btn btn-primary">Turn on: email me a code</button>
+                </form>
+            }
+            else if (!Model.IsEnabled)
+            {
+                @* Step 2: enter the code to finish turning it on. *@
+                <form method="post" asp-page-handler="Enable" novalidate>
+                    <div class="mb-3" style="max-width: 14rem;">
+                        <label asp-for="Code" class="form-label fw-semibold"></label>
+                        <input asp-for="Code" class="form-control form-control-lg" inputmode="numeric" maxlength="6" autocomplete="one-time-code" autofocus />
+                        <span asp-validation-for="Code" class="text-danger small"></span>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Turn on two-step sign-in</button>
+                </form>
+                <form method="post" asp-page-handler="SendCode" class="mt-2">
+                    <button type="submit" class="btn btn-link p-0">Send a new code</button>
+                </form>
+            }
+            else
+            {
+                @* Turning it off weakens the account, so the current password is required. *@
+                <form method="post" asp-page-handler="Disable" novalidate>
+                    <div class="mb-3">
+                        <label asp-for="CurrentPassword" class="form-label fw-semibold"></label>
+                        <input asp-for="CurrentPassword" class="form-control" autocomplete="current-password" />
+                        <span asp-validation-for="CurrentPassword" class="text-danger small"></span>
+                    </div>
+                    <button type="submit" class="btn btn-outline-danger">Turn off two-step sign-in</button>
+                </form>
+            }
+        </section>
+    </div>
+</div>
