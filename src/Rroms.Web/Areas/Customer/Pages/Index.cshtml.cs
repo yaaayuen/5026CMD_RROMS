@@ -26,7 +26,8 @@ public class IndexModel : PageModel
                 "Book a table",
                 "Choose a time and party size; we show only free tables.",
                 "calendar",
-                "Sprint 2 · WL"),
+                "Sprint 2 · WL",
+                "/Customer/Reservations/Book"),
             new ModuleTileViewModel(
                 "Menu and ordering",
                 "Browse the menu and order to your table.",
