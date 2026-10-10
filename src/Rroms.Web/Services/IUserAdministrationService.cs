@@ -19,11 +19,9 @@ public interface IUserAdministrationService
     Task<UserSummary?> GetUserAsync(string userId);
 
     //Creates an account with the given role (used to create staff account)
-    Task<ServiceResult<string>> CreateUserAsync(string fullName, string email, string? phoneNumber, string password, string roleName);
+    Task<ServiceResult<string>> CreateUserAsync(string fullName, string email, string? phoneNumber, string roleName);
 
     //Updates name, phone, role, and active status
     Task<ServiceResult> UpdateUserAsync(string actingUserId, string userId, string fullName, string? phoneNumber, string roleName, bool isActive);
 
-    //Sets a new password for a user who has forgotten theirs
-    Task<ServiceResult> ResetPasswordAsync(string userId, string newPassword);
 }
