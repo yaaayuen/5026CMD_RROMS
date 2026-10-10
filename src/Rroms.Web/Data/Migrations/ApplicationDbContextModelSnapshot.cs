@@ -585,6 +585,88 @@ namespace Rroms.Web.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Rroms.Web.Models.Reservation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CustomerId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("DiningTableId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("EndUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("PartySize")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SpecialRequests")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime>("StartUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DiningTableId");
+
+                    b.HasIndex("CustomerId", "StartUtc");
+
+                    b.HasIndex("StartUtc", "Status");
+
+                    b.ToTable("Reservations", t =>
+                        {
+                            t.HasCheckConstraint("CK_Reservations_EndAfterStart", "[EndUtc] > [StartUtc]");
+                        });
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.ReservationSlot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DiningTableId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ReservationId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("SlotStartUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReservationId");
+
+                    b.HasIndex("DiningTableId", "SlotStartUtc")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ReservationSlots_Table_SlotStart");
+
+                    b.ToTable("ReservationSlots");
+                });
+
             modelBuilder.Entity("Rroms.Web.Models.RestaurantProfile", b =>
                 {
                     b.Property<int>("Id")
@@ -729,9 +811,50 @@ namespace Rroms.Web.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Rroms.Web.Models.Reservation", b =>
+                {
+                    b.HasOne("Rroms.Web.Models.ApplicationUser", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Rroms.Web.Models.DiningTable", "DiningTable")
+                        .WithMany()
+                        .HasForeignKey("DiningTableId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("DiningTable");
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.ReservationSlot", b =>
+                {
+                    b.HasOne("Rroms.Web.Models.DiningTable", null)
+                        .WithMany()
+                        .HasForeignKey("DiningTableId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Rroms.Web.Models.Reservation", "Reservation")
+                        .WithMany("Slots")
+                        .HasForeignKey("ReservationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Reservation");
+                });
+
             modelBuilder.Entity("Rroms.Web.Models.DiningArea", b =>
                 {
                     b.Navigation("Tables");
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.Reservation", b =>
+                {
+                    b.Navigation("Slots");
                 });
 #pragma warning restore 612, 618
         }
