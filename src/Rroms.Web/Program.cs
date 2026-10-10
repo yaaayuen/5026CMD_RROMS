@@ -139,6 +139,8 @@ builder.Services.AddScoped<IUserAdministrationService, UserAdministrationService
 
 // Restaurant setup: profile, hours, closures, areas, tables, menu categories (WL-1).
 builder.Services.AddScoped<IRestaurantService, RestaurantService>();
+// Booking time rules: visit length, slot grid and overlap check, all from ReservationRules (WL-2).
+builder.Services.AddScoped<ReservationTimeRules>();
 
 // ----- Notifications (YY-6) -----
 // One class serves both interfaces: modules publish through INotificationService,
