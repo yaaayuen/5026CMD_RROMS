@@ -136,12 +136,17 @@ builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<IAccountService, AccountService>(); //YY-2
 builder.Services.AddScoped<IProfileService, ProfileService>(); //YY-4
 builder.Services.AddScoped<IUserAdministrationService, UserAdministrationService>();  //YY-5
+builder.Services.AddScoped<IAccountSecurityService, AccountSecurityService>(); //YY-7
 
 // Restaurant setup: profile, hours, closures, areas, tables, menu categories (WL-1).
 builder.Services.AddScoped<IRestaurantService, RestaurantService>();
 // Booking time rules: visit length, slot grid and overlap check, all from ReservationRules (WL-2).
 builder.Services.AddScoped<ReservationTimeRules>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
+
+// Menu items: dishes, prices, availability and offers (YJ-1).
+builder.Services.AddScoped<IMenuService, MenuService>();
+
 // ----- Notifications (YY-6) -----
 // One class serves both interfaces: modules publish through INotificationService,
 // the inbox page and bell read through INotificationInbox.
@@ -182,6 +187,7 @@ builder.Services.AddRazorPages(options =>
     // Pages any signed-in user may use, whatever their role.
     options.Conventions.AuthorizePage("/Account/Profile");
     options.Conventions.AuthorizePage("/Account/ChangePassword");
+    options.Conventions.AuthorizePage("/Account/TwoStep");
     options.Conventions.AuthorizeFolder("/Notifications");
 });
 

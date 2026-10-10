@@ -47,7 +47,8 @@ public class ProfileService : IProfileService
             DiningPreferences = user.DiningPreferences,
             //The team rule is one role per user (enforced by YY-5), so the first role is the role.
             RoleName = roles.FirstOrDefault() ?? string.Empty,
-            CreatedAtUtc = user.CreatedAtUtc
+            CreatedAtUtc = user.CreatedAtUtc,
+            TwoStepEnabled = user.TwoFactorEnabled 
         };
     }
 

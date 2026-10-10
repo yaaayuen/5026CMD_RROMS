@@ -24,4 +24,7 @@ public class ProfileDetails
 
     //Account creation time
     public DateTime CreatedAtUtc { get; set; }
+
+    //True when email two step sign in is on
+    public bool TwoStepEnabled { get; set; }
 }
