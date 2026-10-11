@@ -1,0 +1,112 @@
+﻿@page "{id:int?}"
+@model EditModel
+@{
+	ViewData["Title"] = Model.EditingId.HasValue ? "Edit dish" : "Add a dish";
+	bool isEditing = Model.EditingId.HasValue;
+}
+
+<section class="hero hero-compact mb-4" aria-labelledby="edit-heading">
+	<span class="hero-bubble one" aria-hidden="true"></span>
+	<div class="position-relative">
+		<span class="eyebrow">Menu</span>
+		<h1 id="edit-heading" class="mb-1">@(isEditing ? $"Edit {Model.EditingName}" : "Add a dish")</h1>
+		<p class="lead mb-0">Price, availability, an optional offer and a photo.</p>
+	</div>
+</section>
+
+@if (TempData["PhotoError"] is string photoError)
+{
+	<div class="alert alert-warning" role="alert">@photoError</div>
+}
+
+<section class="tg-card h-auto" aria-labelledby="form-heading">
+	<h2 id="form-heading" class="h4 mb-3">Dish details</h2>
+
+	<form method="post" enctype="multipart/form-data" asp-route-id="@Model.EditingId" novalidate>
+		<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+		<div class="row">
+			<div class="col-md-8 mb-3">
+				<label asp-for="Input.Name" class="form-label fw-semibold"></label>
+				<input asp-for="Input.Name" class="form-control" placeholder="e.g. Smoky BBQ Burger" />
+				<span asp-validation-for="Input.Name" class="text-danger small"></span>
+			</div>
+			<div class="col-md-4 mb-3">
+				<label asp-for="Input.MenuCategoryId" class="form-label fw-semibold"></label>
+				<select asp-for="Input.MenuCategoryId" asp-items="Model.CategoryChoices" class="form-select">
+					<option value="">Choose a category</option>
+				</select>
+				<span asp-validation-for="Input.MenuCategoryId" class="text-danger small"></span>
+			</div>
+		</div>
+
+		<div class="mb-3">
+			<label asp-for="Input.Description" class="form-label fw-semibold"></label>
+			<textarea asp-for="Input.Description" class="form-control" rows="3"></textarea>
+			<span asp-validation-for="Input.Description" class="text-danger small"></span>
+		</div>
+
+		<div class="row">
+			<div class="col-md-4 mb-3">
+				<label asp-for="Input.Price" class="form-label fw-semibold"></label>
+				<input asp-for="Input.Price" type="number" step="0.01" min="@Model.MinPriceText" class="form-control" />
+				<span asp-validation-for="Input.Price" class="text-danger small"></span>
+			</div>
+			<div class="col-md-8 mb-3 d-flex align-items-end">
+				<div class="form-check">
+					<input asp-for="Input.IsAvailable" class="form-check-input" />
+					<label asp-for="Input.IsAvailable" class="form-check-label"></label>
+					<div class="form-text">Untick to show the dish on the menu but stop customers ordering it.</div>
+				</div>
+			</div>
+		</div>
+
+		<fieldset class="mb-3">
+			<legend class="h5">Offer (optional)</legend>
+			<p class="text-secondary small">Fill in all three fields, or leave all three empty. The offer price must be lower than the normal price.</p>
+			<div class="row">
+				<div class="col-md-4 mb-3">
+					<label asp-for="Input.PromoPrice" class="form-label fw-semibold"></label>
+					<input asp-for="Input.PromoPrice" type="number" step="0.01" min="@Model.MinPriceText" class="form-control" />
+					<span asp-validation-for="Input.PromoPrice" class="text-danger small"></span>
+				</div>
+				<div class="col-md-4 mb-3">
+					<label asp-for="PromoStartLocal" class="form-label fw-semibold"></label>
+					<input asp-for="PromoStartLocal" class="form-control" />
+					<span asp-validation-for="PromoStartLocal" class="text-danger small"></span>
+				</div>
+				<div class="col-md-4 mb-3">
+					<label asp-for="PromoEndLocal" class="form-label fw-semibold"></label>
+					<input asp-for="PromoEndLocal" class="form-control" />
+					<span asp-validation-for="PromoEndLocal" class="text-danger small"></span>
+				</div>
+			</div>
+		</fieldset>
+
+		<fieldset class="mb-4">
+			<legend class="h5">Photo</legend>
+
+			@if (Model.CurrentPhotoUrl != null)
+			{
+				<div class="mb-3">
+					<img src="@Model.CurrentPhotoUrl" alt="Current photo of @Model.EditingName" width="160" class="rounded d-block mb-2" />
+					<div class="form-check">
+						<input asp-for="RemovePhoto" class="form-check-input" />
+						<label asp-for="RemovePhoto" class="form-check-label"></label>
+					</div>
+				</div>
+			}
+
+			<label asp-for="Photo" class="form-label fw-semibold">@(Model.CurrentPhotoUrl != null ? "Replace the photo" : "Upload a photo")</label>
+			<input asp-for="Photo" type="file" accept=".jpg,.jpeg,.png,.webp" class="form-control" aria-describedby="photo-help" />
+			<div id="photo-help" class="form-text">@Model.PhotoHelpText</div>
+		</fieldset>
+
+		<button type="submit" class="btn btn-primary">@(isEditing ? "Save changes" : "Add dish")</button>
+		<a class="btn btn-link" asp-page="/Menu/Index">Cancel</a>
+	</form>
+</section>
+
+@section Scripts {
+	<partial name="_ValidationScriptsPartial" />
+}

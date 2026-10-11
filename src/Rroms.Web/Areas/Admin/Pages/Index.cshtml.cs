@@ -32,7 +32,8 @@ public class IndexModel : PageModel
                 "Menu items",
                 "Dishes, prices, availability, offers and photos.",
                 "menu",
-                "Sprint 3 · YJ"),
+                "Sprint 3 · YJ",
+                "/Admin/Menu"),
             new ModuleTileViewModel(
                 "Accounts and roles",
                 "Create staff accounts, assign roles and deactivate users.",
