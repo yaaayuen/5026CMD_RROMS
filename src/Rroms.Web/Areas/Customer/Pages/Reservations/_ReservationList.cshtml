@@ -1,0 +1,40 @@
+﻿@*
+    Table of reservations, used twice on My reservations (upcoming and past).
+    Times are stored in UTC and shown in Malaysia time.
+*@
+@using Rroms.Web.Common
+@model IReadOnlyList<ReservationSummary>
+
+<div class="table-responsive">
+    <table class="table align-middle mb-0">
+        <thead>
+            <tr>
+                <th scope="col">Date</th>
+                <th scope="col">Time</th>
+                <th scope="col">Guests</th>
+                <th scope="col">Table</th>
+                <th scope="col">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (ReservationSummary reservation in Model)
+            {
+                DateTime start = MalaysiaTime.FromUtc(reservation.StartUtc);
+                DateTime end = MalaysiaTime.FromUtc(reservation.EndUtc);
+                <tr>
+                    <td>
+                        @start.ToString("ddd d MMM yyyy")
+                        @if (!string.IsNullOrEmpty(reservation.SpecialRequests))
+                        {
+                            <div class="small text-secondary">@reservation.SpecialRequests</div>
+                        }
+                    </td>
+                    <td>@start.ToString("h:mm tt") – @end.ToString("h:mm tt")</td>
+                    <td>@reservation.PartySize</td>
+                    <td>@reservation.TableLabel <span class="text-secondary">· @reservation.AreaName</span></td>
+                    <td><span class="badge @IndexModel.StatusBadgeClass(reservation.Status)">@reservation.Status</span></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

@@ -1,0 +1,40 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "My reservations";
+}
+
+<section class="hero hero-compact mb-4" aria-labelledby="mine-heading">
+    <span class="hero-bubble one" aria-hidden="true"></span>
+    <div class="position-relative">
+        <span class="eyebrow">Reservations</span>
+        <h1 id="mine-heading" class="mb-1">My reservations</h1>
+        <p class="lead mb-0">New bookings are pending until our staff confirm them.</p>
+    </div>
+</section>
+
+<p><a class="btn btn-primary" asp-page="Book">Book a table</a></p>
+
+<section class="tg-card h-auto mb-4" aria-labelledby="upcoming-heading">
+    <h2 id="upcoming-heading" class="h4 mb-3">Upcoming</h2>
+    @if (Model.Upcoming.Count == 0)
+    {
+        <p class="mb-0 text-secondary">No upcoming bookings.</p>
+    }
+    else
+    {
+        <partial name="_ReservationList" model="Model.Upcoming" />
+    }
+</section>
+
+<section class="tg-card h-auto" aria-labelledby="past-heading">
+    <h2 id="past-heading" class="h4 mb-3">Past</h2>
+    @if (Model.Past.Count == 0)
+    {
+        <p class="mb-0 text-secondary">No past visits yet.</p>
+    }
+    else
+    {
+        <partial name="_ReservationList" model="Model.Past" />
+    }
+</section>

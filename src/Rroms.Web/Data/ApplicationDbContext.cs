@@ -47,6 +47,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<MenuCategory> MenuCategories => Set<MenuCategory>();
 
 
+    /// <summary>Table bookings made by customers (WL-2).</summary>
+    public DbSet<Reservation> Reservations => Set<Reservation>();
+
+    /// <summary>Time slots held by each reservation; their unique index prevents double booking (WL-2).</summary>
+    public DbSet<ReservationSlot> ReservationSlots => Set<ReservationSlot>();
+
     // ----- Sprint 3 (YJ): menu and orders -----
     /// <summary>Dishes and drinks on the menu; each belongs to one MenuCategory.</summary>
     public DbSet<MenuItem> MenuItems => Set<MenuItem>();
@@ -105,6 +111,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         // Sprint 2 (WL): restaurant setup rules and seed data live in their own file.
         RestaurantSetupConfiguration.Configure(builder);
+        ReservationConfiguration.Configure(builder);
 
         // YJ (Sprint 3): menu rules
         MenuConfiguration.Configure(builder);
