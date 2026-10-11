@@ -45,6 +45,7 @@ public class MenuServiceTests : IDisposable
     private readonly SqliteConnection _connection;
     private readonly ApplicationDbContext _context;
     private readonly RestaurantService _restaurantService;
+    private readonly FakeMenuImageStorage _imageStorage;
     private readonly MenuService _service;
 
     /// <summary>
@@ -67,7 +68,8 @@ public class MenuServiceTests : IDisposable
         _context.Database.EnsureCreated();
 
         _restaurantService = new RestaurantService(_context);
-        _service = new MenuService(_context, _restaurantService);
+        _imageStorage = new FakeMenuImageStorage();
+        _service = new MenuService(_context, _restaurantService, _imageStorage);
     }
 
     /// <summary>Runs after EVERY test: closing the connection deletes the database.</summary>
@@ -393,6 +395,117 @@ public class MenuServiceTests : IDisposable
         Assert.Equal(2, everything.Count);
     }
 
+    //================================================== Photos ==================================================//
+
+    [Fact]
+    public async Task SetImage_WithAcceptedPhoto_LinksItToTheItem()
+    {
+        // Arrange
+        ServiceResult<int> created = await _service.CreateMenuItemAsync(CreateValidInput());
+        using MemoryStream photo = new MemoryStream(new byte[] { 1 });
+
+        // Act
+        ServiceResult result = await _service.SetImageAsync(created.Value, photo, "burger.png");
+
+        // Assert
+        Assert.True(result.Succeeded);
+        MenuItem? saved = await _service.GetMenuItemAsync(created.Value);
+        Assert.NotNull(saved);
+        Assert.Equal("photo1.png", saved.ImageFileName);
+    }
+
+    [Fact]
+    public async Task SetImage_ReplacingAPhoto_DeletesTheOldFile()
+    {
+        // Arrange: the item already has photo1.png.
+        ServiceResult<int> created = await _service.CreateMenuItemAsync(CreateValidInput());
+        using MemoryStream first = new MemoryStream(new byte[] { 1 });
+        await _service.SetImageAsync(created.Value, first, "first.png");
+        using MemoryStream second = new MemoryStream(new byte[] { 2 });
+
+        // Act
+        ServiceResult result = await _service.SetImageAsync(created.Value, second, "second.png");
+
+        // Assert: the item now uses photo2.png and the old file was removed from disk.
+        Assert.True(result.Succeeded);
+        MenuItem? saved = await _service.GetMenuItemAsync(created.Value);
+        Assert.NotNull(saved);
+        Assert.Equal("photo2.png", saved.ImageFileName);
+        Assert.Contains("photo1.png", _imageStorage.DeletedFiles);
+        Assert.DoesNotContain("photo2.png", _imageStorage.DeletedFiles);
+    }
+
+    [Fact]
+    public async Task SetImage_WhenThePhotoIsRejected_KeepsTheOldPhoto()
+    {
+        // Arrange: the item has a photo, then the storage starts refusing uploads.
+        ServiceResult<int> created = await _service.CreateMenuItemAsync(CreateValidInput());
+        using MemoryStream first = new MemoryStream(new byte[] { 1 });
+        await _service.SetImageAsync(created.Value, first, "first.png");
+
+        _imageStorage.ErrorToReturn = MenuImageStorage.NotAnImageMessage;
+        using MemoryStream bad = new MemoryStream(new byte[] { 2 });
+
+        // Act
+        ServiceResult result = await _service.SetImageAsync(created.Value, bad, "bad.png");
+
+        // Assert: the storage's message is passed on, and nothing was changed or deleted.
+        Assert.False(result.Succeeded);
+        Assert.Contains(MenuImageStorage.NotAnImageMessage, result.Errors);
+        MenuItem? saved = await _service.GetMenuItemAsync(created.Value);
+        Assert.NotNull(saved);
+        Assert.Equal("photo1.png", saved.ImageFileName);
+        Assert.Empty(_imageStorage.DeletedFiles);
+    }
+
+    [Fact]
+    public async Task SetImage_UnknownItem_IsRejected()
+    {
+        // Arrange
+        using MemoryStream photo = new MemoryStream(new byte[] { 1 });
+
+        // Act
+        ServiceResult result = await _service.SetImageAsync(UnknownItemId, photo, "burger.png");
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains(MenuService.ItemNotFoundMessage, result.Errors);
+    }
+
+    [Fact]
+    public async Task RemoveImage_ClearsTheLinkAndDeletesTheFile()
+    {
+        // Arrange
+        ServiceResult<int> created = await _service.CreateMenuItemAsync(CreateValidInput());
+        using MemoryStream photo = new MemoryStream(new byte[] { 1 });
+        await _service.SetImageAsync(created.Value, photo, "burger.png");
+
+        // Act
+        ServiceResult result = await _service.RemoveImageAsync(created.Value);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        MenuItem? saved = await _service.GetMenuItemAsync(created.Value);
+        Assert.NotNull(saved);
+        Assert.Null(saved.ImageFileName);
+        Assert.Contains("photo1.png", _imageStorage.DeletedFiles);
+    }
+
+    [Fact]
+    public async Task DeleteMenuItem_AlsoDeletesItsPhoto()
+    {
+        // Arrange
+        ServiceResult<int> created = await _service.CreateMenuItemAsync(CreateValidInput());
+        using MemoryStream photo = new MemoryStream(new byte[] { 1 });
+        await _service.SetImageAsync(created.Value, photo, "burger.png");
+
+        // Act
+        await _service.DeleteMenuItemAsync(created.Value);
+
+        // Assert
+        Assert.Contains("photo1.png", _imageStorage.DeletedFiles);
+    }
+
     /// <summary>Switches a seeded category off through WL's service, like an administrator would.</summary>
     private async Task DeactivateCategoryAsync(int id, string name, int displayOrder)
     {
@@ -404,5 +517,40 @@ public class MenuServiceTests : IDisposable
         };
 
         await _restaurantService.UpdateMenuCategoryAsync(id, input);
+    }
+    /// <summary>
+    /// A stand-in for the real photo storage: it accepts everything (unless told to refuse), hands out the names
+    /// photo1.png, photo2.png, ... and records which files were deleted, so these tests need no real images.
+    /// </summary>
+    private class FakeMenuImageStorage : IMenuImageStorage
+    {
+        private int _savedCount;
+
+        /// <summary>When set, every save is refused with this message.</summary>
+        public string? ErrorToReturn { get; set; }
+
+        /// <summary>The file names the service asked to delete.</summary>
+        public List<string> DeletedFiles { get; } = new List<string>();
+
+        public Task<ServiceResult<string>> SaveAsync(Stream content, string originalFileName)
+        {
+            if (ErrorToReturn != null)
+            {
+                return Task.FromResult(ServiceResult<string>.Failure(ErrorToReturn));
+            }
+
+            _savedCount++;
+            return Task.FromResult(ServiceResult<string>.Success($"photo{_savedCount}.png"));
+        }
+
+        public void Delete(string fileName)
+        {
+            DeletedFiles.Add(fileName);
+        }
+
+        public string GetPublicUrl(string fileName)
+        {
+            return "/uploads/menu/" + fileName;
+        }
     }
 }

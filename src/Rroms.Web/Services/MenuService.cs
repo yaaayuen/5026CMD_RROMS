@@ -47,16 +47,19 @@ public class MenuService : IMenuService
 
     private readonly ApplicationDbContext _context;
     private readonly IRestaurantService _restaurantService;
+    private readonly IMenuImageStorage _imageStorage;
 
     /// <summary>
-    /// Receives the database and WL's restaurant service, which owns the menu categories.
+    /// Receives the database, WL's restaurant service (which owns the menu categories) and the photo storage.
     /// </summary>
     /// <param name="context">The database context.</param>
     /// <param name="restaurantService">Used to look categories up, so this class never touches WL's tables directly.</param>
-    public MenuService(ApplicationDbContext context, IRestaurantService restaurantService)
+    /// <param name="imageStorage">Checks, resizes and stores the dish photos.</param>
+    public MenuService(ApplicationDbContext context, IRestaurantService restaurantService, IMenuImageStorage imageStorage)
     {
         _context = context;
         _restaurantService = restaurantService;
+        _imageStorage = imageStorage;
     }
 
     /// <inheritdoc />
@@ -162,8 +165,74 @@ public class MenuService : IMenuService
             return ServiceResult.Failure(ItemNotFoundMessage);
         }
 
+        string? photoFileName = item.ImageFileName;
+
         _context.MenuItems.Remove(item);
         await _context.SaveChangesAsync();
+
+        // The file is removed only after the database change succeeded, so a failed save never loses a photo.
+        if (!string.IsNullOrEmpty(photoFileName))
+        {
+            _imageStorage.Delete(photoFileName);
+        }
+
+        return ServiceResult.Success();
+    }
+
+    /// <inheritdoc />
+    public async Task<ServiceResult> SetImageAsync(int id, Stream content, string originalFileName)
+    {
+        MenuItem? item = await _context.MenuItems.FirstOrDefaultAsync(i => i.Id == id);
+
+        if (item == null)
+        {
+            return ServiceResult.Failure(ItemNotFoundMessage);
+        }
+
+        ServiceResult<string> saved = await _imageStorage.SaveAsync(content, originalFileName);
+
+        if (!saved.Succeeded)
+        {
+            return ServiceResult.Failure(saved.Errors.ToArray());
+        }
+
+        string? oldFileName = item.ImageFileName;
+
+        item.ImageFileName = saved.Value;
+        item.UpdatedAtUtc = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        // Delete the previous photo last, after the new one is safely linked.
+        if (!string.IsNullOrEmpty(oldFileName))
+        {
+            _imageStorage.Delete(oldFileName);
+        }
+
+        return ServiceResult.Success();
+    }
+
+    /// <inheritdoc />
+    public async Task<ServiceResult> RemoveImageAsync(int id)
+    {
+        MenuItem? item = await _context.MenuItems.FirstOrDefaultAsync(i => i.Id == id);
+
+        if (item == null)
+        {
+            return ServiceResult.Failure(ItemNotFoundMessage);
+        }
+
+        string? oldFileName = item.ImageFileName;
+
+        if (string.IsNullOrEmpty(oldFileName))
+        {
+            return ServiceResult.Success();
+        }
+
+        item.ImageFileName = null;
+        item.UpdatedAtUtc = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        _imageStorage.Delete(oldFileName);
 
         return ServiceResult.Success();
     }

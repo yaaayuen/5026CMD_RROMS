@@ -103,6 +103,8 @@ builder.Services.Configure<ReservationRulesOptions>(
     builder.Configuration.GetSection(ReservationRulesOptions.SectionName));
 builder.Services.Configure<AuthRateLimitOptions>(
     builder.Configuration.GetSection(AuthRateLimitOptions.SectionName));
+builder.Services.Configure<MenuImageOptions>(
+    builder.Configuration.GetSection(MenuImageOptions.SectionName));
 builder.Services.Configure<SmtpOptions>(
     builder.Configuration.GetSection(SmtpOptions.SectionName));
 
@@ -143,6 +145,9 @@ builder.Services.AddScoped<IRestaurantService, RestaurantService>();
 
 // Menu items: dishes, prices, availability and offers (YJ-1).
 builder.Services.AddScoped<IMenuService, MenuService>();
+
+// Dish photos: validation, resizing and storage (YJ-1).
+builder.Services.AddScoped<IMenuImageStorage, MenuImageStorage>();
 
 // ----- Notifications (YY-6) -----
 // One class serves both interfaces: modules publish through INotificationService,
