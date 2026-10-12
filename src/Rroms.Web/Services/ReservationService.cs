@@ -3,6 +3,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
+using System.Linq.Expressions;
 using Rroms.Web.Common;
 using Rroms.Web.Constants;
 using Rroms.Web.Contracts;
@@ -47,6 +48,19 @@ public class ReservationService : IReservationService
 
     /// <summary>Shown when another booking holds the table first, including the race the database catches.</summary>
     public const string TableJustTakenMessage = "Sorry, that table has just been booked. Please choose another table or time.";
+
+    /// <summary>Shown when a booking does not exist, and also when it belongs to someone else (never reveal other bookings).</summary>
+    public const string ReservationNotFoundMessage = "Reservation not found.";
+
+    /// <summary>Shown when the transition table does not allow a change. {0} = current status, {1} = requested status.</summary>
+    public const string StatusChangeNotAllowedMessageFormat = "A {0} booking cannot be changed to {1}.";
+
+    /// <summary>Shown when staff mark a no-show too early. {0} = grace minutes.</summary>
+    public const string TooEarlyForNoShowMessageFormat = "A booking can be marked as no-show {0} minutes after its start time.";
+
+    /// <summary>How long staff wait for late guests before a booking may be marked as no-show.</summary>
+    public const int NoShowGraceMinutes = 15;
+
 
     /// <summary>One full day, the limit when listing start times.</summary>
     private static readonly TimeSpan OneDay = TimeSpan.FromDays(1);
@@ -106,7 +120,8 @@ public class ReservationService : IReservationService
     // ============================== 2. Search ==============================//
 
     /// <inheritdoc />
-    public async Task<ServiceResult<IReadOnlyList<AvailableTable>>> SearchAvailableTablesAsync(AvailabilitySearchInput input)
+    public async Task<ServiceResult<IReadOnlyList<AvailableTable>>> SearchAvailableTablesAsync(
+        AvailabilitySearchInput input, int? ignoreReservationId = null)
     {
         string? problem = await CheckRequestAsync(input);
         if (problem != null)
@@ -119,6 +134,7 @@ public class ReservationService : IReservationService
         // Tables that already have a booking in any of the slots this visit needs.
         List<int> busyTableIds = await _context.ReservationSlots
             .Where(s => slotStarts.Contains(s.SlotStartUtc))
+            .Where(s => ignoreReservationId == null || s.ReservationId != ignoreReservationId)
             .Select(s => s.DiningTableId)
             .Distinct()
             .ToListAsync();
@@ -251,7 +267,176 @@ public class ReservationService : IReservationService
             .ToListAsync();
     }
 
-    // ============================== 5. Helpers (private) ==============================//
+    // ============================== 5. Staff: daily view and status changes (WL-3) ==============================//
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ReservationDetails>> GetReservationsForDateAsync(DateOnly date)
+    {
+        DateTime dayStartUtc = ToUtc(date, TimeOnly.MinValue);
+        DateTime nextDayStartUtc = ToUtc(date.AddDays(1), TimeOnly.MinValue);
+
+        return await _context.Reservations
+            .AsNoTracking()
+            .Where(r => r.StartUtc >= dayStartUtc && r.StartUtc < nextDayStartUtc)
+            .OrderBy(r => r.StartUtc)
+            .ThenBy(r => r.DiningTable!.Label)
+            .Select(ToDetails)
+            .ToListAsync();
+    }
+
+    /// <inheritdoc />
+    public async Task<ReservationDetails?> GetReservationAsync(int reservationId)
+    {
+        return await _context.Reservations
+            .AsNoTracking()
+            .Where(r => r.Id == reservationId)
+            .Select(ToDetails)
+            .SingleOrDefaultAsync();
+    }
+
+    /// <inheritdoc />
+    public async Task<ServiceResult> ConfirmAsync(int reservationId)
+    {
+        ServiceResult<Reservation> moved = await MoveStatusAsync(reservationId, ReservationStatus.Confirmed);
+        if (!moved.Succeeded)
+        {
+            return moved;
+        }
+
+        Reservation reservation = moved.Value!;
+        await _context.SaveChangesAsync();
+
+        await NotifyCustomerAsync(reservation, NotificationType.ReservationConfirmed,
+            "Reservation confirmed",
+            $"Your table for {reservation.PartySize} on {DescribeVisit(reservation)} is confirmed.");
+        return ServiceResult.Success();
+    }
+
+    /// <inheritdoc />
+    public async Task<ServiceResult> SeatAsync(int reservationId)
+    {
+        ServiceResult<Reservation> moved = await MoveStatusAsync(reservationId, ReservationStatus.Seated);
+        if (!moved.Succeeded)
+        {
+            return moved;
+        }
+
+        Reservation reservation = moved.Value!;
+        await _context.SaveChangesAsync();
+
+        // From now on the kitchen may start cooking this booking's orders (Alex's rule).
+        await NotifyCustomerAsync(reservation, NotificationType.General,
+            "Welcome to Three Grills",
+            $"You are seated at table {reservation.DiningTable!.Label}. Enjoy your meal!");
+        return ServiceResult.Success();
+    }
+
+    /// <inheritdoc />
+    public async Task<ServiceResult> CompleteAsync(int reservationId)
+    {
+        ServiceResult<Reservation> moved = await MoveStatusAsync(reservationId, ReservationStatus.Completed);
+        if (!moved.Succeeded)
+        {
+            return moved;
+        }
+
+        Reservation reservation = moved.Value!;
+
+        // Guests who leave early free the rest of their time, so the table can be booked again straight away.
+        ReleaseSlots(reservation, DateTime.UtcNow);
+        await _context.SaveChangesAsync();
+
+        await NotifyCustomerAsync(reservation, NotificationType.General,
+            "Thank you for dining with us",
+            "We hope you enjoyed your visit. We would love to hear your feedback.");
+        return ServiceResult.Success();
+    }
+
+    /// <inheritdoc />
+    public async Task<ServiceResult> CancelByStaffAsync(int reservationId)
+    {
+        ServiceResult<Reservation> moved = await MoveStatusAsync(reservationId, ReservationStatus.Cancelled);
+        if (!moved.Succeeded)
+        {
+            return moved;
+        }
+
+        Reservation reservation = moved.Value!;
+        ReleaseSlots(reservation, DateTime.MinValue);
+        await CancelUnstartedOrdersAsync(reservation.Id);
+        await _context.SaveChangesAsync();
+
+        await NotifyCustomerAsync(reservation, NotificationType.ReservationCancelled,
+            "Reservation cancelled",
+            $"Your booking on {DescribeVisit(reservation)} has been cancelled by the restaurant. Please contact us if this is unexpected.");
+        return ServiceResult.Success();
+    }
+
+    /// <inheritdoc />
+    public async Task<ServiceResult> MarkNoShowAsync(int reservationId)
+    {
+        Reservation? existing = await FindReservationAsync(reservationId);
+        if (existing == null)
+        {
+            return ServiceResult.Failure(ReservationNotFoundMessage);
+        }
+
+        // Give late guests a fair chance before the table is given away.
+        if (DateTime.UtcNow < existing.StartUtc.AddMinutes(NoShowGraceMinutes))
+        {
+            return ServiceResult.Failure(string.Format(TooEarlyForNoShowMessageFormat, NoShowGraceMinutes));
+        }
+
+        ServiceResult<Reservation> moved = await MoveStatusAsync(reservationId, ReservationStatus.NoShow);
+        if (!moved.Succeeded)
+        {
+            return moved;
+        }
+
+        Reservation reservation = moved.Value!;
+        ReleaseSlots(reservation, DateTime.MinValue);
+        await CancelUnstartedOrdersAsync(reservation.Id);
+        await _context.SaveChangesAsync();
+
+        await NotifyCustomerAsync(reservation, NotificationType.ReservationCancelled,
+            "We missed you",
+            $"Your booking on {DescribeVisit(reservation)} was marked as a no-show and the table has been released.");
+        return ServiceResult.Success();
+    }
+
+    /// <inheritdoc />
+    public Task<ServiceResult> ModifyByStaffAsync(int reservationId, BookingInput input)
+    {
+        throw new NotImplementedException("Added in WL-3 step 3, second half.");
+    }
+
+    // ============================== 6. Customer changes and orders (WL-3) ==============================//
+
+    /// <inheritdoc />
+    public Task<ReservationDetails?> GetCustomerReservationAsync(string customerId, int reservationId)
+    {
+        throw new NotImplementedException("Added in WL-3 step 3, second half.");
+    }
+
+    /// <inheritdoc />
+    public Task<ServiceResult> ModifyByCustomerAsync(string customerId, int reservationId, BookingInput input)
+    {
+        throw new NotImplementedException("Added in WL-3 step 3, second half.");
+    }
+
+    /// <inheritdoc />
+    public Task<ServiceResult> CancelByCustomerAsync(string customerId, int reservationId)
+    {
+        throw new NotImplementedException("Added in WL-3 step 3, second half.");
+    }
+
+    /// <inheritdoc />
+    public Task<ServiceResult> CanOrderForReservationAsync(string customerId, int reservationId)
+    {
+        throw new NotImplementedException("Added in WL-3 step 3, second half.");
+    }
+
+    // ============================== 7. Helpers (private) ==============================//
 
     /// <summary>
     /// Checks a date, time and party size against every booking rule.
@@ -369,5 +554,95 @@ public class ReservationService : IReservationService
         }
 
         return value.Trim();
+    }
+
+
+    /// <summary>
+    /// A reusable "Select" recipe that turns a Reservation row into ReservationDetails.
+    /// EF translates it into SQL, joining the table, area and customer, so only the needed columns are read.
+    /// </summary>
+    private static readonly Expression<Func<Reservation, ReservationDetails>> ToDetails = r => new ReservationDetails
+    {
+        Id = r.Id,
+        CustomerId = r.CustomerId,
+        CustomerName = r.Customer!.FullName,
+        CustomerPhone = r.Customer.PhoneNumber,
+        StartUtc = r.StartUtc,
+        EndUtc = r.EndUtc,
+        PartySize = r.PartySize,
+        DiningTableId = r.DiningTableId,
+        TableLabel = r.DiningTable!.Label,
+        AreaName = r.DiningTable.DiningArea!.Name,
+        Status = r.Status,
+        SpecialRequests = r.SpecialRequests,
+        CreatedAtUtc = r.CreatedAtUtc
+    };
+
+    /// <summary>Loads a booking with its slots and table, tracked so it can be changed and saved.</summary>
+    /// <param name="reservationId">The booking to load.</param>
+    private async Task<Reservation?> FindReservationAsync(int reservationId)
+    {
+        return await _context.Reservations
+            .Include(r => r.Slots)
+            .Include(r => r.DiningTable)
+            .SingleOrDefaultAsync(r => r.Id == reservationId);
+    }
+
+    /// <summary>
+    /// The one path every status change takes: find the booking, ask the transition table, then set the new status.
+    /// Nothing is saved here, so the caller can add its own changes (releasing slots) to the same save.
+    /// </summary>
+    /// <param name="reservationId">The booking to change.</param>
+    /// <param name="newStatus">The requested status.</param>
+    private async Task<ServiceResult<Reservation>> MoveStatusAsync(int reservationId, ReservationStatus newStatus)
+    {
+        Reservation? reservation = await FindReservationAsync(reservationId);
+        if (reservation == null)
+        {
+            return ServiceResult<Reservation>.Failure(ReservationNotFoundMessage);
+        }
+
+        if (!ReservationStatusRules.CanMove(reservation.Status, newStatus))
+        {
+            return ServiceResult<Reservation>.Failure(
+                string.Format(StatusChangeNotAllowedMessageFormat, reservation.Status, newStatus));
+        }
+
+        reservation.Status = newStatus;
+        reservation.UpdatedAtUtc = DateTime.UtcNow;
+        return ServiceResult<Reservation>.Success(reservation);
+    }
+
+    /// <summary>Gives a booking's table time back: removes its slots that start at or after a moment.</summary>
+    /// <param name="reservation">A booking loaded with its slots.</param>
+    /// <param name="fromUtc">DateTime.MinValue releases every slot; "now" releases only the unused ones.</param>
+    private void ReleaseSlots(Reservation reservation, DateTime fromUtc)
+    {
+        List<ReservationSlot> released = reservation.Slots.Where(s => s.SlotStartUtc >= fromUtc).ToList();
+        _context.ReservationSlots.RemoveRange(released);
+    }
+
+    /// <summary>
+    /// Cancels the booking's orders that the kitchen has not started (still Placed).
+    /// Order status changes belong to Alex, so this will call his CancelUnstartedOrdersForReservationAsync
+    /// once it is on main. Until then there are no orders in the system, so there is nothing to cancel.
+    /// </summary>
+    /// <param name="reservationId">The cancelled or no-show booking.</param>
+    private Task CancelUnstartedOrdersAsync(int reservationId)
+    {
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Sends a notification to the booking's customer, linking to its details page.</summary>
+    private Task NotifyCustomerAsync(Reservation reservation, NotificationType type, string title, string message)
+    {
+        return _notificationService.NotifyUserAsync(
+            reservation.CustomerId, type, title, message, $"/Customer/Reservations/Details/{reservation.Id}");
+    }
+
+    /// <summary>A booking's start in Malaysia time for messages, e.g. "Tue 20 Oct at 7:00 PM".</summary>
+    private static string DescribeVisit(Reservation reservation)
+    {
+        return MalaysiaTime.FromUtc(reservation.StartUtc).ToString("ddd d MMM 'at' h:mm tt");
     }
 }
