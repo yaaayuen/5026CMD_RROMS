@@ -42,6 +42,9 @@ public class MenuService : IMenuService
     /// <summary>Error shown when the item does not exist.</summary>
     public const string ItemNotFoundMessage = "That menu item does not exist.";
 
+    /// <summary>Error shown when someone tries to delete a dish that customers have already ordered.</summary>
+    public const string ItemHasOrdersMessage = "This dish has been ordered, so it cannot be deleted. Mark it unavailable instead.";
+
     /// <summary>Passed to validation when there is no existing item or category to compare with.</summary>
     private const int NoExistingId = 0;
 
@@ -163,6 +166,14 @@ public class MenuService : IMenuService
         if (item == null)
         {
             return ServiceResult.Failure(ItemNotFoundMessage);
+        }
+
+        // Order history must keep its dishes (the database refuses too, but this gives a friendly message).
+        bool hasBeenOrdered = await _context.OrderItems.AnyAsync(line => line.MenuItemId == id);
+
+        if (hasBeenOrdered)
+        {
+            return ServiceResult.Failure(ItemHasOrdersMessage);
         }
 
         string? photoFileName = item.ImageFileName;

@@ -5,7 +5,8 @@ using Rroms.Web.Models.ViewModels;
 namespace Rroms.Web.Services;
 
 /// <summary>
-/// Menu item administration: dishes, prices, availability and offers. Owner: YJ (Sprint 3, YJ-1).
+/// Menu item administration: dishes, prices, availability and offers. 
+/// Owner: YJ (Sprint 3, YJ-1).
 /// </summary>
 /// <remarks>
 /// Pages call this interface and never use ApplicationDbContext directly (shared-contracts.md, section 1).
@@ -15,7 +16,8 @@ namespace Rroms.Web.Services;
 /// </remarks>
 public interface IMenuService
 {
-    /// <summary>Returns menu items with their category, ordered by category then name. Used by the admin list.</summary>
+    /// <summary>Returns menu items with their category, ordered by category then name. 
+    /// Used by the admin list.</summary>
     /// <param name="categoryId">Only items in this category, or null for every item.</param>
     Task<IReadOnlyList<MenuItem>> GetMenuItemsAsync(int? categoryId);
 
@@ -47,16 +49,18 @@ public interface IMenuService
     /// </summary>
     /// <param name="id">The item the photo belongs to.</param>
     /// <param name="content">The uploaded file's bytes.</param>
-    /// <param name="originalFileName">The name of the uploaded file. Only its extension is used.</param>
+    /// <param name="originalFileName">The name of the uploaded file. 
+    /// Only its extension is used.</param>
     Task<ServiceResult> SetImageAsync(int id, Stream content, string originalFileName);
 
-    /// <summary>Removes an item's photo, both the file and the link to it. Does nothing if it has none.</summary>
+    /// <summary>Removes an item's photo, both the file and the link to it. 
+    /// Does nothing if it has none.</summary>
     /// <param name="id">The item whose photo is removed.</param>
     Task<ServiceResult> RemoveImageAsync(int id);
 
     /// <summary>
-    /// Deletes an item and its photo. Once orders exist (YJ-0) an item that has been ordered must be made
-    /// unavailable instead.
+    /// Deletes an item and its photo. A dish that customers have already ordered cannot be deleted
+    /// (order history keeps it); it must be marked unavailable instead.
     /// </summary>
     /// <param name="id">The item to delete.</param>
     Task<ServiceResult> DeleteMenuItemAsync(int id);
