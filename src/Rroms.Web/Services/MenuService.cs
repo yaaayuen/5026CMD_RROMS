@@ -94,6 +94,61 @@ public class MenuService : IMenuService
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<MenuItemCard>> SearchMenuAsync(MenuSearchCriteria criteria)
+    {
+        // Dishes in a hidden category are hidden from customers too.
+        IQueryable<MenuItem> query = _context.MenuItems
+            .Include(item => item.MenuCategory)
+            .Where(item => item.MenuCategory!.IsActive);
+
+        if (criteria.MenuCategoryId.HasValue)
+        {
+            query = query.Where(item => item.MenuCategoryId == criteria.MenuCategoryId.Value);
+        }
+
+        // Lower-case both sides: SQL Server ignores case but the SQLite test database does not.
+        string searchText = criteria.SearchText.Trim().ToLower();
+
+        if (searchText.Length > 0)
+        {
+            query = query.Where(item => item.Name.ToLower().Contains(searchText)
+                || item.Description.ToLower().Contains(searchText));
+        }
+
+        List<MenuItem> loaded = await query.ToListAsync();
+
+        // Sort here rather than in SQL, so the order is the same on SQL Server and SQLite.
+        List<MenuItem> items = loaded
+            .OrderBy(item => item.MenuCategory!.DisplayOrder)
+            .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        DateTime now = DateTime.UtcNow;
+        List<MenuItemCard> cards = new List<MenuItemCard>();
+
+        foreach (MenuItem item in items)
+        {
+            // The price filter uses the price the customer would really pay today, so a dish on offer
+            // matches its offer price. Done in C# after loading because the menu is small.
+            decimal currentPrice = MenuItemPricing.GetCurrentPrice(item, now);
+
+            if (criteria.MinPrice.HasValue && currentPrice < criteria.MinPrice.Value)
+            {
+                continue;
+            }
+
+            if (criteria.MaxPrice.HasValue && currentPrice > criteria.MaxPrice.Value)
+            {
+                continue;
+            }
+
+            cards.Add(BuildCard(item, currentPrice, now));
+        }
+
+        return cards;
+    }
+
+    /// <inheritdoc />
     public async Task<ServiceResult<int>> CreateMenuItemAsync(MenuItemInput input)
     {
         List<string> errors = await ValidateAsync(input, NoExistingId, NoExistingId);
@@ -246,6 +301,43 @@ public class MenuService : IMenuService
         _imageStorage.Delete(oldFileName);
 
         return ServiceResult.Success();
+    }
+
+    /// <summary>Turns a dish into the ready-to-display card the customer menu shows.</summary>
+    private MenuItemCard BuildCard(MenuItem item, decimal currentPrice, DateTime now)
+    {
+        bool offerActive = MenuItemPricing.IsPromoActive(item, now);
+
+        string? photoUrl = null;
+
+        if (!string.IsNullOrEmpty(item.ImageFileName))
+        {
+            photoUrl = _imageStorage.GetPublicUrl(item.ImageFileName);
+        }
+
+        DateTime? offerEndsAtUtc = null;
+
+        if (offerActive)
+        {
+            offerEndsAtUtc = item.PromoEndUtc;
+        }
+
+        MenuItemCard card = new MenuItemCard
+        {
+            Id = item.Id,
+            Name = item.Name,
+            Description = item.Description,
+            CategoryName = item.MenuCategory?.Name ?? string.Empty,
+            PhotoUrl = photoUrl,
+            NormalPrice = item.Price,
+            CurrentPrice = currentPrice,
+            IsOfferActive = offerActive,
+            OfferEndsAtUtc = offerEndsAtUtc,
+            IsAvailable = item.IsAvailable,
+            CanOrder = item.IsAvailable
+        };
+
+        return card;
     }
 
     /// <summary>

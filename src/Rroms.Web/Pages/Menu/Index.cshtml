@@ -1,0 +1,111 @@
+﻿@page
+@model Rroms.Web.Pages.Menu.IndexModel
+@using Rroms.Web.Models
+@using Rroms.Web.Models.ViewModels
+@{
+	ViewData["Title"] = "Our menu";
+}
+
+<section class="hero hero-compact mb-4" aria-labelledby="menu-heading">
+	<span class="hero-bubble one" aria-hidden="true"></span>
+	<div class="position-relative">
+		<span class="eyebrow">Three Grills</span>
+		<h1 id="menu-heading" class="mb-1">Our menu</h1>
+		<p class="lead mb-0">Fresh from the grill. Search by name, pick a category or set a price range.</p>
+	</div>
+</section>
+
+<section class="tg-card h-auto mb-4" aria-labelledby="filter-heading">
+	<h2 id="filter-heading" class="h5 mb-3">Find a dish</h2>
+
+	<form method="get" class="row g-3 align-items-end">
+		<div class="col-md-4">
+			<label for="menuSearch" class="form-label fw-semibold">Search</label>
+			<input id="menuSearch" name="q" type="search" class="form-control" value="@Model.SearchText" placeholder="e.g. burger" />
+		</div>
+		<div class="col-md-3">
+			<label for="menuCategory" class="form-label fw-semibold">Category</label>
+			<select id="menuCategory" name="categoryId" class="form-select">
+				<option value="">All categories</option>
+				@foreach (MenuCategory category in Model.Categories)
+				{
+					<option value="@category.Id" selected="@(category.Id == Model.CategoryId)">@category.Name</option>
+				}
+			</select>
+		</div>
+		<div class="col-6 col-md-2">
+			<label for="menuMinPrice" class="form-label fw-semibold">Min price (RM)</label>
+			<input id="menuMinPrice" name="minPrice" type="number" min="0" step="0.01" class="form-control" value="@Model.MinPrice" />
+		</div>
+		<div class="col-6 col-md-2">
+			<label for="menuMaxPrice" class="form-label fw-semibold">Max price (RM)</label>
+			<input id="menuMaxPrice" name="maxPrice" type="number" min="0" step="0.01" class="form-control" value="@Model.MaxPrice" />
+		</div>
+		<div class="col-md-1 d-grid">
+			<button type="submit" class="btn btn-primary">Filter</button>
+		</div>
+	</form>
+
+	@if (Model.HasFilters)
+	{
+		<a class="d-inline-block mt-3" asp-page="/Menu/Index">Show the whole menu</a>
+	}
+</section>
+
+@if (Model.Dishes.Count == 0)
+{
+	<p class="text-secondary" role="status">No dishes match. Try a different search or filter.</p>
+}
+else
+{
+	@foreach (IGrouping<string, MenuItemCard> group in Model.Dishes.GroupBy(dish => dish.CategoryName))
+	{
+		<section class="mb-5" aria-label="@group.Key">
+			<h2 class="section-title h3 mb-3">@group.Key</h2>
+
+			<div class="row g-4">
+				@foreach (MenuItemCard dish in group)
+				{
+					<div class="col-sm-6 col-lg-4">
+						<article class="tg-card h-100 @(dish.IsAvailable ? "" : "opacity-75")">
+							@if (dish.PhotoUrl != null)
+							{
+								<img src="@dish.PhotoUrl" alt="Photo of @dish.Name" class="rounded mb-3 w-100" style="object-fit: cover; height: 12rem;" />
+							}
+
+							<h3 class="h5">@dish.Name</h3>
+							<p class="text-secondary">@dish.Description</p>
+
+							<p class="mb-1">
+								@if (dish.IsOfferActive)
+								{
+									<span class="text-decoration-line-through text-secondary">RM @dish.NormalPrice.ToString("N2")</span>
+									<strong class="fs-5">RM @dish.CurrentPrice.ToString("N2")</strong>
+									<span class="badge text-bg-warning">Offer</span>
+								}
+								else
+								{
+									<strong class="fs-5">RM @dish.CurrentPrice.ToString("N2")</strong>
+								}
+							</p>
+
+							@if (dish.IsOfferActive && dish.OfferEndsAtUtc.HasValue)
+							{
+								<p class="small text-secondary mb-2">Offer until @Model.FormatOfferEnd(dish.OfferEndsAtUtc.Value)</p>
+							}
+
+							@if (dish.IsAvailable)
+							{
+								<span class="badge text-bg-success">Available</span>
+							}
+							else
+							{
+								<span class="badge text-bg-secondary">Unavailable</span>
+							}
+						</article>
+					</div>
+				}
+			</div>
+		</section>
+	}
+}
