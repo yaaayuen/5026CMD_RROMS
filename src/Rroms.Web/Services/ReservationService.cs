@@ -796,7 +796,9 @@ public class ReservationService : IReservationService
         }
 
         reservation.DiningTableId = table.Id;
-        reservation.DiningTable = table;
+        // Point at the tracked table row, not the read-only copy from the restaurant service,
+        // so EF does not try to insert that table again. Messages after the save use its label.
+        reservation.DiningTable = await _context.DiningTables.FindAsync(table.Id);
         reservation.PartySize = input.PartySize;
         reservation.StartUtc = startUtc;
         reservation.EndUtc = _timeRules.GetEndUtc(startUtc);
