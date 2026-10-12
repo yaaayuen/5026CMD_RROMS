@@ -1,0 +1,61 @@
+﻿@page "{id:int}"
+@model DetailsModel
+@using Rroms.Web.Common
+@{
+	ViewData["Title"] = "My booking";
+	DateTime start = MalaysiaTime.FromUtc(Model.Booking.StartUtc);
+	DateTime end = MalaysiaTime.FromUtc(Model.Booking.EndUtc);
+}
+
+<section class="hero hero-compact mb-4" aria-labelledby="details-heading">
+	<span class="hero-bubble one" aria-hidden="true"></span>
+	<div class="position-relative">
+		<span class="eyebrow">Reservations</span>
+		<h1 id="details-heading" class="mb-1">@start.ToString("dddd d MMMM")</h1>
+		<p class="lead mb-0">@start.ToString("h:mm tt") – @end.ToString("h:mm tt") · table for @Model.Booking.PartySize</p>
+	</div>
+</section>
+
+<section class="tg-card h-auto mb-4" aria-labelledby="booking-heading">
+	<h2 id="booking-heading" class="h4 mb-3">Booking details</h2>
+
+	<dl class="row mb-0">
+		<dt class="col-sm-4">Status</dt>
+		<dd class="col-sm-8"><span class="badge @IndexModel.StatusBadgeClass(Model.Booking.Status)">@Model.Booking.Status</span></dd>
+
+		<dt class="col-sm-4">Table</dt>
+		<dd class="col-sm-8">@Model.Booking.TableLabel · @Model.Booking.AreaName</dd>
+
+		<dt class="col-sm-4">Guests</dt>
+		<dd class="col-sm-8">@Model.Booking.PartySize</dd>
+
+		<dt class="col-sm-4">Special requests</dt>
+		<dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Booking.SpecialRequests) ? "None" : Model.Booking.SpecialRequests)</dd>
+
+		<dt class="col-sm-4">Booked on</dt>
+		<dd class="col-sm-8">@MalaysiaTime.FromUtc(Model.Booking.CreatedAtUtc).ToString("d MMM yyyy, h:mm tt")</dd>
+	</dl>
+
+	@if (Model.Booking.Status == Rroms.Web.Contracts.ReservationStatus.Pending)
+	{
+		<p class="text-secondary small mt-3 mb-0">Our staff will confirm your booking soon. You will get a notification.</p>
+	}
+</section>
+
+@if (Model.CanChange)
+{
+	<section class="tg-card h-auto" aria-labelledby="change-heading">
+		<h2 id="change-heading" class="h4 mb-3">Need to change your plans?</h2>
+		<div class="d-flex flex-wrap gap-2">
+			<a class="btn btn-primary" asp-page="Change" asp-route-id="@Model.Booking.Id">Change booking</a>
+
+			<form method="post" asp-page-handler="Cancel" asp-route-id="@Model.Booking.Id"
+				  onsubmit="return confirm('Cancel this booking?');">
+				<button type="submit" class="btn btn-outline-danger">Cancel booking</button>
+			</form>
+		</div>
+		<p class="text-secondary small mt-3 mb-0">Changing a confirmed booking sends it back to our staff to confirm again.</p>
+	</section>
+}
+
+<p class="mt-4"><a asp-page="Index">Back to my reservations</a></p>

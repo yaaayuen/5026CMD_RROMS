@@ -23,7 +23,7 @@
                 DateTime end = MalaysiaTime.FromUtc(reservation.EndUtc);
                 <tr>
                     <td>
-                        @start.ToString("ddd d MMM yyyy")
+                        <a asp-page="Details" asp-route-id="@reservation.Id">@start.ToString("ddd d MMM yyyy")</a>
                         @if (!string.IsNullOrEmpty(reservation.SpecialRequests))
                         {
                             <div class="small text-secondary">@reservation.SpecialRequests</div>
