@@ -62,6 +62,16 @@ public class ReservationService : IReservationService
     public const int NoShowGraceMinutes = 15;
 
 
+    /// <summary>Shown when a booking has started or is no longer Pending or Confirmed.</summary>
+    public const string BookingLockedMessage = "This booking can no longer be changed online. Please contact the restaurant.";
+
+    /// <summary>Shown to YJ's order page when the booking is still waiting for staff.</summary>
+    public const string NotConfirmedYetMessage = "You can order once your reservation is confirmed.";
+
+    /// <summary>Shown to YJ's order page when the booking is finished, cancelled or a no-show.</summary>
+    public const string ClosedForOrdersMessage = "This reservation is no longer open for orders.";
+
+
     /// <summary>One full day, the limit when listing start times.</summary>
     private static readonly TimeSpan OneDay = TimeSpan.FromDays(1);
 
@@ -405,35 +415,137 @@ public class ReservationService : IReservationService
     }
 
     /// <inheritdoc />
-    public Task<ServiceResult> ModifyByStaffAsync(int reservationId, BookingInput input)
+    public async Task<ServiceResult> ModifyByStaffAsync(int reservationId, BookingInput input)
     {
-        throw new NotImplementedException("Added in WL-3 step 3, second half.");
+        Reservation? reservation = await FindReservationAsync(reservationId);
+        if (reservation == null)
+        {
+            return ServiceResult.Failure(ReservationNotFoundMessage);
+        }
+
+        if (!ReservationStatusRules.IsChangeable(reservation.Status))
+        {
+            return ServiceResult.Failure(BookingLockedMessage);
+        }
+
+        // Staff speak for the restaurant, so the booking keeps its status.
+        ServiceResult changed = await ApplyBookingChangesAsync(reservation, input);
+        if (!changed.Succeeded)
+        {
+            return changed;
+        }
+
+        await NotifyCustomerAsync(reservation, NotificationType.ReservationUpdated,
+            "Reservation updated",
+            $"The restaurant has updated your booking: table for {reservation.PartySize} on {DescribeVisit(reservation)}.");
+        return ServiceResult.Success();
     }
 
     // ============================== 6. Customer changes and orders (WL-3) ==============================//
 
     /// <inheritdoc />
-    public Task<ReservationDetails?> GetCustomerReservationAsync(string customerId, int reservationId)
+    public async Task<ReservationDetails?> GetCustomerReservationAsync(string customerId, int reservationId)
     {
-        throw new NotImplementedException("Added in WL-3 step 3, second half.");
+        // Filtering by the customer as well as the ID means someone else's booking is simply "not found".
+        return await _context.Reservations
+            .AsNoTracking()
+            .Where(r => r.Id == reservationId && r.CustomerId == customerId)
+            .Select(ToDetails)
+            .SingleOrDefaultAsync();
     }
 
     /// <inheritdoc />
-    public Task<ServiceResult> ModifyByCustomerAsync(string customerId, int reservationId, BookingInput input)
+    public async Task<ServiceResult> ModifyByCustomerAsync(string customerId, int reservationId, BookingInput input)
     {
-        throw new NotImplementedException("Added in WL-3 step 3, second half.");
+        Reservation? reservation = await FindReservationAsync(reservationId);
+        if (reservation == null || reservation.CustomerId != customerId)
+        {
+            return ServiceResult.Failure(ReservationNotFoundMessage);
+        }
+
+        if (!ReservationStatusRules.IsChangeable(reservation.Status) || reservation.StartUtc <= DateTime.UtcNow)
+        {
+            return ServiceResult.Failure(BookingLockedMessage);
+        }
+
+        ReservationStatus statusBefore = reservation.Status;
+
+        // A confirmed booking that changes needs the restaurant to agree again.
+        reservation.Status = ReservationStatus.Pending;
+
+        ServiceResult changed = await ApplyBookingChangesAsync(reservation, input);
+        if (!changed.Succeeded)
+        {
+            return changed;
+        }
+
+        string again = statusBefore == ReservationStatus.Confirmed ? " Please confirm it again." : string.Empty;
+        await _notificationService.NotifyRoleAsync(
+            RoleNames.Staff,
+            NotificationType.ReservationUpdated,
+            "Reservation changed by customer",
+            $"Table {reservation.DiningTable!.Label}, {reservation.PartySize} guests, {DescribeVisit(reservation)}.{again}");
+        return ServiceResult.Success();
     }
 
     /// <inheritdoc />
-    public Task<ServiceResult> CancelByCustomerAsync(string customerId, int reservationId)
+    public async Task<ServiceResult> CancelByCustomerAsync(string customerId, int reservationId)
     {
-        throw new NotImplementedException("Added in WL-3 step 3, second half.");
+        Reservation? existing = await FindReservationAsync(reservationId);
+        if (existing == null || existing.CustomerId != customerId)
+        {
+            return ServiceResult.Failure(ReservationNotFoundMessage);
+        }
+
+        // After the start time a missing customer is handled by staff as a no-show.
+        if (existing.StartUtc <= DateTime.UtcNow)
+        {
+            return ServiceResult.Failure(BookingLockedMessage);
+        }
+
+        ServiceResult<Reservation> moved = await MoveStatusAsync(reservationId, ReservationStatus.Cancelled);
+        if (!moved.Succeeded)
+        {
+            return moved;
+        }
+
+        Reservation reservation = moved.Value!;
+        ReleaseSlots(reservation, DateTime.MinValue);
+        await CancelUnstartedOrdersAsync(reservation.Id);
+        await _context.SaveChangesAsync();
+
+        await _notificationService.NotifyRoleAsync(
+            RoleNames.Staff,
+            NotificationType.ReservationCancelled,
+            "Reservation cancelled by customer",
+            $"Table {reservation.DiningTable!.Label}, {reservation.PartySize} guests, {DescribeVisit(reservation)}. The table is free again.");
+        return ServiceResult.Success();
     }
 
     /// <inheritdoc />
-    public Task<ServiceResult> CanOrderForReservationAsync(string customerId, int reservationId)
+    public async Task<ServiceResult> CanOrderForReservationAsync(string customerId, int reservationId)
     {
-        throw new NotImplementedException("Added in WL-3 step 3, second half.");
+        ReservationStatus? status = await _context.Reservations
+            .Where(r => r.Id == reservationId && r.CustomerId == customerId)
+            .Select(r => (ReservationStatus?)r.Status)
+            .SingleOrDefaultAsync();
+
+        if (status == null)
+        {
+            return ServiceResult.Failure(ReservationNotFoundMessage);
+        }
+
+        if (status == ReservationStatus.Confirmed || status == ReservationStatus.Seated)
+        {
+            return ServiceResult.Success();
+        }
+
+        if (status == ReservationStatus.Pending)
+        {
+            return ServiceResult.Failure(NotConfirmedYetMessage);
+        }
+
+        return ServiceResult.Failure(ClosedForOrdersMessage);
     }
 
     // ============================== 7. Helpers (private) ==============================//
@@ -620,6 +732,88 @@ public class ReservationService : IReservationService
     {
         List<ReservationSlot> released = reservation.Slots.Where(s => s.SlotStartUtc >= fromUtc).ToList();
         _context.ReservationSlots.RemoveRange(released);
+    }
+
+
+    /// <summary>
+    /// Moves a booking to new values (date, time, party size, table, note) after checking every booking rule again.
+    /// Shared by the customer's and the staff's change. Saves the change and returns the result.
+    /// </summary>
+    /// <remarks>
+    /// Only the slots that really change are touched: moving 19:00 to 19:30 on the same table keeps the
+    /// 19:30, 20:00 and 20:30 rows, removes 19:00 and adds 21:00. So the booking never collides with itself,
+    /// while the unique index still stops it taking a slot another booking holds.
+    /// </remarks>
+    /// <param name="reservation">The tracked booking, loaded with its slots.</param>
+    /// <param name="input">The new values.</param>
+    private async Task<ServiceResult> ApplyBookingChangesAsync(Reservation reservation, BookingInput input)
+    {
+        List<string> errors = ValidateAnnotations(input);
+        if (errors.Count > 0)
+        {
+            return ServiceResult.Failure(errors.ToArray());
+        }
+
+        string? problem = await CheckRequestAsync(input);
+        if (problem != null)
+        {
+            return ServiceResult.Failure(problem);
+        }
+
+        IReadOnlyList<DiningTable> bookable = await _restaurantService.GetBookableTablesAsync();
+        DiningTable? table = bookable.SingleOrDefault(t => t.Id == input.DiningTableId);
+        if (table == null || table.Capacity < input.PartySize)
+        {
+            return ServiceResult.Failure(TableUnavailableMessage);
+        }
+
+        DateTime startUtc = ToUtc(input.Date, input.Time);
+        List<DateTime> newSlotStarts = _timeRules.GetSlotStartsUtc(startUtc).ToList();
+
+        // Is another booking holding any of the new slots? This booking's own slots do not count.
+        bool heldByOthers = await _context.ReservationSlots.AnyAsync(s =>
+            s.DiningTableId == table.Id
+            && newSlotStarts.Contains(s.SlotStartUtc)
+            && s.ReservationId != reservation.Id);
+        if (heldByOthers)
+        {
+            return ServiceResult.Failure(TableJustTakenMessage);
+        }
+
+        // Remove the slots the booking no longer needs, then add only the ones it does not hold yet.
+        List<ReservationSlot> noLongerNeeded = reservation.Slots
+            .Where(s => s.DiningTableId != table.Id || !newSlotStarts.Contains(s.SlotStartUtc))
+            .ToList();
+        _context.ReservationSlots.RemoveRange(noLongerNeeded);
+
+        foreach (DateTime slotStart in newSlotStarts)
+        {
+            bool alreadyHeld = reservation.Slots.Any(s => s.DiningTableId == table.Id && s.SlotStartUtc == slotStart);
+            if (!alreadyHeld)
+            {
+                reservation.Slots.Add(new ReservationSlot { DiningTableId = table.Id, SlotStartUtc = slotStart });
+            }
+        }
+
+        reservation.DiningTableId = table.Id;
+        reservation.DiningTable = table;
+        reservation.PartySize = input.PartySize;
+        reservation.StartUtc = startUtc;
+        reservation.EndUtc = _timeRules.GetEndUtc(startUtc);
+        reservation.SpecialRequests = CleanOptional(input.SpecialRequests);
+        reservation.UpdatedAtUtc = DateTime.UtcNow;
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception) when (IsSlotConflict(exception))
+        {
+            _context.ChangeTracker.Clear();
+            return ServiceResult.Failure(TableJustTakenMessage);
+        }
+
+        return ServiceResult.Success();
     }
 
     /// <summary>
