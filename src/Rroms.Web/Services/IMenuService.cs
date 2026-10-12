@@ -26,8 +26,18 @@ public interface IMenuService
     Task<MenuItem?> GetMenuItemAsync(int id);
 
     /// <summary>
+    /// The customer menu: dishes in active categories that match the search text, 
+    /// category and price range, ready to display 
+    /// (current price, running offer, photo address and whether the dish can be ordered).
+    /// Unavailable dishes are included but cannot be ordered. Sorted by category order, then name.
+    /// </summary>
+    /// <param name="criteria">What the customer typed into the filter form. Every field is optional.</param>
+    Task<IReadOnlyList<MenuItemCard>> SearchMenuAsync(MenuSearchCriteria criteria);
+
+    /// <summary>
     /// Creates a menu item. The price must be above zero, the category must exist and be active,
-    /// the name must be unique in the category, and an offer must be complete and cheaper than the normal price.
+    /// the name must be unique in the category, 
+    /// and an offer must be complete and cheaper than the normal price.
     /// </summary>
     /// <param name="input">The values from the form.</param>
     /// <returns>The new item's Id on success.</returns>
@@ -49,8 +59,7 @@ public interface IMenuService
     /// </summary>
     /// <param name="id">The item the photo belongs to.</param>
     /// <param name="content">The uploaded file's bytes.</param>
-    /// <param name="originalFileName">The name of the uploaded file. 
-    /// Only its extension is used.</param>
+    /// <param name="originalFileName">The name of the uploaded file. Only its extension is used.</param>
     Task<ServiceResult> SetImageAsync(int id, Stream content, string originalFileName);
 
     /// <summary>Removes an item's photo, both the file and the link to it. 

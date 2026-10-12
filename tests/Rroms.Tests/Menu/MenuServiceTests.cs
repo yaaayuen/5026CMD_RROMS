@@ -13,8 +13,7 @@ namespace Rroms.Tests.Menu;
 /// Unit tests for the YJ-1 menu item rules in <see cref="MenuService"/>.
 /// </summary>
 /// <remarks>
-/// Every test follows Arrange (prepare data) - Act (call the method) 
-/// - Assert (check the result).
+/// Every test follows Arrange (prepare data) - Act (call the method) - Assert (check the result).
 /// Seed data available in every test: five menu categories, Starters (Id 1), Grills (Id 2),
 /// Pasta (Id 3), Desserts (Id 4) and Beverages (Id 5). No menu items are seeded.
 /// Prices in the offer tests use the same number of digits (20.00 and 15.00): SQLite stores
@@ -411,6 +410,204 @@ public class MenuServiceTests : IDisposable
         Assert.Contains(MenuService.ItemHasOrdersMessage, result.Errors);
         MenuItem? stillThere = await _service.GetMenuItemAsync(created.Value);
         Assert.NotNull(stillThere);
+    }
+
+    //================================================== Customer menu (YJ-2) ==================================================//
+
+    /// <summary>Creates a dish for the menu tests and returns its Id.</summary>
+    private async Task<int> AddDishAsync(
+        string name,
+        int categoryId = GrillsId,
+        decimal price = NormalPrice,
+        bool isAvailable = true,
+        string description = "Plain description")
+    {
+        MenuItemInput input = CreateValidInput(name, categoryId);
+        input.Price = price;
+        input.IsAvailable = isAvailable;
+        input.Description = description;
+
+        ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
+        Assert.True(result.Succeeded);
+
+        return result.Value;
+    }
+
+    /// <summary>Creates a dish with an offer from <paramref name="startOffsetDays"/> to <paramref name="endOffsetDays"/> days from now.</summary>
+    private async Task<int> AddDishWithOfferAsync(string name, int startOffsetDays, int endOffsetDays)
+    {
+        DateTime now = DateTime.UtcNow;
+
+        MenuItemInput input = CreateValidInput(name);
+        input.PromoPrice = OfferPrice;
+        input.PromoStartUtc = now.AddDays(startOffsetDays);
+        input.PromoEndUtc = now.AddDays(endOffsetDays);
+
+        ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
+        Assert.True(result.Succeeded);
+
+        return result.Value;
+    }
+
+    [Fact]
+    public async Task SearchMenu_NoFilters_ListsDishesByCategoryOrderThenName()
+    {
+        // Arrange: Starters come before Grills, then Desserts (the seeded display order 10, 20, 40).
+        await AddDishAsync("Zebra Steak", GrillsId);
+        await AddDishAsync("Apple Pie", 4);
+        await AddDishAsync("Garlic Bread", StartersId);
+        await AddDishAsync("Burger", GrillsId);
+
+        // Act
+        IReadOnlyList<MenuItemCard> cards = await _service.SearchMenuAsync(new MenuSearchCriteria());
+
+        // Assert
+        List<string> names = cards.Select(card => card.Name).ToList();
+        Assert.Equal(new List<string> { "Garlic Bread", "Burger", "Zebra Steak", "Apple Pie" }, names);
+    }
+
+    [Fact]
+    public async Task SearchMenu_ByText_MatchesNameOrDescriptionIgnoringCase()
+    {
+        // Arrange: one match in the name, one in the description, one with no match.
+        await AddDishAsync("Smoky BBQ Burger", description: "Beef patty");
+        await AddDishAsync("Ribs", description: "Served with SMOKY sauce");
+        await AddDishAsync("Garden Salad", description: "Fresh and light");
+
+        // Act
+        IReadOnlyList<MenuItemCard> cards = await _service.SearchMenuAsync(
+            new MenuSearchCriteria { SearchText = "smoky" });
+
+        // Assert
+        List<string> names = cards.Select(card => card.Name).OrderBy(name => name).ToList();
+        Assert.Equal(new List<string> { "Ribs", "Smoky BBQ Burger" }, names);
+    }
+
+    [Fact]
+    public async Task SearchMenu_ByCategory_ReturnsOnlyThatCategory()
+    {
+        // Arrange
+        await AddDishAsync("Garlic Bread", StartersId);
+        await AddDishAsync("Burger", GrillsId);
+
+        // Act
+        IReadOnlyList<MenuItemCard> cards = await _service.SearchMenuAsync(
+            new MenuSearchCriteria { MenuCategoryId = GrillsId });
+
+        // Assert
+        Assert.Single(cards);
+        Assert.Equal("Burger", cards[0].Name);
+    }
+
+    [Fact]
+    public async Task SearchMenu_DishInAHiddenCategory_IsNotShown()
+    {
+        // Arrange: switch Beverages off after adding a drink to it.
+        await AddDishAsync("Iced Lemon Tea", BeveragesId);
+        await DeactivateCategoryAsync(BeveragesId, "Beverages", 50);
+
+        // Act
+        IReadOnlyList<MenuItemCard> cards = await _service.SearchMenuAsync(new MenuSearchCriteria());
+
+        // Assert
+        Assert.Empty(cards);
+    }
+
+    [Fact]
+    public async Task SearchMenu_PriceFilter_UsesThePriceTheCustomerWouldPayToday()
+    {
+        // Arrange: a RM 20 dish with a RM 15 offer running now, and a plain RM 20 dish.
+        await AddDishWithOfferAsync("Offer Burger", startOffsetDays: -1, endOffsetDays: 1);
+        await AddDishAsync("Plain Burger");
+
+        // Act: nothing above RM 16.
+        IReadOnlyList<MenuItemCard> cards = await _service.SearchMenuAsync(
+            new MenuSearchCriteria { MaxPrice = 16.00m });
+
+        // Assert: only the dish whose offer price fits.
+        Assert.Single(cards);
+        Assert.Equal("Offer Burger", cards[0].Name);
+    }
+
+    [Fact]
+    public async Task SearchMenu_MinimumPrice_LeavesOutCheaperDishes()
+    {
+        // Arrange
+        await AddDishAsync("Cheap Bites", StartersId, price: 8.00m);
+        await AddDishAsync("Big Steak", GrillsId, price: 45.00m);
+
+        // Act
+        IReadOnlyList<MenuItemCard> cards = await _service.SearchMenuAsync(
+            new MenuSearchCriteria { MinPrice = 10.00m });
+
+        // Assert
+        Assert.Single(cards);
+        Assert.Equal("Big Steak", cards[0].Name);
+    }
+
+    [Fact]
+    public async Task SearchMenu_RunningOffer_ShowsOfferPriceAndEndTime()
+    {
+        // Arrange
+        await AddDishWithOfferAsync("Offer Burger", startOffsetDays: -1, endOffsetDays: 1);
+
+        // Act
+        IReadOnlyList<MenuItemCard> cards = await _service.SearchMenuAsync(new MenuSearchCriteria());
+
+        // Assert
+        MenuItemCard card = Assert.Single(cards);
+        Assert.True(card.IsOfferActive);
+        Assert.Equal(NormalPrice, card.NormalPrice);
+        Assert.Equal(OfferPrice, card.CurrentPrice);
+        Assert.NotNull(card.OfferEndsAtUtc);
+    }
+
+    [Fact]
+    public async Task SearchMenu_ExpiredOffer_ShowsTheNormalPrice()
+    {
+        // Arrange: the offer ended yesterday.
+        await AddDishWithOfferAsync("Old Offer Burger", startOffsetDays: -2, endOffsetDays: -1);
+
+        // Act
+        IReadOnlyList<MenuItemCard> cards = await _service.SearchMenuAsync(new MenuSearchCriteria());
+
+        // Assert
+        MenuItemCard card = Assert.Single(cards);
+        Assert.False(card.IsOfferActive);
+        Assert.Equal(NormalPrice, card.CurrentPrice);
+        Assert.Null(card.OfferEndsAtUtc);
+    }
+
+    [Fact]
+    public async Task SearchMenu_UnavailableDish_IsListedButCannotBeOrdered()
+    {
+        // Arrange
+        await AddDishAsync("Sold Out Special", isAvailable: false);
+        await AddDishAsync("Normal Burger", isAvailable: true);
+
+        // Act
+        IReadOnlyList<MenuItemCard> cards = await _service.SearchMenuAsync(new MenuSearchCriteria());
+
+        // Assert: both are listed, but only the available one can be ordered.
+        Assert.Equal(2, cards.Count);
+        Assert.False(cards.Single(card => card.Name == "Sold Out Special").CanOrder);
+        Assert.True(cards.Single(card => card.Name == "Normal Burger").CanOrder);
+    }
+
+    [Fact]
+    public async Task SearchMenu_DishWithAPhoto_CarriesThePhotoAddress()
+    {
+        // Arrange
+        int id = await AddDishAsync("Photo Burger");
+        using MemoryStream photo = new MemoryStream(new byte[] { 1 });
+        await _service.SetImageAsync(id, photo, "burger.png");
+
+        // Act
+        IReadOnlyList<MenuItemCard> cards = await _service.SearchMenuAsync(new MenuSearchCriteria());
+
+        // Assert
+        MenuItemCard card = Assert.Single(cards);
+        Assert.Equal("/uploads/menu/photo1.png", card.PhotoUrl);
     }
 
     //================================================== Photos ==================================================//
