@@ -57,6 +57,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     /// <summary>Dishes and drinks on the menu; each belongs to one MenuCategory.</summary>
     public DbSet<MenuItem> MenuItems => Set<MenuItem>();
 
+    /// <summary>Food orders; each belongs to one reservation.</summary>
+    public DbSet<Order> Orders => Set<Order>();
+
+    /// <summary>The lines of an order: which dish, how many, at what price.</summary>
+    public DbSet<OrderItem> OrderItems => Set<OrderItem>();
+
     // ----- Sprint 4 (Alex): announcements and feedback -----
 
     // ----- Sprint 5 (Darren): payments -----
@@ -115,5 +121,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         // YJ (Sprint 3): menu rules
         MenuConfiguration.Configure(builder);
+
+        // YJ (Sprint 3): order rules
+        OrderConfiguration.Configure(builder);
     }
 }

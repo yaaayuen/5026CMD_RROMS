@@ -13,7 +13,8 @@ namespace Rroms.Tests.Menu;
 /// Unit tests for the YJ-1 menu item rules in <see cref="MenuService"/>.
 /// </summary>
 /// <remarks>
-/// Every test follows Arrange (prepare data) - Act (call the method) - Assert (check the result).
+/// Every test follows Arrange (prepare data) - Act (call the method) 
+/// - Assert (check the result).
 /// Seed data available in every test: five menu categories, Starters (Id 1), Grills (Id 2),
 /// Pasta (Id 3), Desserts (Id 4) and Beverages (Id 5). No menu items are seeded.
 /// Prices in the offer tests use the same number of digits (20.00 and 15.00): SQLite stores
@@ -393,6 +394,23 @@ public class MenuServiceTests : IDisposable
         Assert.Single(grills);
         Assert.Equal("Smoky BBQ Burger", grills[0].Name);
         Assert.Equal(2, everything.Count);
+    }
+
+    [Fact]
+    public async Task DeleteMenuItem_ThatHasBeenOrdered_IsRejectedAndKept()
+    {
+        // Arrange: a customer has ordered the dish.
+        ServiceResult<int> created = await _service.CreateMenuItemAsync(CreateValidInput());
+        await OrderTestData.AddOrderAsync(_context, created.Value);
+
+        // Act
+        ServiceResult result = await _service.DeleteMenuItemAsync(created.Value);
+
+        // Assert: refused with a helpful message, and the dish is still there.
+        Assert.False(result.Succeeded);
+        Assert.Contains(MenuService.ItemHasOrdersMessage, result.Errors);
+        MenuItem? stillThere = await _service.GetMenuItemAsync(created.Value);
+        Assert.NotNull(stillThere);
     }
 
     //================================================== Photos ==================================================//
