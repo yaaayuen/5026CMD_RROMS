@@ -123,41 +123,8 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<IAccountServices, AccountService>();
 
-<<<<<<< Updated upstream
 // Temporary notification implementation; replaced by the real one in YY-6.
 builder.Services.AddScoped<INotificationService, LoggingNotificationService>();
-=======
-// Restaurant setup: profile, hours, closures, areas, tables, menu categories (WL-1).
-builder.Services.AddScoped<IRestaurantService, RestaurantService>();
-// Booking time rules: visit length, slot grid and overlap check, all from ReservationRules (WL-2).
-builder.Services.AddScoped<ReservationTimeRules>();
-builder.Services.AddScoped<IReservationService, ReservationService>();
-
-// Menu items: dishes, prices, availability and offers (YJ-1).
-builder.Services.AddScoped<IMenuService, MenuService>();
-
-// Dish photos: validation, resizing and storage (YJ-1).
-builder.Services.AddScoped<IMenuImageStorage, MenuImageStorage>();
-
-// Services (Alex-1)
-builder.Services.AddScoped<IOrderProcessingService, OrderProcessingService>();
-builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
-builder.Services.AddScoped<IFeedbackService, FeedbackService>();
-
-// ----- Notifications (YY-6) -----
-// One class serves both interfaces: modules publish through INotificationService,
-// the inbox page and bell read through INotificationInbox.
-builder.Services.AddScoped<INotificationService, NotificationService>();
-builder.Services.AddScoped<INotificationInbox, NotificationService>();
-builder.Services.AddScoped<INotificationPusher, SignalRNotificationPusher>();
-builder.Services.AddSignalR();
-
-// Email: pages add to an in-memory queue (singleton, shared by all requests);
-// a background service sends from the queue through Gmail.
-builder.Services.AddSingleton<IEmailQueue, EmailQueue>();
-builder.Services.AddSingleton<IEmailDelivery, SmtpEmailDelivery>();
-builder.Services.AddHostedService<EmailBackgroundService>();
->>>>>>> Stashed changes
 
 // ----- Authorization policies (YY-3) -----
 // Each policy names a rule once; folders and pages refer to it by name.
