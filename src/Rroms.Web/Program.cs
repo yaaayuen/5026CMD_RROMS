@@ -105,6 +105,8 @@ builder.Services.Configure<AuthRateLimitOptions>(
     builder.Configuration.GetSection(AuthRateLimitOptions.SectionName));
 builder.Services.Configure<MenuImageOptions>(
     builder.Configuration.GetSection(MenuImageOptions.SectionName));
+builder.Services.Configure<OrderRulesOptions>(
+    builder.Configuration.GetSection(OrderRulesOptions.SectionName));
 builder.Services.Configure<SmtpOptions>(
     builder.Configuration.GetSection(SmtpOptions.SectionName));
 
@@ -151,6 +153,9 @@ builder.Services.AddScoped<IMenuService, MenuService>();
 
 // Dish photos: validation, resizing and storage (YJ-1).
 builder.Services.AddScoped<IMenuImageStorage, MenuImageStorage>();
+
+// Orders: placing an order for a reservation (YJ-3).
+builder.Services.AddScoped<IOrderService, OrderService>();
 
 // Alex (Sprint 4)
 builder.Services.AddScoped<IOrderProcessingService, OrderProcessingService>();

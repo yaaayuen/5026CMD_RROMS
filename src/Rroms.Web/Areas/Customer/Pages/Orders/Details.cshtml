@@ -1,0 +1,72 @@
+﻿@page "{id:int}"
+@model DetailsModel
+@using Rroms.Web.Common
+@using Rroms.Web.Contracts
+@{
+	ViewData["Title"] = "My order";
+	DateTime placed = MalaysiaTime.FromUtc(Model.Summary.PlacedAtUtc);
+}
+
+<section class="hero hero-compact mb-4" aria-labelledby="order-heading">
+	<span class="hero-bubble one" aria-hidden="true"></span>
+	<div class="position-relative">
+		<span class="eyebrow">Orders</span>
+		<h1 id="order-heading" class="mb-1">Order #@Model.Summary.Id</h1>
+		<p class="lead mb-0">Table @Model.Summary.TableLabel · placed @placed.ToString("d MMM yyyy, h:mm tt")</p>
+	</div>
+</section>
+
+<section class="tg-card h-auto mb-4" aria-labelledby="items-heading">
+	<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+		<h2 id="items-heading" class="h4 mb-0">Your dishes</h2>
+		<span class="badge @DetailsModel.StatusBadgeClass(Model.Summary.Status) fs-6">@DetailsModel.StatusText(Model.Summary.Status)</span>
+	</div>
+
+	<div class="table-responsive">
+		<table class="table align-middle">
+			<thead>
+				<tr>
+					<th scope="col">Dish</th>
+					<th scope="col" class="text-end">Quantity</th>
+					<th scope="col" class="text-end">Price (RM)</th>
+					<th scope="col" class="text-end">Total (RM)</th>
+				</tr>
+			</thead>
+			<tbody>
+				@foreach (Rroms.Web.Models.ViewModels.OrderSummaryLine line in Model.Summary.Lines)
+				{
+					<tr>
+						<th scope="row">
+							@line.DishName
+							@if (!string.IsNullOrEmpty(line.Notes))
+							{
+								<div class="small text-secondary fw-normal">Note: @line.Notes</div>
+							}
+						</th>
+						<td class="text-end">@line.Quantity</td>
+						<td class="text-end">@line.UnitPrice.ToString("N2")</td>
+						<td class="text-end">@line.LineTotal.ToString("N2")</td>
+					</tr>
+				}
+			</tbody>
+			<tfoot>
+				<tr>
+					<th scope="row" colspan="3" class="text-end">Total</th>
+					<td class="text-end fw-bold">RM @Model.Summary.TotalAmount.ToString("N2")</td>
+				</tr>
+			</tfoot>
+		</table>
+	</div>
+
+	@if (!string.IsNullOrEmpty(Model.Summary.Notes))
+	{
+		<p class="mb-0"><strong>Note for the kitchen:</strong> @Model.Summary.Notes</p>
+	}
+
+	@if (Model.Summary.Status == OrderStatus.Placed)
+	{
+		<p class="text-secondary small mt-3 mb-0">Your order is in. It will be prepared once you are seated at your table.</p>
+	}
+</section>
+
+<p><a asp-page="/Reservations/Details" asp-route-id="@Model.Summary.ReservationId">Back to my booking</a></p>

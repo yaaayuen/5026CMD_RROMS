@@ -1,0 +1,154 @@
+﻿@page "{reservationId:int}"
+@model NewModel
+@using System.Globalization
+@using Rroms.Web.Common
+@using Rroms.Web.Models.ViewModels
+@{
+	ViewData["Title"] = "Order food";
+
+	// Only dishes that can be ordered get a quantity box. Their rows must be numbered 0, 1, 2, ... with no gaps,
+	// because ASP.NET Core stops reading a list at the first missing number.
+	List<MenuItemCard> orderable = Model.Dishes.Where(dish => dish.CanOrder).ToList();
+}
+
+<section class="hero hero-compact mb-4" aria-labelledby="order-heading">
+	<span class="hero-bubble one" aria-hidden="true"></span>
+	<div class="position-relative">
+		<span class="eyebrow">Order</span>
+		<h1 id="order-heading" class="mb-1">Order food</h1>
+		@if (Model.Reservation != null)
+		{
+			DateTime start = MalaysiaTime.FromUtc(Model.Reservation.StartUtc);
+			<p class="lead mb-0">Table @Model.Reservation.TableLabel · @Model.Reservation.AreaName · @start.ToString("ddd d MMM, h:mm tt")</p>
+		}
+	</div>
+</section>
+
+@if (Model.Reservation == null)
+{
+	<section class="tg-card h-auto" aria-labelledby="not-yet-heading">
+		<h2 id="not-yet-heading" class="h4 mb-3">You cannot order yet</h2>
+		<p>@Model.NotOrderableMessage</p>
+		<a class="btn btn-primary" asp-page="/Reservations/Index">Back to my reservations</a>
+	</section>
+}
+else
+{
+	<form method="post" id="orderForm" novalidate>
+		<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+		<p class="text-secondary">
+			Your food is prepared once you are seated at your table. You can order now and we will have it ready for you.
+		</p>
+
+		@foreach (IGrouping<string, MenuItemCard> group in Model.Dishes.GroupBy(dish => dish.CategoryName))
+		{
+			<section class="mb-4" aria-label="@group.Key">
+				<h2 class="section-title h3 mb-3">@group.Key</h2>
+
+				<div class="row g-3">
+					@foreach (MenuItemCard dish in group)
+					{
+						int row = orderable.IndexOf(dish);
+
+						<div class="col-md-6">
+							<article class="tg-card h-100 @(dish.CanOrder ? "" : "opacity-75")">
+								<div class="d-flex justify-content-between gap-3">
+									<div>
+										<h3 class="h5 mb-1">@dish.Name</h3>
+										<p class="text-secondary small mb-2">@dish.Description</p>
+										<p class="mb-0">
+											@if (dish.IsOfferActive)
+											{
+												<span class="text-decoration-line-through text-secondary">RM @dish.NormalPrice.ToString("N2")</span>
+												<strong>RM @dish.CurrentPrice.ToString("N2")</strong>
+												<span class="badge text-bg-warning">Offer</span>
+											}
+											else
+											{
+												<strong>RM @dish.CurrentPrice.ToString("N2")</strong>
+											}
+										</p>
+									</div>
+
+									@if (dish.CanOrder)
+									{
+										<div class="text-end">
+											<input type="hidden" name="Lines[@row].MenuItemId" value="@dish.Id" />
+											<label for="quantity-@dish.Id" class="form-label small mb-1">Quantity</label>
+											<input id="quantity-@dish.Id" type="number" name="Lines[@row].Quantity" class="form-control" style="width: 6rem;"
+												   min="0" max="@Model.MaxQuantity" value="@Model.QuantityFor(dish.Id)"
+												   data-price="@dish.CurrentPrice.ToString(CultureInfo.InvariantCulture)" />
+										</div>
+									}
+								</div>
+
+								@if (dish.CanOrder)
+								{
+									<label for="note-@dish.Id" class="visually-hidden">Note for @dish.Name</label>
+									<input id="note-@dish.Id" type="text" name="Lines[@row].Notes" class="form-control form-control-sm mt-3"
+										   maxlength="@Model.MaxLineNoteLength" placeholder="Note for this dish (optional)" value="@Model.NoteFor(dish.Id)" />
+								}
+								else
+								{
+									<span class="badge text-bg-secondary mt-3">Unavailable</span>
+								}
+							</article>
+						</div>
+					}
+				</div>
+			</section>
+		}
+
+		<section class="tg-card h-auto mb-4" aria-labelledby="summary-heading">
+			<h2 id="summary-heading" class="h4 mb-3">Your order</h2>
+
+			<label asp-for="Notes" class="form-label fw-semibold">Note for the kitchen (optional)</label>
+			<textarea asp-for="Notes" class="form-control mb-3" rows="2" maxlength="@Model.MaxOrderNoteLength" placeholder="e.g. allergic to peanuts"></textarea>
+
+			<p class="fs-5 mb-1" aria-live="polite">Estimated total: <strong>RM <span id="orderTotal">0.00</span></strong></p>
+			<p class="text-secondary small">The restaurant works out the final total from today's prices when you place the order.</p>
+
+			<button type="submit" id="placeOrder" class="btn btn-primary">Place order</button>
+			<a class="btn btn-link" asp-page="/Reservations/Details" asp-route-id="@Model.Reservation.Id">Cancel</a>
+		</section>
+	</form>
+}
+
+@section Scripts {
+	<script>
+		(function () {
+			var inputs = document.querySelectorAll('input[data-price]');
+			var totalElement = document.getElementById('orderTotal');
+			var form = document.getElementById('orderForm');
+			var button = document.getElementById('placeOrder');
+
+			if (!totalElement || !form) {
+				return;
+			}
+
+			// Only a convenience for the customer: the server works out the real total itself.
+			function updateTotal() {
+				var total = 0;
+				inputs.forEach(function (input) {
+					var quantity = parseInt(input.value, 10) || 0;
+					var price = parseFloat(input.dataset.price) || 0;
+					if (quantity > 0) {
+						total += quantity * price;
+					}
+				});
+				totalElement.textContent = total.toFixed(2);
+			}
+
+			inputs.forEach(function (input) {
+				input.addEventListener('input', updateTotal);
+			});
+			updateTotal();
+
+			// A second click on a slow connection must not place the order twice.
+			form.addEventListener('submit', function () {
+				button.disabled = true;
+			});
+		})();
+	</script>
+}
