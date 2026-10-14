@@ -1,0 +1,103 @@
+﻿@page "{id:int?}"
+@model CategoriesModel
+@{
+	ViewData["Title"] = "Menu categories";
+	bool isEditing = Model.EditingId.HasValue;
+}
+
+<section class="hero hero-compact mb-4" aria-labelledby="categories-heading">
+	<span class="hero-bubble one" aria-hidden="true"></span>
+	<div class="position-relative">
+		<span class="eyebrow">Restaurant setup</span>
+		<h1 id="categories-heading" class="mb-1">Menu categories</h1>
+		<p class="lead mb-0">The sections of the menu, in the order customers see them.</p>
+	</div>
+</section>
+
+<div class="row g-4">
+	<div class="col-lg-3">
+		<div class="sticky-lg-top" style="top: calc(50vh - 8rem);">
+			<partial name="_RestaurantNav" model='"Categories"' />
+		</div>
+	</div>
+
+	<div class="col-lg-9">
+		<section class="tg-card h-auto mb-4" aria-labelledby="list-heading">
+			<h2 id="list-heading" class="h4 mb-3">All categories</h2>
+			<p class="text-secondary small">Lower numbers appear first on the menu.</p>
+
+			<div class="table-responsive">
+				<table class="table align-middle">
+					<thead>
+						<tr>
+							<th scope="col">Order</th>
+							<th scope="col">Name</th>
+							<th scope="col">Status</th>
+							<th scope="col"><span class="visually-hidden">Edit</span></th>
+						</tr>
+					</thead>
+					<tbody>
+						@foreach (Rroms.Web.Models.MenuCategory category in Model.Categories)
+						{
+							<tr class="@(category.Id == Model.EditingId ? "table-warning" : "")">
+								<td>@category.DisplayOrder</td>
+								<th scope="row">@category.Name</th>
+								<td>
+									@if (category.IsActive)
+									{
+										<span class="badge text-bg-success">Shown on menu</span>
+									}
+									else
+									{
+										<span class="badge text-bg-secondary">Hidden</span>
+									}
+								</td>
+								<td class="text-end">
+									<a class="btn btn-sm btn-outline-primary" asp-page="/Restaurant/Categories" asp-route-id="@category.Id">Edit</a>
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<section class="tg-card h-auto" aria-labelledby="form-heading">
+			<h2 id="form-heading" class="h4 mb-3">@(isEditing ? $"Edit {Model.EditingName}" : "Add a category")</h2>
+
+			<form method="post" asp-route-id="@Model.EditingId" novalidate>
+				<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+				<div class="row">
+					<div class="col-md-8 mb-3">
+						<label asp-for="Input.Name" class="form-label fw-semibold"></label>
+						<input asp-for="Input.Name" class="form-control" placeholder="e.g. Soups" />
+						<span asp-validation-for="Input.Name" class="text-danger small"></span>
+					</div>
+					<div class="col-md-4 mb-3">
+						<label asp-for="Input.DisplayOrder" class="form-label fw-semibold"></label>
+						<input asp-for="Input.DisplayOrder" class="form-control"
+							   min="@Rroms.Web.Models.MenuCategory.MinDisplayOrder" max="@Rroms.Web.Models.MenuCategory.MaxDisplayOrder" />
+						<span asp-validation-for="Input.DisplayOrder" class="text-danger small"></span>
+					</div>
+				</div>
+
+				<div class="form-check mb-3">
+					<input asp-for="Input.IsActive" class="form-check-input" />
+					<label asp-for="Input.IsActive" class="form-check-label"></label>
+					<div class="form-text">Untick to hide this category, and its dishes, from the customer menu.</div>
+				</div>
+
+				<button type="submit" class="btn btn-primary">@(isEditing ? "Save changes" : "Add category")</button>
+				@if (isEditing)
+				{
+					<a class="btn btn-link" asp-page="/Restaurant/Categories" asp-route-id="">Cancel</a>
+				}
+			</form>
+		</section>
+	</div>
+</div>
+
+@section Scripts {
+	<partial name="_ValidationScriptsPartial" />
+}

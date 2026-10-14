@@ -21,11 +21,47 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     }
 
     // ----- Sprint 1 (YY): accounts and notifications -----
-    // Users and roles come from IdentityDbContext. Notification table is added in YY-6.
+    // Users and roles come from IdentityDbContext. 
+
+    /// <summary>Notification inbox rows (YY-6).</summary>
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     // ----- Sprint 2 (WL): restaurant setup and reservations -----
 
+    /// <summary>The restaurant's contact details (always one row).</summary>
+    public DbSet<RestaurantProfile> RestaurantProfiles => Set<RestaurantProfile>();
+
+    /// <summary>Normal opening hours, one row per day of the week.</summary>
+    public DbSet<OperatingHour> OperatingHours => Set<OperatingHour>();
+
+    /// <summary>Date ranges when the restaurant is closed, e.g. public holidays.</summary>
+    public DbSet<SpecialClosure> SpecialClosures => Set<SpecialClosure>();
+
+    /// <summary>Parts of the restaurant that contain tables.</summary>
+    public DbSet<DiningArea> DiningAreas => Set<DiningArea>();
+
+    /// <summary>Tables customers can book.</summary>
+    public DbSet<DiningTable> DiningTables => Set<DiningTable>();
+
+    /// <summary>Menu sections; YJ's menu items reference these.</summary>
+    public DbSet<MenuCategory> MenuCategories => Set<MenuCategory>();
+
+
+    /// <summary>Table bookings made by customers (WL-2).</summary>
+    public DbSet<Reservation> Reservations => Set<Reservation>();
+
+    /// <summary>Time slots held by each reservation; their unique index prevents double booking (WL-2).</summary>
+    public DbSet<ReservationSlot> ReservationSlots => Set<ReservationSlot>();
+
     // ----- Sprint 3 (YJ): menu and orders -----
+    /// <summary>Dishes and drinks on the menu; each belongs to one MenuCategory.</summary>
+    public DbSet<MenuItem> MenuItems => Set<MenuItem>();
+
+    /// <summary>Food orders; each belongs to one reservation.</summary>
+    public DbSet<Order> Orders => Set<Order>();
+
+    /// <summary>The lines of an order: which dish, how many, at what price.</summary>
+    public DbSet<OrderItem> OrderItems => Set<OrderItem>();
 
     // ----- Sprint 4 (Alex): announcements and feedback -----
 
@@ -64,5 +100,29 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             // Admin account lists filter by active status, so index it.
             user.HasIndex(u => u.IsActive);
         });
+
+        // ----- Sprint 1 (YY): notifications -----
+        builder.Entity<Notification>(notification =>
+        {
+            // Each notification belongs to one user. Deleting a user deletes their notifications.
+            notification.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // The bell badge asks "how many unread for this user?" on every page load;
+            // this index answers it without scanning the table.
+            notification.HasIndex(n => new { n.UserId, n.IsRead, n.CreatedAtUtc });
+        });
+
+        // Sprint 2 (WL): restaurant setup rules and seed data live in their own file.
+        RestaurantSetupConfiguration.Configure(builder);
+        ReservationConfiguration.Configure(builder);
+
+        // YJ (Sprint 3): menu rules
+        MenuConfiguration.Configure(builder);
+
+        // YJ (Sprint 3): order rules
+        OrderConfiguration.Configure(builder);
     }
 }

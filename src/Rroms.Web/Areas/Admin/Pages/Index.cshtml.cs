@@ -26,17 +26,20 @@ public class IndexModel : PageModel
                 "Restaurant setup",
                 "Dining areas, tables, opening hours and menu categories.",
                 "settings",
-                "Sprint 2 · WL"),
+                "Sprint 2 · WL",
+                "/Admin/Restaurant"),
             new ModuleTileViewModel(
                 "Menu items",
                 "Dishes, prices, availability, offers and photos.",
                 "menu",
-                "Sprint 3 · YJ"),
+                "Sprint 3 · YJ",
+                "/Admin/Menu"),
             new ModuleTileViewModel(
                 "Accounts and roles",
                 "Create staff accounts, assign roles and deactivate users.",
                 "users",
-                "Sprint 1 · YY"),
+                "Sprint 1 · YY",
+                "/Admin/Accounts"),
             new ModuleTileViewModel(
                 "Announcements",
                 "Promotional campaigns and restaurant notices.",

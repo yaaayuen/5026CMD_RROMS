@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Rroms.Web.Common;
 using Rroms.Web.Options;
 using Rroms.Web.Services;
+using Rroms.Web.Models.ViewModels;
 
 namespace Rroms.Web.Pages.Account;
 
@@ -16,10 +17,10 @@ namespace Rroms.Web.Pages.Account;
 [EnableRateLimiting(AuthRateLimitOptions.PolicyName)]
 public class LoginModel : PageModel
 {
-    private readonly IAccountServices _accountService;
+    private readonly IAccountService _accountService;
 
     //Receives the account service from dependency injection
-    public LoginModel(IAccountServices accountService)
+    public LoginModel(IAccountService accountService)
     {
         _accountService = accountService;
     }
@@ -47,33 +48,40 @@ public class LoginModel : PageModel
     //Validates form and signs user in
     public async Task<IActionResult> OnPostAsync()
     {
-        //Server-side validation of the form data
+        // Server-side validation always runs, even if the browser already validated the form.
         if (!ModelState.IsValid)
         {
             return Page();
         }
 
-        ServiceResult<string> result = await _accountService.SignInAsync(Input.Email, Input.Password, Input.RememberMe);
-        if (!result.Succeeded)
+        ServiceResult<SignInOutcome> result = await _accountService.SignInAsync(Input.Email, Input.Password, Input.RememberMe);
+        if (!result.Succeeded || result.Value == null)
         {
             foreach (string error in result.Errors)
             {
-                //An empty key shows the message in the validation summary, rather than next to a specific field
+                // An empty key shows the message in the form-level validation summary.
                 ModelState.AddModelError(string.Empty, error);
             }
 
             return Page();
         }
 
+        if (result.Value.RequiresCode)
+        {
+            // Two-step sign-in (YY-7): a code has been emailed. Pass ReturnUrl and RememberMe along.
+            return RedirectToPage("/Account/LoginWithCode", new { ReturnUrl, Input.RememberMe });
+        }
+
         // Only follow ReturnUrl if it points inside this site. Otherwise an attacker could send a link
+        // like /Account/Login?ReturnUrl=https://evil.example and use our login to redirect victims (open redirect).
         if (!string.IsNullOrEmpty(ReturnUrl) && Url.IsLocalUrl(ReturnUrl))
         {
             return LocalRedirect(ReturnUrl);
         }
 
-        string homePath = result.Value ?? "/";
-        return LocalRedirect(homePath);
+        return LocalRedirect(result.Value.HomePath);
     }
+
     //Form fields for signing in. Data annotations drive both server and browser validation.
     public class LoginInput
     {

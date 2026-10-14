@@ -1,0 +1,100 @@
+﻿@page
+@model Rroms.Web.Areas.Admin.Pages.Accounts.IndexModel
+@using Rroms.Web.Common
+@{
+    ViewData["Title"] = "Accounts and roles";
+}
+
+<a asp-area="Admin" asp-page="/Index" class="d-inline-block mb-3">&larr; Back to dashboard</a>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="section-title mb-1">Accounts and roles</h1>
+        <p class="section-subtitle mb-0">Create staff accounts, assign roles and deactivate users.</p>
+    </div>
+    <a class="btn btn-primary" asp-page="Create">+ New account</a>
+</div>
+
+@* GET form: filters appear in the URL, so a filtered list can be bookmarked or shared. *@
+<form method="get" class="tg-card mb-4" role="search" aria-label="Filter accounts">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-5">
+            <label for="search" class="form-label fw-semibold">Search</label>
+            <input id="search" name="Search" value="@Model.Search" class="form-control" placeholder="Name, email or phone" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label for="role" class="form-label fw-semibold">Role</label>
+            <select id="role" name="Role" class="form-select">
+                <option value="">All roles</option>
+                @foreach (string roleName in RoleNames.All)
+                {
+                    <option value="@roleName" selected="@(Model.Role == roleName)">@roleName</option>
+                }
+            </select>
+        </div>
+        <div class="col-6 col-md-2">
+            <label for="status" class="form-label fw-semibold">Status</label>
+            <select id="status" name="Status" class="form-select">
+                <option value="">Any</option>
+                <option value="active" selected="@(Model.Status == "active")">Active</option>
+                <option value="inactive" selected="@(Model.Status == "inactive")">Deactivated</option>
+            </select>
+        </div>
+        <div class="col-md-2 d-grid">
+            <button type="submit" class="btn btn-outline-primary">Filter</button>
+        </div>
+    </div>
+</form>
+
+<div class="tg-card p-0 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <caption class="visually-hidden">Accounts matching the filters</caption>
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Joined</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Users.Count == 0)
+                {
+                    <tr>
+                        <td colspan="6" class="text-center text-secondary py-4">No accounts match these filters.</td>
+                    </tr>
+                }
+
+                @foreach (var user in Model.Users)
+                {
+                    <tr>
+                        <td class="fw-semibold">@user.FullName</td>
+                        <td>@user.Email</td>
+                        <td><span class="role-chip">@(string.IsNullOrEmpty(user.RoleName) ? "No role" : user.RoleName)</span></td>
+                        <td>
+                            @if (user.IsActive)
+                            {
+                                <span class="badge text-bg-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-secondary">Deactivated</span>
+                            }
+                        </td>
+                        <td>@MalaysiaTime.FromUtc(user.CreatedAtUtc).ToString("d MMM yyyy")</td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-primary" asp-page="Edit" asp-route-id="@user.Id">Edit</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (Model.Users.Count == Rroms.Web.Services.UserAdministrationService.MaxResults)
+{
+    <p class="small text-secondary mt-2">Showing the first @Model.Users.Count accounts. Use the search box to narrow the list.</p>
+}

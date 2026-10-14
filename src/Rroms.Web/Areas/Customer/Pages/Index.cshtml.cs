@@ -26,7 +26,8 @@ public class IndexModel : PageModel
                 "Book a table",
                 "Choose a time and party size; we show only free tables.",
                 "calendar",
-                "Sprint 2 · WL"),
+                "Sprint 2 · WL",
+                "/Customer/Reservations/Book"),
             new ModuleTileViewModel(
                 "Menu and ordering",
                 "Browse the menu and order to your table.",
@@ -46,7 +47,14 @@ public class IndexModel : PageModel
                 "Notifications",
                 "Booking confirmations, order updates and offers.",
                 "bell",
-                "Sprint 1 · YY"),
+                "Sprint 1 · YY",
+                "/Notifications"),
+            new ModuleTileViewModel(
+                "My profile",
+                "Contact details and dining preferences.",
+                "users",
+                "Sprint 1 · YY",
+                "/Account/Profile"),
             new ModuleTileViewModel(
                 "Ask our assistant",
                 "Questions about the menu, hours or booking.",

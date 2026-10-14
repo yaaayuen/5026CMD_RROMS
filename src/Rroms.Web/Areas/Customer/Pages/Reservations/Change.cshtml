@@ -1,0 +1,117 @@
+﻿@page "{id:int}"
+@model ChangeModel
+@{
+    ViewData["Title"] = "Change booking";
+}
+
+<section class="hero hero-compact mb-4" aria-labelledby="change-heading">
+    <span class="hero-bubble one" aria-hidden="true"></span>
+    <div class="position-relative">
+        <span class="eyebrow">Reservations</span>
+        <h1 id="change-heading" class="mb-1">Change booking</h1>
+        <p class="lead mb-0">Pick a new day, time, party size or table. Your current table stays available to you.</p>
+    </div>
+</section>
+
+@if (!Model.CanChange)
+{
+    <div class="alert alert-warning" role="alert">This booking can no longer be changed online. Please contact the restaurant.</div>
+    <p><a asp-page="Details" asp-route-id="@Model.Booking.Id">Back to the booking</a></p>
+}
+else
+{
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+    <section class="tg-card h-auto mb-4" aria-labelledby="search-heading">
+        <h2 id="search-heading" class="h4 mb-3">1. When and how many?</h2>
+
+        <form method="get">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label asp-for="Search.Date" class="form-label fw-semibold"></label>
+                    <input asp-for="Search.Date" type="date" class="form-control"
+                           min="@Model.MinDate.ToString("yyyy-MM-dd")" max="@Model.MaxDate.ToString("yyyy-MM-dd")"
+                           onchange="this.form.submit()" />
+                </div>
+
+                <div class="col-md-3">
+                    <label for="search-time" class="form-label fw-semibold">Time</label>
+                    @if (Model.StartTimes.Count == 0)
+                    {
+                        <p id="search-time" class="form-control-plaintext text-danger mb-0">Closed on this day</p>
+                    }
+                    else
+                    {
+                        <select id="search-time" name="Search.Time" class="form-select">
+                            @foreach (TimeOnly time in Model.StartTimes)
+                            {
+                                <option value="@time.ToString("HH:mm")" selected="@(time == Model.Search.Time)">@time.ToString("h:mm tt")</option>
+                            }
+                        </select>
+                    }
+                </div>
+
+                <div class="col-md-2">
+                    <label asp-for="Search.PartySize" class="form-label fw-semibold"></label>
+                    <input asp-for="Search.PartySize" class="form-control" min="@Model.MinPartySize" max="@Model.MaxPartySize" />
+                </div>
+
+                <div class="col-md-3">
+                    <button type="submit" name="Find" value="true" class="btn btn-primary w-100"
+                            disabled="@(Model.StartTimes.Count == 0)">Find tables</button>
+                </div>
+            </div>
+        </form>
+    </section>
+
+    @if (Model.Results != null)
+    {
+        <section class="tg-card h-auto" aria-labelledby="results-heading">
+            <h2 id="results-heading" class="h4 mb-3">2. Choose your table</h2>
+
+            @if (Model.Results.Count == 0)
+            {
+                <p class="mb-0">Sorry, every table is taken at that time. Please try another time.</p>
+            }
+            else
+            {
+                // Pre-select the current table when it is still offered, otherwise the first one.
+                bool currentOffered = Model.Results.Any(t => t.DiningTableId == Model.Booking.DiningTableId);
+                int selectedId = currentOffered ? Model.Booking.DiningTableId : Model.Results[0].DiningTableId;
+
+                <form method="post">
+                    <input type="hidden" name="Search.Date" value="@Model.Search.Date.ToString("yyyy-MM-dd")" />
+                    <input type="hidden" name="Search.Time" value="@Model.Search.Time.ToString("HH:mm")" />
+                    <input type="hidden" name="Search.PartySize" value="@Model.Search.PartySize" />
+
+                    <div class="list-group mb-3">
+                        @foreach (AvailableTable table in Model.Results)
+                        {
+                            <label class="list-group-item d-flex align-items-center gap-3">
+                                <input class="form-check-input mt-0" type="radio" name="DiningTableId"
+                                       value="@table.DiningTableId" checked="@(table.DiningTableId == selectedId)" />
+                                <span>
+                                    <strong>Table @table.Label</strong>
+                                    <span class="text-secondary">· @table.AreaName · @table.Capacity seats</span>
+                                    @if (table.DiningTableId == Model.Booking.DiningTableId)
+                                    {
+                                        <span class="badge text-bg-light border ms-1">Your current table</span>
+                                    }
+                                </span>
+                            </label>
+                        }
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="SpecialRequests" class="form-label fw-semibold">Special requests (optional)</label>
+                        <textarea asp-for="SpecialRequests" class="form-control" rows="2"
+                                  maxlength="@Rroms.Web.Models.Reservation.SpecialRequestsMaxLength"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save changes</button>
+                    <a class="btn btn-link" asp-page="Details" asp-route-id="@Model.Booking.Id">Keep my booking as it is</a>
+                </form>
+            }
+        </section>
+    }
+}

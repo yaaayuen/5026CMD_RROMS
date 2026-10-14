@@ -1,0 +1,76 @@
+﻿@page
+@model Rroms.Web.Pages.Account.ProfileModel
+@using Rroms.Web.Common
+@using Rroms.Web.Security
+@{
+	ViewData["Title"] = "My profile";
+}
+
+<a href="@User.GetHomePath()" class="d-inline-block mb-3">&larr; Back to dashboard</a>
+<section class="hero hero-compact mb-4" aria-labelledby="profile-heading">
+	<span class="hero-bubble one" aria-hidden="true"></span>
+	<div class="position-relative">
+		<span class="eyebrow">@Model.Details.RoleName</span>
+		<h1 id="profile-heading" class="mb-1">My profile</h1>
+		<p class="lead mb-0">Keep your details up to date so we can look after you.</p>
+	</div>
+</section>
+
+<div class="row g-4">
+	<div class="col-lg-8">
+		<section class="tg-card" aria-labelledby="details-heading">
+			<h2 id="details-heading" class="h4 mb-3">Your details</h2>
+
+			<form method="post" novalidate>
+				<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+				<div class="mb-3">
+					<label asp-for="Input.FullName" class="form-label fw-semibold"></label>
+					<input asp-for="Input.FullName" class="form-control" autocomplete="name" />
+					<span asp-validation-for="Input.FullName" class="text-danger small"></span>
+				</div>
+
+				<div class="mb-3">
+					<label asp-for="Input.PhoneNumber" class="form-label fw-semibold"></label>
+					<input asp-for="Input.PhoneNumber" class="form-control" autocomplete="tel" />
+					<span asp-validation-for="Input.PhoneNumber" class="text-danger small"></span>
+				</div>
+
+				@if (Model.ShowDiningPreferences)
+				{
+					<div class="mb-3">
+						<label asp-for="Input.DiningPreferences" class="form-label fw-semibold"></label>
+						<textarea asp-for="Input.DiningPreferences" class="form-control" rows="3"
+								  placeholder="e.g. Window seat, no peanuts, prefers medium-rare"
+								  aria-describedby="preferences-help"></textarea>
+						<div id="preferences-help" class="form-text">Staff see this with your bookings, and we use it to suggest dishes you'll like.</div>
+						<span asp-validation-for="Input.DiningPreferences" class="text-danger small"></span>
+					</div>
+				}
+				                <button type="submit" class="btn btn-primary">Save changes</button>
+			</form>
+		</section>
+	</div>
+
+	<div class="col-lg-4">
+		<aside class="tg-card" aria-labelledby="account-heading">
+			<h2 id="account-heading" class="h5">Account</h2>
+			<dl class="mb-3">
+				<dt class="small text-secondary">Email (sign-in)</dt>
+				<dd class="fw-semibold">@Model.Details.Email</dd>
+				<dt class="small text-secondary">Role</dt>
+				<dd><span class="role-chip">@Model.Details.RoleName</span></dd>
+				<dt class="small text-secondary">Member since</dt>
+				<dd>@MalaysiaTime.FromUtc(Model.Details.CreatedAtUtc).ToString("d MMM yyyy")</dd>
+			</dl>
+				<a class="btn btn-outline-primary w-100 mb-2" asp-page="/Account/ChangePassword">Change password</a>
+				<a class="btn btn-outline-primary w-100" asp-page="/Account/TwoStep">
+					Two-step sign-in: @(Model.Details.TwoStepEnabled ? "On" : "Off")
+				</a>
+		</aside>
+	</div>
+</div>
+
+@section Scripts {
+	<partial name="_ValidationScriptsPartial" />
+}

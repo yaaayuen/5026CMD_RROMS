@@ -1,51 +1,54 @@
 ﻿@page
 @model Rroms.Web.Pages.Account.LoginModel
 @{
-	ViewData["Title"] = "Sign in";
+    ViewData["Title"] = "Sign in";
 }
 
 <div class="row justify-content-center">
-	<div class="col-md-8 col-lg-5">
-		<section class="tg-card auth-card" aria-labelledby="login-heading">
-			<span class="tg-icon raspberry"><partial name="_Icon" model='"users"' /></span>
-			<h1 id="login-heading" class="h2 mb-1">Welcome back</h1>
-			<p class="text-secondary mb-4">Sign in to book a table, order and track your meal.</p>
+    <div class="col-md-8 col-lg-5">
+        <section class="tg-card auth-card" aria-labelledby="login-heading">
+            <span class="tg-icon coral"><partial name="_Icon" model='"users"' /></span>
+            <h1 id="login-heading" class="h2 mb-1">Welcome back</h1>
+            <p class="text-secondary mb-4">Sign in to book a table, order and track your meal.</p>
 
-			@* method="post" makes the form tag helper add the hidden antiforgery token automatically. *@
-			<form method="post" novalidate>
-				<input type="hidden" asp-for="ReturnUrl" />
+            @* method="post" makes the form tag helper add the hidden antiforgery token automatically. *@
+            <form method="post" novalidate>
+                <input type="hidden" asp-for="ReturnUrl" />
 
-				@* Form-level errors such as "Invalid email or password." *@
-				<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                @* Form-level errors such as "Invalid email or password." *@
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
-				<div class="mb-3">
-					<label asp-for="Input.Email" class="form-label fw-semibold"></label>
-					<input asp-for="Input.Email" class="form-control form-control-lg" autocomplete="username" autofocus />
-					<span asp-validation-for="Input.Email" class="text-danger small"></span>
-				</div>
+                <div class="mb-3">
+                    <label asp-for="Input.Email" class="form-label fw-semibold"></label>
+                    <input asp-for="Input.Email" class="form-control form-control-lg" autocomplete="username" autofocus />
+                    <span asp-validation-for="Input.Email" class="text-danger small"></span>
+                </div>
 
-				<div class="mb-3">
-					<label asp-for="Input.Password" class="form-label fw-semibold"></label>
-					<input asp-for="Input.Password" class="form-control form-control-lg" autocomplete="current-password" />
-					<span asp-validation-for="Input.Password" class="text-danger small"></span>
-				</div>
+                <div class="mb-3">
+                    <label asp-for="Input.Password" class="form-label fw-semibold"></label>
+                    <input asp-for="Input.Password" class="form-control form-control-lg" autocomplete="current-password" />
+                    <span asp-validation-for="Input.Password" class="text-danger small"></span>
+                </div>
 
-				<div class="form-check mb-4">
-					<input asp-for="Input.RememberMe" class="form-check-input" />
-					<label asp-for="Input.RememberMe" class="form-check-label"></label>
-				</div>
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="form-check mb-0">
+                        <input asp-for="Input.RememberMe" class="form-check-input" />
+                        <label asp-for="Input.RememberMe" class="form-check-label"></label>
+                    </div>
+                    <a asp-page="/Account/ForgotPassword" class="small fw-semibold">Forgot your password?</a>
+                </div>
 
-				<button type="submit" class="btn btn-primary btn-lg w-100">Sign in</button>
-			</form>
+                <button type="submit" class="btn btn-primary btn-lg w-100">Sign in</button>
+            </form>
 
-			<p class="text-center mt-4 mb-0">
-				New to @SiteInfo.RestaurantName?
-				<a asp-page="/Account/Register" asp-route-returnUrl="@Model.ReturnUrl" class="fw-bold">Create an account</a>
-			</p>
-		</section>
-	</div>
+            <p class="text-center mt-4 mb-0">
+                New to @SiteInfo.RestaurantName?
+                <a asp-page="/Account/Register" asp-route-returnUrl="@Model.ReturnUrl" class="fw-bold">Create an account</a>
+            </p>
+        </section>
+    </div>
 </div>
 
 @section Scripts {
-	<partial name="_ValidationScriptsPartial" />
+    <partial name="_ValidationScriptsPartial" />
 }

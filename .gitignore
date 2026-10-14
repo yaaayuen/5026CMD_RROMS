@@ -480,3 +480,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Dish photos uploaded while testing the admin menu pages (YJ)
+src/Rroms.Web/wwwroot/uploads/

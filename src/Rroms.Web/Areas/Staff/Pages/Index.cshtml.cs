@@ -41,7 +41,8 @@ public class IndexModel : PageModel
                 "My profile",
                 "Update your contact details and password.",
                 "users",
-                "Sprint 1 · YY")
+                "Sprint 1 · YY",
+                "/Account/Profile")
         };
     }
 }

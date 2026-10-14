@@ -3,6 +3,8 @@ using Microsoft.Extensions.Options;
 using Rroms.Web.Common;
 using Rroms.Web.Models;
 using Rroms.Web.Constants;
+using Rroms.Web.Contracts;
+using Rroms.Web.Models.ViewModels;
 
 namespace Rroms.Web.Services;
 
@@ -10,7 +12,7 @@ namespace Rroms.Web.Services;
 /// Handles user registration, sign-in, and sign-out. This service abstracts the underlying Identity framework, providing a centralized point for authentication logic and security rules. It ensures that all account-related operations are performed consistently and securely across the application.
 /// </summary>
 
-public class AccountService : IAccountServices 
+public class AccountService : IAccountService 
 {
     //Shown for every failed login attempt, only one same message to avoid revealing whether the email exists or not.
     public const string InvalidLoginMessage = "Invalid email or password.";
@@ -27,6 +29,8 @@ public class AccountService : IAccountServices
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly IdentityOptions _identityOptions;
+    private readonly INotificationService _notificationService;
+    private readonly IAccountSecurityService _accountSecurity;
     private readonly ILogger<AccountService> _logger;
 
     //All dependencies are injected via constructor, following the Dependency Injection pattern.
@@ -34,11 +38,15 @@ public class AccountService : IAccountServices
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
         IOptions<IdentityOptions> identityOptions,
+        INotificationService notificationService,
+        IAccountSecurityService accountSecurity,
         ILogger<AccountService> logger)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _identityOptions = identityOptions.Value;
+        _notificationService = notificationService;
+        _accountSecurity = accountSecurity;
         _logger = logger;
     }
 
@@ -78,11 +86,19 @@ public class AccountService : IAccountServices
         //isPersistent: false - the cookie ends when the browser closes, until the user chooses "remember me" at login.
         await _signInManager.SignInAsync(user, isPersistent: false);
 
+        // Welcome message (YY-6): appears in the new customer's inbox and is emailed to them.
+        await _notificationService.NotifyUserAsync(
+            user.Id,
+            NotificationType.General,
+            $"Welcome to {SiteInfo.RestaurantName}",
+            "Your account is ready. You can now book a table, order from your seat and follow your food live.",
+            "/Customer");
+
         _logger.LogInformation("New customer account {UserId} registered.", user.Id);
         return ServiceResult<ApplicationUser>.Success(user);
     }
 
-    public async Task<ServiceResult<string>> SignInAsync(string email, string password, bool rememberMe)
+    public async Task<ServiceResult<SignInOutcome>> SignInAsync(string email, string password, bool rememberMe)
     {
         string cleanEmail = email.Trim();
 
@@ -97,33 +113,93 @@ public class AccountService : IAccountServices
             {
                 // Should be impossible straight after a successful sign-in, but never assume.
                 await _signInManager.SignOutAsync();
-                return ServiceResult<string>.Failure(InvalidLoginMessage);
+                return ServiceResult<SignInOutcome>.Failure(InvalidLoginMessage);
             }
 
             string homePath = await GetHomePathAsync(user);
             _logger.LogInformation("User {UserId} signed in.", user.Id);
-            return ServiceResult<string>.Success(homePath);
+            return ServiceResult<SignInOutcome>.Success(new SignInOutcome { HomePath = homePath });
+        }
+
+        if (result.RequiresTwoFactor)
+        {
+            // The password was correct, but two-step sign-in is on (YY-7). Identity has stored a short-lived
+            // "half signed in" cookie; the user is not signed in until the emailed code is checked.
+            ApplicationUser? user = await _userManager.FindByEmailAsync(cleanEmail);
+            if (user == null)
+            {
+                return ServiceResult<SignInOutcome>.Failure(InvalidLoginMessage);
+            }
+
+            await _accountSecurity.SendLoginCodeAsync(user);
+            _logger.LogInformation("Sign-in code emailed to user {UserId}.", user.Id);
+            return ServiceResult<SignInOutcome>.Success(new SignInOutcome { RequiresCode = true });
         }
 
         if (result.IsLockedOut)
         {
-            // A specific message here is a deliberate trade-off (the same as Microsoft's template):
-            // it helps genuine users understand why they cannot sign in.
-            int minutes = (int)Math.Ceiling(_identityOptions.Lockout.DefaultLockoutTimeSpan.TotalMinutes);
             _logger.LogWarning("Locked-out sign-in attempt for {Email}.", cleanEmail);
-            return ServiceResult<string>.Failure(
-                $"This account is temporarily locked after too many failed attempts. Try again in {minutes} minutes.");
+            return ServiceResult<SignInOutcome>.Failure(LockedOutMessage());
         }
 
-        // Wrong password, unknown email, or deactivated account (NotAllowed): all get the same message.
-        return ServiceResult<string>.Failure(InvalidLoginMessage);
+        // Wrong password, unknown email, deactivated account (NotAllowed), or an invited user who has
+        // not set a password yet: all get the same message.
+        return ServiceResult<SignInOutcome>.Failure(InvalidLoginMessage);
+    }
+
+    public async Task<ServiceResult<string>> SignInWithCodeAsync(string code, bool rememberMe)
+    {
+        ApplicationUser? user = await _signInManager.GetTwoFactorAuthenticationUserAsync();
+        if (user == null)
+        {
+            // The "half signed in" cookie has expired (about 5 minutes) or was never there.
+            return ServiceResult<string>.Failure("Your sign-in has expired. Please sign in again.");
+        }
+
+        // rememberClient: false - never skip the code on this browser next time; every sign-in needs one.
+        // A wrong code counts towards the same lockout as a wrong password.
+        SignInResult result = await _signInManager.TwoFactorSignInAsync(
+            TokenOptions.DefaultEmailProvider, code.Trim(), rememberMe, rememberClient: false);
+
+        if (result.Succeeded)
+        {
+            _logger.LogInformation("User {UserId} signed in with an email code.", user.Id);
+            return ServiceResult<string>.Success(await GetHomePathAsync(user));
+        }
+
+        if (result.IsLockedOut)
+        {
+            _logger.LogWarning("User {UserId} locked out after wrong sign-in codes.", user.Id);
+            return ServiceResult<string>.Failure(LockedOutMessage());
+        }
+
+        return ServiceResult<string>.Failure(AccountSecurityService.InvalidCodeMessage);
+    }
+
+    public async Task<bool> HasPendingCodeSignInAsync()
+    {
+        ApplicationUser? user = await _signInManager.GetTwoFactorAuthenticationUserAsync();
+        return user != null;
+    }
+
+    public async Task ResendLoginCodeAsync()
+    {
+        ApplicationUser? user = await _signInManager.GetTwoFactorAuthenticationUserAsync();
+        if (user != null)
+        {
+            await _accountSecurity.SendLoginCodeAsync(user);
+        }
     }
 
     public async Task SignOutAsync()
     {
         await _signInManager.SignOutAsync();
     }
-
+    private string LockedOutMessage()
+    {
+        int minutes = (int)Math.Ceiling(_identityOptions.Lockout.DefaultLockoutTimeSpan.TotalMinutes);
+        return $"This account is temporarily locked after too many failed attempts. Try again in {minutes} minutes.";
+    }
 
     //Chooses the home page for the user's highest role.
     private async Task<string> GetHomePathAsync(ApplicationUser user)

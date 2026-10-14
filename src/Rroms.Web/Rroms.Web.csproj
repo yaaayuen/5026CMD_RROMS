@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <!-- ASP.NET Core Identity stored in our SQL Server database through Entity Framework Core. -->
+    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="14.17.2" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.12" />
 
     <!-- EF Core provider for SQL Server (managed with SQL Server Management Studio). -->
