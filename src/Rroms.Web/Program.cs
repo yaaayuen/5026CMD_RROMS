@@ -1,4 +1,4 @@
-﻿// =============================================================================
+// =============================================================================
 // Three Grills - Restaurant Reservation and Order Management System (RROMS)
 // Application entry point: registers services, configures security and starts the web server.
 //
@@ -151,6 +151,11 @@ builder.Services.AddScoped<IMenuService, MenuService>();
 
 // Dish photos: validation, resizing and storage (YJ-1).
 builder.Services.AddScoped<IMenuImageStorage, MenuImageStorage>();
+
+// Alex (Sprint 4)
+builder.Services.AddScoped<IOrderProcessingService, OrderProcessingService>();
+builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
+builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 
 // ----- Notifications (YY-6) -----
 // One class serves both interfaces: modules publish through INotificationService,
