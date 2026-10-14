@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 using Rroms.Web.Contracts;
@@ -64,6 +64,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
 
     // ----- Sprint 4 (Alex): announcements and feedback -----
+    public DbSet<Announcement> Announcements => Set<Announcement>();
+    public DbSet<Feedback> Feedback => Set<Feedback>();
 
     // ----- Sprint 5 (Darren): payments -----
 
@@ -124,5 +126,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         // YJ (Sprint 3): order rules
         OrderConfiguration.Configure(builder);
+        DiningExperienceConfiguration.Configure(builder);
     }
 }

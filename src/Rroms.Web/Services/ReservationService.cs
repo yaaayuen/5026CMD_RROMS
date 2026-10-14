@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -821,12 +821,13 @@ public class ReservationService : IReservationService
     /// <summary>
     /// Cancels the booking's orders that the kitchen has not started (still Placed).
     /// Order status changes belong to Alex, so this will call his CancelUnstartedOrdersForReservationAsync
-    /// once it is on main. Until then there are no orders in the system, so there is nothing to cancel.
+    /// using the existing context, so reservation and order cancellation are saved together.
     /// </summary>
     /// <param name="reservationId">The cancelled or no-show booking.</param>
     private Task CancelUnstartedOrdersAsync(int reservationId)
     {
-        return Task.CompletedTask;
+        return new OrderProcessingService(_context, _notificationService)
+            .CancelUnstartedOrdersForReservationAsync(reservationId);
     }
 
     /// <summary>Sends a notification to the booking's customer, linking to its details page.</summary>
