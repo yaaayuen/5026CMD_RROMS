@@ -1,0 +1,30 @@
+@model Rroms.Web.Areas.Staff.Pages.Orders.IndexModel
+@using Rroms.Web.Services
+@using Rroms.Web.Common
+@if (Model.Orders.Count == 0) { <p>No orders match this filter.</p> }
+@foreach (var order in Model.Orders)
+{
+    <article class="tg-card p-3 mb-3">
+        <h2 class="h4">Order #@order.Id · Table @order.Reservation?.DiningTable?.Label</h2>
+        <p><strong>@order.Status</strong> · @MalaysiaTime.FromUtc(order.PlacedAtUtc).ToString("dd MMM HH:mm")</p>
+        <ul>
+        @foreach (var item in order.Items)
+        {
+            <li>@item.Quantity × @item.MenuItem?.Name @if (!string.IsNullOrWhiteSpace(item.Notes)) { <strong>(@item.Notes)</strong> }</li>
+        }
+        </ul>
+        @if (!string.IsNullOrWhiteSpace(order.Notes)) { <p><strong>Customer note:</strong> @order.Notes</p> }
+        <div class="d-flex flex-wrap gap-2">
+        @foreach (var next in OrderStatusRules.Next(order.Status))
+        {
+            <form method="post" asp-page="/Orders/Index" asp-area="Staff">
+                <input type="hidden" name="id" value="@order.Id" />
+                <input type="hidden" name="expected" value="@order.Status" />
+                <input type="hidden" name="next" value="@next" />
+                <input type="hidden" name="Status" value="@Model.Status" />
+                <button class="btn btn-outline-primary">@next</button>
+            </form>
+        }
+        </div>
+    </article>
+}

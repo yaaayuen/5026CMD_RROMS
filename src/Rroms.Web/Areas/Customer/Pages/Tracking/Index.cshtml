@@ -1,0 +1,10 @@
+@page
+@model Rroms.Web.Areas.Customer.Pages.Tracking.IndexModel
+@{ ViewData["Title"] = "Track my visit"; }
+<h1>Track my visit</h1>
+<p>Food preparation starts after staff mark your reservation as seated.</p>
+<p id="dining-refresh-state" class="text-muted" role="status">Connecting to live updates...</p>
+<div id="dining-live-content" data-refresh-url="@Url.Page("/Tracking/Index", "Status", new { area = "Customer" })" data-use-signalr="true">
+    <partial name="_Status" model="Model" />
+</div>
+@section Scripts { <script src="~/js/dining-live.js" asp-append-version="true"></script> }

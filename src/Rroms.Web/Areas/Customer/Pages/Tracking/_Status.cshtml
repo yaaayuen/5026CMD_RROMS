@@ -1,0 +1,21 @@
+@model Rroms.Web.Areas.Customer.Pages.Tracking.IndexModel
+@using Rroms.Web.Contracts
+<h2 class="h4">Reservations</h2>
+@if (Model.Reservations.Count == 0) { <p>You have no reservations yet.</p> }
+@foreach (var booking in Model.Reservations)
+{
+    <p><a asp-area="Customer" asp-page="/Reservations/Details" asp-route-id="@booking.Id">Reservation #@booking.Id</a>: <strong>@booking.Status</strong></p>
+}
+<h2 class="h4">Orders</h2>
+@if (Model.Orders.Count == 0) { <p>You have no orders yet.</p> }
+@foreach (var order in Model.Orders)
+{
+    <article class="tg-card p-3 mb-3">
+        <h3 class="h5">Order #@order.Id · Reservation #@order.ReservationId</h3>
+        <p>Status: <strong>@order.Status</strong></p>
+        @if (order.Status == OrderStatus.Placed && order.Reservation?.Status != ReservationStatus.Seated)
+        { <p>Your pre-order is saved. The kitchen receives it after you are seated.</p> }
+        <ul>@foreach (var item in order.Items) { <li>@item.Quantity × @item.MenuItem?.Name</li> }</ul>
+        <p>Total: RM @order.TotalAmount.ToString("0.00")</p>
+    </article>
+}
