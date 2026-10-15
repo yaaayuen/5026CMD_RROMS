@@ -12,8 +12,8 @@ using Rroms.Web.Data;
 namespace Rroms.Web.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20261013005216_S4_Alex_AnnouncementsFeedback")]
-    partial class S4_Alex_AnnouncementsFeedback
+    [Migration("20261014090524_S5_Darren_Payments")]
+    partial class S5_Darren_Payments
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -811,6 +811,60 @@ namespace Rroms.Web.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Rroms.Web.Models.Payment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("PaidAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("StaffId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Payments_OnePaidPerOrder")
+                        .HasFilter("[Status] = 'Paid'");
+
+                    b.HasIndex("StaffId");
+
+                    b.HasIndex("Status", "PaidAtUtc");
+
+                    b.ToTable("Payments", t =>
+                        {
+                            t.HasCheckConstraint("CK_Payments_AmountNotNegative", "[Amount] >= 0");
+
+                            t.HasCheckConstraint("CK_Payments_Method", "[Method] IN ('Cash', 'CardTerminal', 'EWallet', 'SimulatedOnline')");
+
+                            t.HasCheckConstraint("CK_Payments_Status", "[Status] IN ('Unpaid', 'Paid', 'Voided')");
+                        });
+                });
+
             modelBuilder.Entity("Rroms.Web.Models.Reservation", b =>
                 {
                     b.Property<int>("Id")
@@ -1096,6 +1150,25 @@ namespace Rroms.Web.Data.Migrations
                     b.Navigation("MenuItem");
 
                     b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.Payment", b =>
+                {
+                    b.HasOne("Rroms.Web.Models.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Rroms.Web.Models.ApplicationUser", "Staff")
+                        .WithMany()
+                        .HasForeignKey("StaffId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+
+                    b.Navigation("Staff");
                 });
 
             modelBuilder.Entity("Rroms.Web.Models.Reservation", b =>

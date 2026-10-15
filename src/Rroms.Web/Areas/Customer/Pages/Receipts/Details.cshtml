@@ -1,0 +1,12 @@
+@page "{id:int}"
+@model Rroms.Web.Areas.Customer.Pages.Receipts.DetailsModel
+@{
+    ViewData["Title"] = "Receipt #" + Model.Receipt.PaymentId;
+}
+<link rel="stylesheet" href="~/css/billing-print.css" asp-append-version="true" />
+
+<partial name="~/Pages/Shared/_PaymentReceipt.cshtml" model="Model.Receipt" />
+<div class="d-flex gap-2 mt-3 d-print-none">
+    <button type="button" class="btn btn-primary" onclick="window.print()">Print receipt</button>
+    <a asp-page="/Orders/Details" asp-route-id="@Model.Receipt.Bill.OrderId" class="btn btn-outline-primary">Back to my order</a>
+</div>

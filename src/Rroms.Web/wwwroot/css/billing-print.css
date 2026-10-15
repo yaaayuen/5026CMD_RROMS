@@ -1,0 +1,8 @@
+/* DA-1: preserve the receipt while removing navigation from printed copies. */
+@media print {
+    header, footer, nav, .d-print-none { display: none !important; }
+    .tg-card { box-shadow: none !important; border: 0 !important; }
+    .container { max-width: 100% !important; }
+    .table-responsive { overflow: visible !important; }
+    tr { break-inside: avoid; }
+}

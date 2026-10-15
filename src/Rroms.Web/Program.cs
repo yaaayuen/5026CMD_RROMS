@@ -169,6 +169,9 @@ builder.Services.AddScoped<IOrderProcessingService, OrderProcessingService>();
 builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 
+// ----- Sprint 5 (Darren): billing and receipts (DA-1) -----
+builder.Services.AddScoped<IBillingService, BillingService>();
+
 // ----- Notifications (YY-6) -----
 // One class serves both interfaces: modules publish through INotificationService,
 // the inbox page and bell read through INotificationInbox.

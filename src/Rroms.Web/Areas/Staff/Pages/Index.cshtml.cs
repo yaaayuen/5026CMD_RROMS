@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 
 using Rroms.Web.Models.ViewModels;
 
@@ -32,11 +32,13 @@ public class IndexModel : PageModel
                 "Move orders from Preparing to Ready to Serve to Served.",
                 "flame",
                 "Sprint 4 · Alex"),
+            // DA-1 (Darren): activate this module's existing dashboard tile.
             new ModuleTileViewModel(
                 "Billing and payments",
                 "Generate bills and record cash, card or e-wallet payments.",
                 "receipt",
-                "Sprint 5 · Darren"),
+                "Sprint 5 · Darren",
+                "/Staff/Billing"),
             new ModuleTileViewModel(
                 "My profile",
                 "Update your contact details and password.",
