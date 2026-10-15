@@ -33,6 +33,13 @@ public class DetailsModel : PageModel
     /// <summary>True while the customer may still change or cancel: Pending or Confirmed, and not started yet.</summary>
     public bool CanChange { get; private set; }
 
+    /// <summary>
+    /// True when the customer may order food for this booking (Confirmed or Seated).
+    /// The rule lives only in <see cref="IReservationService.CanOrderForReservationAsync"/>,
+    /// so this page, YJ's order page and the service always agree.
+    /// </summary>
+    public bool CanOrder { get; private set; }
+
     /// <summary>Handles GET /Customer/Reservations/Details/{id}.</summary>
     /// <param name="id">The booking to show.</param>
     public async Task<IActionResult> OnGetAsync(int id)
@@ -45,6 +52,7 @@ public class DetailsModel : PageModel
 
         Booking = details;
         CanChange = ReservationStatusRules.IsChangeable(details.Status) && details.StartUtc > DateTime.UtcNow;
+        CanOrder = (await _reservationService.CanOrderForReservationAsync(User.GetUserId(), id)).Succeeded;
         return Page();
     }
 
