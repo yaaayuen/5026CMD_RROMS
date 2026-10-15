@@ -1,0 +1,14 @@
+<button class="btn btn-primary position-fixed bottom-0 start-0 m-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#alex-chat" aria-controls="alex-chat" style="z-index:1030">Ask Three Grills</button>
+<div class="offcanvas offcanvas-end" tabindex="-1" id="alex-chat" aria-labelledby="chatbot-title">
+    <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="chatbot-title">Three Grills assistant</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button></div>
+    <div class="offcanvas-body">
+        <p>Answers use local rules and restaurant data. Please do not enter passwords or payment details.</p>
+        <div id="chatbot-log" role="log" aria-live="polite" aria-relevant="additions"></div>
+        <form method="post" asp-area="" asp-page="/Chat/Index" id="chatbot-form">
+            <label for="chatbot-question" class="form-label">Your question</label>
+            <input id="chatbot-question" name="Question" maxlength="500" required class="form-control mb-2" autocomplete="off" />
+            <button class="btn btn-primary" id="chatbot-send">Ask</button>
+        </form>
+        <p id="chatbot-state" role="status" class="mt-2"></p>
+    </div>
+</div>

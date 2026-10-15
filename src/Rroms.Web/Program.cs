@@ -152,6 +152,12 @@ builder.Services.AddScoped<IMenuService, MenuService>();
 // Dish photos: validation, resizing and storage (YJ-1).
 builder.Services.AddScoped<IMenuImageStorage, MenuImageStorage>();
 
+// Local chatbot with request rate limiting.
+builder.Services.AddScoped<IChatbotService, ChatbotService>();
+builder.Services.AddRateLimiter(options => options.AddPolicy("AlexChat", context =>
+    RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 12, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 })));
+
 // Alex (Sprint 4)
 builder.Services.AddScoped<IOrderProcessingService, OrderProcessingService>();
 builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
