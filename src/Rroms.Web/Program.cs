@@ -147,6 +147,8 @@ builder.Services.AddScoped<IRestaurantService, RestaurantService>();
 // Booking time rules: visit length, slot grid and overlap check, all from ReservationRules (WL-2).
 builder.Services.AddScoped<ReservationTimeRules>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
+// Table occupancy and reservation analytics (WL-4).
+builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 
 // Menu items: dishes, prices, availability and offers (YJ-1).
 builder.Services.AddScoped<IMenuService, MenuService>();
