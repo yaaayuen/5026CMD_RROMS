@@ -194,7 +194,7 @@ public class DiningExperienceServiceTests : IDisposable
     private ReservationService ReservationService()
     {
         var rules = Microsoft.Extensions.Options.Options.Create(new ReservationRulesOptions());
-        return new ReservationService(_db, new RestaurantService(_db), new ReservationTimeRules(rules), rules, _notices);
+        return new ReservationService(_db, new RestaurantService(_db), new ReservationTimeRules(rules), rules, _notices, _orders);
     }
 
     private class Notices : INotificationService

@@ -80,6 +80,7 @@ public class ReservationService : IReservationService
     private readonly ReservationTimeRules _timeRules;
     private readonly ReservationRulesOptions _options;
     private readonly INotificationService _notificationService;
+    private readonly IOrderProcessingService _orderProcessing;
 
     /// <summary>Receives its dependencies from dependency injection.</summary>
     /// <param name="context">The database.</param>
@@ -87,18 +88,24 @@ public class ReservationService : IReservationService
     /// <param name="timeRules">Visit length, slot grid and slot calculation.</param>
     /// <param name="options">Party size limits and booking window.</param>
     /// <param name="notificationService">Tells staff about new bookings (YY-6).</param>
+    /// <param name="orderProcessing">
+    /// Alex's order service, used to cancel orders the kitchen has not started when a booking is cancelled
+    /// or marked no-show. It is scoped like this service, so both share the request's DbContext.
+    /// </param>
     public ReservationService(
         ApplicationDbContext context,
         IRestaurantService restaurantService,
         ReservationTimeRules timeRules,
         IOptions<ReservationRulesOptions> options,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IOrderProcessingService orderProcessing)
     {
         _context = context;
         _restaurantService = restaurantService;
         _timeRules = timeRules;
         _options = options.Value;
         _notificationService = notificationService;
+        _orderProcessing = orderProcessing;
     }
 
     // ============================== 1. Start times ==============================//
@@ -820,14 +827,14 @@ public class ReservationService : IReservationService
 
     /// <summary>
     /// Cancels the booking's orders that the kitchen has not started (still Placed).
-    /// Order status changes belong to Alex, so this will call his CancelUnstartedOrdersForReservationAsync
-    /// using the existing context, so reservation and order cancellation are saved together.
+    /// Order status changes belong to Alex, so this calls his CancelUnstartedOrdersForReservationAsync.
+    /// His service is injected and scoped, so it uses this request's DbContext and the booking change,
+    /// released slots and cancelled orders are saved together.
     /// </summary>
     /// <param name="reservationId">The cancelled or no-show booking.</param>
     private Task CancelUnstartedOrdersAsync(int reservationId)
     {
-        return new OrderProcessingService(_context, _notificationService)
-            .CancelUnstartedOrdersForReservationAsync(reservationId);
+        return _orderProcessing.CancelUnstartedOrdersForReservationAsync(reservationId);
     }
 
     /// <summary>Sends a notification to the booking's customer, linking to its details page.</summary>

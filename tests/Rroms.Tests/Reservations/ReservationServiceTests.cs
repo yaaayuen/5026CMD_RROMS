@@ -398,7 +398,8 @@ public class ReservationServiceTests : IDisposable
             new RestaurantService(context),
             new ReservationTimeRules(rules),
             rules,
-            notifications);
+            notifications,
+            new OrderProcessingService(context, notifications));
     }
 
     /// <summary>A minimal customer account row.</summary>

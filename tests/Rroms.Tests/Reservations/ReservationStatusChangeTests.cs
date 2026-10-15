@@ -64,7 +64,9 @@ public class ReservationStatusChangeTests : IDisposable
             Microsoft.Extensions.Options.Options.Create(new ReservationRulesOptions());
         _timeRules = new ReservationTimeRules(rules);
         _notifications = new RecordingNotificationService();
-        _service = new ReservationService(_context, new RestaurantService(_context), _timeRules, rules, _notifications);
+        _service = new ReservationService(
+            _context, new RestaurantService(_context), _timeRules, rules, _notifications,
+            new OrderProcessingService(_context, _notifications));
     }
 
     /// <summary>Runs after EVERY test: closing the connection deletes the database.</summary>
