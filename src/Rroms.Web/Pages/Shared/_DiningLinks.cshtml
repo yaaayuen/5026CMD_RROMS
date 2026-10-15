@@ -1,7 +1,16 @@
 @using Rroms.Web.Constants
 <nav aria-label="Dining features" class="d-flex flex-wrap gap-3 mb-3">
+    <a asp-area="" asp-page="/Announcements/Index">News and offers</a>
     @if (User.IsInRole(RoleNames.Customer))
-    { <a asp-area="Customer" asp-page="/Tracking/Index">Track my visit</a> }
+    {
+        <a asp-area="Customer" asp-page="/Tracking/Index">Track my visit</a>
+        <a asp-area="Customer" asp-page="/Feedback/Index">Leave feedback</a>
+    }
     @if (User.IsInRole(RoleNames.Staff) || User.IsInRole(RoleNames.Administrator))
     { <a asp-area="Staff" asp-page="/Orders/Index">Kitchen orders</a> }
+    @if (User.IsInRole(RoleNames.Administrator))
+    {
+        <a asp-area="Admin" asp-page="/Announcements/Index">Manage announcements</a>
+        <a asp-area="Admin" asp-page="/Feedback/Index">Review feedback</a>
+    }
 </nav>

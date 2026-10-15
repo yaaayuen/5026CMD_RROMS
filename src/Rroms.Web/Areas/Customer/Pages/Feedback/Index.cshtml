@@ -1,0 +1,21 @@
+@page
+@model Rroms.Web.Areas.Customer.Pages.Feedback.IndexModel
+@using Rroms.Web.Common
+@{ ViewData["Title"] = "Dining feedback"; }
+<h1>Dining feedback</h1>
+<div asp-validation-summary="All" class="text-danger" role="alert"></div>
+@if (Model.Visits.Count == 0) { <p>No completed visits are waiting for feedback.</p> }
+else
+{
+    <form method="post" class="tg-card p-3">
+        <label asp-for="ReservationId" class="form-label">Completed visit</label>
+        <select asp-for="ReservationId" class="form-select mb-3">
+        @foreach (var visit in Model.Visits) { <option value="@visit.Id">#@visit.Id · @MalaysiaTime.FromUtc(visit.StartUtc).ToString("dd MMM yyyy HH:mm")</option> }
+        </select>
+        <label asp-for="Rating" class="form-label">Rating</label><select asp-for="Rating" class="form-select mb-3">
+        @for (int stars = 1; stars <= 5; stars++) { <option value="@stars">@stars stars</option> }
+        </select>
+        <label asp-for="Comment" class="form-label">Comment (optional)</label><textarea asp-for="Comment" class="form-control mb-3" maxlength="1000"></textarea>
+        <button class="btn btn-primary">Submit feedback</button>
+    </form>
+}
