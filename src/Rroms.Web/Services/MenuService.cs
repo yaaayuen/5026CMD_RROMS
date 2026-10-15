@@ -106,6 +106,11 @@ public class MenuService : IMenuService
             query = query.Where(item => item.MenuCategoryId == criteria.MenuCategoryId.Value);
         }
 
+        if (criteria.VegetarianOnly)
+        {
+            query = query.Where(item => item.IsVegetarian);
+        }
+
         // Lower-case both sides: SQL Server ignores case but the SQLite test database does not.
         string searchText = criteria.SearchText.Trim().ToLower();
 
@@ -334,6 +339,8 @@ public class MenuService : IMenuService
             IsOfferActive = offerActive,
             OfferEndsAtUtc = offerEndsAtUtc,
             IsAvailable = item.IsAvailable,
+            IsVegetarian = item.IsVegetarian,
+            IsSpicy = item.IsSpicy,
             CanOrder = item.IsAvailable
         };
 
@@ -433,6 +440,8 @@ public class MenuService : IMenuService
         item.MenuCategoryId = input.MenuCategoryId;
         item.Price = input.Price;
         item.IsAvailable = input.IsAvailable;
+        item.IsVegetarian = input.IsVegetarian;
+        item.IsSpicy = input.IsSpicy;
         item.PromoPrice = input.PromoPrice;
         item.PromoStartUtc = input.PromoStartUtc;
         item.PromoEndUtc = input.PromoEndUtc;

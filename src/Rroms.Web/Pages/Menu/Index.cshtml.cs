@@ -43,6 +43,10 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true, Name = "categoryId")]
     public int? CategoryId { get; set; }
 
+    /// <summary>True to show only vegetarian dishes (address part ?vegetarian=true).</summary>
+    [BindProperty(SupportsGet = true, Name = "vegetarian")]
+    public bool VegetarianOnly { get; set; }
+
     /// <summary>Lowest price to show (address part ?minPrice=).</summary>
     [BindProperty(SupportsGet = true, Name = "minPrice")]
     public decimal? MinPrice { get; set; }
@@ -64,7 +68,7 @@ public class IndexModel : PageModel
         {
             bool hasText = !string.IsNullOrWhiteSpace(SearchText);
 
-            return hasText || CategoryId.HasValue || MinPrice.HasValue || MaxPrice.HasValue;
+            return hasText || CategoryId.HasValue || VegetarianOnly || MinPrice.HasValue || MaxPrice.HasValue;
         }
     }
 
@@ -77,6 +81,7 @@ public class IndexModel : PageModel
         {
             SearchText = SearchText ?? string.Empty,
             MenuCategoryId = CategoryId,
+            VegetarianOnly = VegetarianOnly,
             MinPrice = MinPrice,
             MaxPrice = MaxPrice
         };
