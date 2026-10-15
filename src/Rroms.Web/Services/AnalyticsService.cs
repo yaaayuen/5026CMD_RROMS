@@ -74,8 +74,13 @@ public class AnalyticsService : IAnalyticsService
         DateTime fromUtc = MalaysiaTime.ToUtc(from.ToDateTime(TimeOnly.MinValue));
         DateTime toUtcExclusive = MalaysiaTime.ToUtc(to.AddDays(1).ToDateTime(TimeOnly.MinValue));
 
-        double occupied = await GetOccupiedTableHoursAsync(fromUtc, toUtcExclusive);
-        double available = await GetAvailableTableHoursAsync(from, to);
+        // Loaded once and shared by the calculations below.
+        IReadOnlyList<OperatingHour> hours = await _restaurantService.GetOperatingHoursAsync();
+        List<DateTime> occupiedSlotStarts = await GetOccupiedSlotStartsAsync(fromUtc, toUtcExclusive);
+
+        double slotHours = _timeRules.SlotLength.TotalHours;
+        double occupied = occupiedSlotStarts.Count * slotHours;
+        double available = await GetAvailableTableHoursAsync(from, to, hours);
 
         OccupancyReport report = new OccupancyReport
         {
@@ -84,6 +89,8 @@ public class AnalyticsService : IAnalyticsService
             OccupiedTableHours = occupied,
             AvailableTableHours = available,
             UtilisationPercent = available > 0 ? Math.Round(occupied / available * 100, 1) : 0,
+            Heatmap = BuildHeatmap(occupiedSlotStarts, hours, slotHours),
+            DailyTrend = await GetDailyTrendAsync(from, to, fromUtc, toUtcExclusive),
             UpcomingDays = UpcomingDays
         };
 
@@ -93,21 +100,20 @@ public class AnalyticsService : IAnalyticsService
 
     // ============================== Helpers ==============================//
 
-    /// <summary>Counts the slots of Seated or Completed bookings in the range and turns them into hours.</summary>
-    private async Task<double> GetOccupiedTableHoursAsync(DateTime fromUtc, DateTime toUtcExclusive)
+    /// <summary>Start times (UTC) of every slot held by a Seated or Completed booking in the range.</summary>
+    /// <remarks>One row = one table for one slot. Utilisation counts them; the heatmap places them on the grid.</remarks>
+    private async Task<List<DateTime>> GetOccupiedSlotStartsAsync(DateTime fromUtc, DateTime toUtcExclusive)
     {
-        int slotCount = await _context.ReservationSlots
+        return await _context.ReservationSlots
             .Where(s => s.SlotStartUtc >= fromUtc && s.SlotStartUtc < toUtcExclusive
                 && OccupiedStatuses.Contains(s.Reservation!.Status))
-            .CountAsync();
-
-        return slotCount * _timeRules.SlotLength.TotalHours;
+            .Select(s => s.SlotStartUtc)
+            .ToListAsync();
     }
 
     /// <summary>Adds up opening hours × bookable tables for every open day in the range.</summary>
-    private async Task<double> GetAvailableTableHoursAsync(DateOnly from, DateOnly to)
+    private async Task<double> GetAvailableTableHoursAsync(DateOnly from, DateOnly to, IReadOnlyList<OperatingHour> hours)
     {
-        IReadOnlyList<OperatingHour> hours = await _restaurantService.GetOperatingHoursAsync();
         IReadOnlyList<SpecialClosure> closures = await _restaurantService.GetSpecialClosuresAsync();
         int tableCount = (await _restaurantService.GetBookableTablesAsync()).Count;
 
@@ -125,6 +131,93 @@ public class AnalyticsService : IAnalyticsService
         }
 
         return total;
+    }
+
+    /// <summary>
+    /// Peak hours: puts every occupied slot on a weekday × hour grid (Malaysia time) and adds up its hours.
+    /// The columns run from the earliest opening hour to the latest closing hour of the open weekdays.
+    /// </summary>
+    private static OccupancyHeatmap BuildHeatmap(List<DateTime> occupiedSlotStarts, IReadOnlyList<OperatingHour> hours, double slotHours)
+    {
+        List<DayOfWeek> days = new List<DayOfWeek>
+        {
+            DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday,
+            DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday
+        };
+
+        List<OperatingHour> openDays = hours.Where(h => !h.IsClosed).ToList();
+        List<int> hourColumns = new List<int>();
+        if (openDays.Count > 0)
+        {
+            int firstHour = openDays.Min(h => h.OpensAt.Hour);
+            // A day closing at 22:00 has its last full hour at 21; one closing at 22:30 still uses the 22 column.
+            int lastHour = openDays.Max(h => h.ClosesAt.Minute == 0 ? h.ClosesAt.Hour - 1 : h.ClosesAt.Hour);
+            for (int hour = firstHour; hour <= lastHour; hour++)
+            {
+                hourColumns.Add(hour);
+            }
+        }
+
+        double[][] cells = days.Select(_ => new double[hourColumns.Count]).ToArray();
+        foreach (DateTime slotStartUtc in occupiedSlotStarts)
+        {
+            DateTime local = MalaysiaTime.FromUtc(slotStartUtc);
+            int row = days.IndexOf(local.DayOfWeek);
+            int column = hourColumns.IndexOf(local.Hour);
+            if (column >= 0)
+            {
+                cells[row][column] += slotHours;
+            }
+        }
+
+        return new OccupancyHeatmap
+        {
+            Days = days,
+            Hours = hourColumns,
+            Cells = cells,
+            MaxCell = cells.SelectMany(row => row).DefaultIfEmpty(0).Max()
+        };
+    }
+
+    /// <summary>
+    /// Reservation trend: for every day in the range (including days with no bookings), how many bookings
+    /// started that day in each status, and how many guests really dined.
+    /// </summary>
+    private async Task<IReadOnlyList<DailyReservationCount>> GetDailyTrendAsync(
+        DateOnly from, DateOnly to, DateTime fromUtc, DateTime toUtcExclusive)
+    {
+        var bookings = await _context.Reservations
+            .Where(r => r.StartUtc >= fromUtc && r.StartUtc < toUtcExclusive)
+            .Select(r => new { r.StartUtc, r.Status, r.PartySize })
+            .ToListAsync();
+
+        // One empty row per day first, so quiet days still appear as 0 on the trend.
+        Dictionary<DateOnly, DailyReservationCount> byDay = new Dictionary<DateOnly, DailyReservationCount>();
+        for (DateOnly day = from; day <= to; day = day.AddDays(1))
+        {
+            byDay[day] = new DailyReservationCount { Date = day };
+        }
+
+        foreach (var booking in bookings)
+        {
+            DailyReservationCount row = byDay[DateOnly.FromDateTime(MalaysiaTime.FromUtc(booking.StartUtc))];
+            switch (booking.Status)
+            {
+                case ReservationStatus.Pending: row.Pending++; break;
+                case ReservationStatus.Confirmed: row.Confirmed++; break;
+                case ReservationStatus.Seated: row.Seated++; break;
+                case ReservationStatus.Completed: row.Completed++; break;
+                case ReservationStatus.Cancelled: row.Cancelled++; break;
+                case ReservationStatus.NoShow: row.NoShow++; break;
+            }
+
+            if (OccupiedStatuses.Contains(booking.Status))
+            {
+                row.GuestsServed += booking.PartySize;
+            }
+        }
+
+        return byDay.Values.OrderBy(r => r.Date).ToList();
     }
 
     /// <summary>Counts Confirmed bookings (and their guests) starting from now until <see cref="UpcomingDays"/> days ahead.</summary>
