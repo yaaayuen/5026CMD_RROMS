@@ -1,0 +1,19 @@
+@page
+@model Rroms.Web.Areas.Admin.Pages.Feedback.IndexModel
+@using Rroms.Web.Common
+@{ ViewData["Title"] = "Customer feedback"; }
+<h1>Customer feedback</h1>
+<div asp-validation-summary="All" class="text-danger"></div>
+<form method="get" class="row g-2 mb-3">
+    <div class="col-sm"><label asp-for="Rating">Stars</label><select asp-for="Rating" class="form-select"><option value="">All</option>@for(int n = 1; n <= 5; n++) { <option value="@n">@n</option> }</select></div>
+    <div class="col-sm"><label asp-for="From">From</label><input asp-for="From" type="date" class="form-control" /></div>
+    <div class="col-sm"><label asp-for="Until">Through</label><input asp-for="Until" type="date" class="form-control" /></div>
+    <div class="col-sm align-self-end"><button class="btn btn-primary">Filter</button></div>
+</form>
+<p>@Model.Items.Count reviews · Average: @(Model.Average?.ToString("0.0") ?? "No ratings")</p>
+@foreach(var item in Model.Items)
+{
+    <article class="tg-card p-3 mb-3"><h2 class="h5">@item.Rating / 5 · Reservation #@item.ReservationId</h2>
+        <p>@item.Comment</p><small>@MalaysiaTime.FromUtc(item.CreatedAtUtc).ToString("dd MMM yyyy HH:mm")</small>
+    </article>
+}

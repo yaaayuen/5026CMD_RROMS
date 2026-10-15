@@ -1,0 +1,9 @@
+@page
+@model Rroms.Web.Pages.Announcements.IndexModel
+@{ ViewData["Title"] = "News and offers"; }
+<h1>News and offers</h1>
+@if (Model.Items.Count == 0) { <p>There are no active announcements today.</p> }
+@foreach (var item in Model.Items)
+{
+    <article class="tg-card p-3 mb-3"><h2 class="h4">@item.Title</h2><p style="white-space:pre-wrap">@item.Message</p></article>
+}
