@@ -32,17 +32,20 @@ public class IndexModel : PageModel
                 "Menu and ordering",
                 "Browse the menu and order to your table.",
                 "menu",
-                "Sprint 3 · YJ"),
+                "Sprint 3 · YJ",
+                "/Menu"),
             new ModuleTileViewModel(
                 "Live order tracking",
                 "Watch your order go from the grill to your table.",
                 "flame",
-                "Sprint 4 · Alex"),
+                "Sprint 4 · Alex",
+                "/Customer/Tracking"),
             new ModuleTileViewModel(
                 "My history",
                 "Past reservations, orders and payment receipts.",
                 "receipt",
-                "Sprint 3 · YJ"),
+                "Sprint 3 · YJ",
+                "/Customer/Reservations"),
             new ModuleTileViewModel(
                 "Notifications",
                 "Booking confirmations, order updates and offers.",
@@ -59,7 +62,8 @@ public class IndexModel : PageModel
                 "Ask our assistant",
                 "Questions about the menu, hours or booking.",
                 "chat",
-                "Sprint 4 · Alex")
+                "Sprint 4 · Alex",
+                "/Chat")
         };
     }
 }
