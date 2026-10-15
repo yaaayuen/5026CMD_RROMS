@@ -75,6 +75,31 @@ public class ReservationChangePagesTests : IClassFixture<TestWebApplicationFacto
         Assert.Contains("Cancel booking", html);
     }
 
+    /// <summary>A Confirmed booking shows the "Order food" link to YJ's order page for that booking.</summary>
+    [Fact]
+    public async Task Details_ConfirmedBooking_ShowsOrderFoodLink()
+    {
+        (HttpClient client, string customerId) = await SignInAsNewCustomerAsync();
+        int id = await BookAsync(customerId, TableT01Id, new TimeOnly(18, 0));
+        await ConfirmAsync(id);
+
+        string html = await client.GetStringAsync($"{DetailsUrl}/{id}");
+
+        Assert.Contains($"href=\"/Customer/Orders/New/{id}\"", html);
+    }
+
+    /// <summary>A Pending booking has no "Order food" link, because staff have not confirmed it yet.</summary>
+    [Fact]
+    public async Task Details_PendingBooking_HidesOrderFoodLink()
+    {
+        (HttpClient client, string customerId) = await SignInAsNewCustomerAsync();
+        int id = await BookAsync(customerId, TableT03Id, new TimeOnly(18, 0));
+
+        string html = await client.GetStringAsync($"{DetailsUrl}/{id}");
+
+        Assert.DoesNotContain("/Customer/Orders/New/", html);
+    }
+
     /// <summary>Another customer gets 404, so they cannot even tell the booking exists.</summary>
     /// <remarks>Each case books at its own hour, because both cases share one database and one table.</remarks>
     [Theory]
@@ -182,6 +207,16 @@ public class ReservationChangePagesTests : IClassFixture<TestWebApplicationFacto
 
         Assert.True(result.Succeeded, string.Join(" ", result.Errors));
         return result.Value;
+    }
+
+    /// <summary>Confirms a booking as staff would, through the service.</summary>
+    private async Task ConfirmAsync(int id)
+    {
+        using IServiceScope scope = _factory.Services.CreateScope();
+        IReservationService service = scope.ServiceProvider.GetRequiredService<IReservationService>();
+
+        ServiceResult result = await service.ConfirmAsync(id);
+        Assert.True(result.Succeeded, string.Join(" ", result.Errors));
     }
 
     /// <summary>The booking's status as stored now.</summary>

@@ -42,6 +42,15 @@
 	}
 </section>
 
+@if (Model.CanOrder)
+{
+	<section class="tg-card h-auto mb-4" aria-labelledby="order-food-heading">
+		<h2 id="order-food-heading" class="h4 mb-3">Hungry?</h2>
+		<p class="text-secondary">Order now and your food will be prepared once you are seated.</p>
+		<a class="btn btn-gold" asp-page="/Orders/New" asp-route-reservationId="@Model.Booking.Id">Order food</a>
+	</section>
+}
+
 @if (Model.CanChange)
 {
 	<section class="tg-card h-auto" aria-labelledby="change-heading">
