@@ -49,7 +49,8 @@ public class IndexModel : PageModel
                 "Analytics dashboard",
                 "Sales, reservations, table occupancy and popular dishes.",
                 "chart",
-                "Sprint 2 · WL"),
+                "Sprint 2 · WL",
+                "/Admin/Analytics"),
             new ModuleTileViewModel(
                 "Reports and exports",
                 "Filtered reports with CSV, Excel and PDF export.",
