@@ -105,6 +105,8 @@ builder.Services.Configure<AuthRateLimitOptions>(
     builder.Configuration.GetSection(AuthRateLimitOptions.SectionName));
 builder.Services.Configure<MenuImageOptions>(
     builder.Configuration.GetSection(MenuImageOptions.SectionName));
+builder.Services.Configure<OrderRulesOptions>(
+    builder.Configuration.GetSection(OrderRulesOptions.SectionName));
 builder.Services.Configure<SmtpOptions>(
     builder.Configuration.GetSection(SmtpOptions.SectionName));
 
@@ -157,6 +159,9 @@ builder.Services.AddScoped<IChatbotService, ChatbotService>();
 builder.Services.AddRateLimiter(options => options.AddPolicy("AlexChat", context =>
     RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 12, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 })));
+
+// Orders: placing an order for a reservation (YJ-3).
+builder.Services.AddScoped<IOrderService, OrderService>();
 
 // Alex (Sprint 4)
 builder.Services.AddScoped<IOrderProcessingService, OrderProcessingService>();
