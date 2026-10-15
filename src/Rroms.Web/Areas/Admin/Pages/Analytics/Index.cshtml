@@ -1,0 +1,154 @@
+﻿@page
+@model IndexModel
+@using System.Globalization
+@{
+	ViewData["Title"] = "Occupancy analytics";
+	OccupancyReport? report = Model.Report;
+}
+
+<section class="hero hero-compact mb-4" aria-labelledby="analytics-heading">
+	<span class="hero-bubble one" aria-hidden="true"></span>
+	<div class="position-relative">
+		<span class="eyebrow">Analytics</span>
+		<h1 id="analytics-heading" class="mb-1">Table occupancy</h1>
+		<p class="lead mb-0">How full the tables really were, the busiest hours, and how bookings are trending.</p>
+	</div>
+</section>
+
+<section class="tg-card h-auto mb-4" aria-labelledby="range-heading">
+	<h2 id="range-heading" class="h5 mb-3">Date range</h2>
+	<form method="get" class="row g-3 align-items-end">
+		<div class="col-sm-4">
+			<label asp-for="From" class="form-label fw-semibold">From</label>
+			<input asp-for="From" type="date" class="form-control" />
+		</div>
+		<div class="col-sm-4">
+			<label asp-for="To" class="form-label fw-semibold">To</label>
+			<input asp-for="To" type="date" class="form-control" />
+		</div>
+		<div class="col-sm-4">
+			<button type="submit" class="btn btn-primary">Show</button>
+		</div>
+	</form>
+	<div asp-validation-summary="All" class="text-danger mt-3" role="alert"></div>
+</section>
+
+@if (report != null)
+{
+	<div class="row g-4 mb-4">
+		<div class="col-md-4">
+			<section class="tg-card h-100" aria-labelledby="utilisation-heading">
+				<h2 id="utilisation-heading" class="h6 text-secondary mb-2">Table utilisation</h2>
+				<p class="display-6 fw-bold mb-1">@report.UtilisationPercent.ToString("0.0", CultureInfo.InvariantCulture)%</p>
+				<p class="small text-secondary mb-0">
+					@report.OccupiedTableHours.ToString("0.#", CultureInfo.InvariantCulture) of
+					@report.AvailableTableHours.ToString("0.#", CultureInfo.InvariantCulture) table-hours used
+				</p>
+			</section>
+		</div>
+		<div class="col-md-4">
+			<section class="tg-card h-100" aria-labelledby="served-heading">
+				<h2 id="served-heading" class="h6 text-secondary mb-2">Guests served</h2>
+				<p class="display-6 fw-bold mb-1">@report.DailyTrend.Sum(d => d.GuestsServed)</p>
+				<p class="small text-secondary mb-0">
+					@report.DailyTrend.Sum(d => d.Total) bookings ·
+					@report.DailyTrend.Sum(d => d.Cancelled) cancelled ·
+					@report.DailyTrend.Sum(d => d.NoShow) no-show
+				</p>
+			</section>
+		</div>
+		<div class="col-md-4">
+			<section class="tg-card h-100" aria-labelledby="upcoming-heading">
+				<h2 id="upcoming-heading" class="h6 text-secondary mb-2">Confirmed, next @report.UpcomingDays days</h2>
+				<p class="display-6 fw-bold mb-1">@report.UpcomingConfirmedBookings</p>
+				<p class="small text-secondary mb-0">bookings · @report.UpcomingConfirmedGuests guests expected</p>
+			</section>
+		</div>
+	</div>
+
+	<p class="small text-secondary mb-4">
+		<strong>How utilisation is worked out:</strong> table-hours really used (Seated or Completed bookings, counted in 30-minute slots)
+		÷ table-hours available (opening hours × active tables, for every open day in the range) × 100.
+		Cancelled and no-show bookings free their table, and guests who leave early free the rest of their slot.
+	</p>
+
+	<section class="tg-card h-auto mb-4" aria-labelledby="heatmap-heading">
+		<h2 id="heatmap-heading" class="h4 mb-1">Peak hours</h2>
+		<p class="text-secondary small mb-3">Table-hours used in each hour (Malaysia time), added up over the range. Darker means busier.</p>
+
+		@if (report.Heatmap.Hours.Count == 0)
+		{
+			<p class="mb-0">The restaurant is closed every day, so there are no hours to show.</p>
+		}
+		else
+		{
+			<div class="table-responsive">
+				<table class="table table-sm table-bordered text-center align-middle mb-0">
+					<thead>
+						<tr>
+							<th scope="col" class="text-start">Day</th>
+							@foreach (int hour in report.Heatmap.Hours)
+							{
+								<th scope="col">@hour.ToString("00"):00</th>
+							}
+						</tr>
+					</thead>
+					<tbody>
+						@for (int row = 0; row < report.Heatmap.Days.Count; row++)
+						{
+							<tr>
+								<th scope="row" class="text-start">@report.Heatmap.Days[row]</th>
+								@for (int column = 0; column < report.Heatmap.Hours.Count; column++)
+								{
+									double value = report.Heatmap.Cells[row][column];
+									<td style="background-color: @IndexModel.HeatColour(value, report.Heatmap.MaxCell); color: @IndexModel.HeatTextColour(value, report.Heatmap.MaxCell);">
+										@(value > 0 ? value.ToString("0.#", CultureInfo.InvariantCulture) : "")
+									</td>
+								}
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	</section>
+
+	<section class="tg-card h-auto" aria-labelledby="trend-heading">
+		<h2 id="trend-heading" class="h4 mb-1">Reservation trend</h2>
+		<p class="text-secondary small mb-3">Bookings by visit date and status. Guests served counts Seated and Completed bookings.</p>
+
+		<div class="table-responsive">
+			<table class="table table-sm align-middle mb-0">
+				<thead>
+					<tr>
+						<th scope="col">Date</th>
+						<th scope="col" class="text-end">Pending</th>
+						<th scope="col" class="text-end">Confirmed</th>
+						<th scope="col" class="text-end">Seated</th>
+						<th scope="col" class="text-end">Completed</th>
+						<th scope="col" class="text-end">Cancelled</th>
+						<th scope="col" class="text-end">No-show</th>
+						<th scope="col" class="text-end">Total</th>
+						<th scope="col" class="text-end">Guests served</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (DailyReservationCount day in report.DailyTrend)
+					{
+						<tr class="@(day.Total == 0 ? "text-secondary" : "")">
+							<th scope="row">@day.Date.ToString("ddd d MMM", CultureInfo.InvariantCulture)</th>
+							<td class="text-end">@day.Pending</td>
+							<td class="text-end">@day.Confirmed</td>
+							<td class="text-end">@day.Seated</td>
+							<td class="text-end">@day.Completed</td>
+							<td class="text-end">@day.Cancelled</td>
+							<td class="text-end">@day.NoShow</td>
+							<td class="text-end fw-semibold">@day.Total</td>
+							<td class="text-end">@day.GuestsServed</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	</section>
+}
