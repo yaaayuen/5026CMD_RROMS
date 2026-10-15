@@ -1,21 +1,33 @@
 using System.Globalization;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Options;
 using Rroms.Web.Common;
 using Rroms.Web.Models.ViewModels;
 using Rroms.Web.Options;
 namespace Rroms.Web.Services;
 
-/// <summary>Local intent rules use live restaurant data. No external AI requests are made.</summary>
+/// <summary>Local intent rules use live restaurant data. AI is optional and cannot choose navigation URLs.</summary>
 public class ChatbotService : IChatbotService
 {
     private readonly IMenuService _menu;
     private readonly IRestaurantService _restaurant;
     private readonly IReservationService _reservations;
-    public ChatbotService(IMenuService menu, IRestaurantService restaurant, IReservationService reservations)
+    private readonly HttpClient _http;
+    private readonly ChatbotOptions _options;
+    private readonly ILogger<ChatbotService> _logger;
+
+    public ChatbotService(IMenuService menu, IRestaurantService restaurant, IReservationService reservations, HttpClient http,
+        IOptions<ChatbotOptions> options, ILogger<ChatbotService> logger)
     {
         _menu = menu;
         _restaurant = restaurant;
         _reservations = reservations;
+        _http = http;
+        _options = options.Value;
+        _logger = logger;
     }
 
     public async Task<ChatReply> AskAsync(string question, bool isCustomer, CancellationToken cancellationToken = default)
@@ -95,7 +107,35 @@ public class ChatbotService : IChatbotService
             return Reply(string.Join("; ", matches.Select(m => m.Name + ": RM " + m.CurrentPrice.ToString("0.00")
                 + (m.CanOrder ? " (available)" : " (unavailable)"))), "/Menu", "Menu");
         }
-        return Fallback();
+        if (string.IsNullOrWhiteSpace(_options.ApiKey)) { return Fallback(); }
+        try
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(TimeSpan.FromSeconds(Math.Clamp(_options.TimeoutSeconds, 1, 15)));
+            using var request = new HttpRequestMessage(HttpMethod.Post, "https://integrate.api.nvidia.com/v1/chat/completions");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
+            request.Content = JsonContent.Create(new
+            {
+                model = _options.Model, temperature = 0.2, max_tokens = 180, stream = false,
+                messages = new[]
+                {
+                    new { role = "system", content = "You are the Three Grills restaurant assistant. Give a brief general dining answer. You have no access to bookings, orders, prices, policies or personal data. Never invent restaurant facts or claim you changed a booking. For restaurant-specific information ask the user to use the menu or booking page. Do not supply URLs. Do not give allergy safety guarantees." },
+                    new { role = "user", content = question }
+                }
+            });
+            using var response = await _http.SendAsync(request, timeout.Token);
+            if (!response.IsSuccessStatusCode) { return Fallback(); }
+            using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(timeout.Token));
+            string? answer = json.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString();
+            if (string.IsNullOrWhiteSpace(answer)) { return Fallback(); }
+            return new ChatReply { Answer = answer.Length > 2000 ? answer[..2000] : answer, Source = "AI" };
+        }
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or JsonException or KeyNotFoundException or InvalidOperationException or IndexOutOfRangeException)
+        {
+            // Do not log the question, key or response body.
+            _logger.LogInformation("Chatbot fallback used: {ErrorType}", ex.GetType().Name);
+            return Fallback();
+        }
     }
 
     private static bool Has(string text, params string[] phrases)
