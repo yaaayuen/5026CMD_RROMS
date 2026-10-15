@@ -483,3 +483,6 @@ $RECYCLE.BIN/
 
 # Dish photos uploaded while testing the admin menu pages (YJ)
 src/Rroms.Web/wwwroot/uploads/
+src/Rroms.Web/Data/Migrations/20261013005216_S4_Alex_AnnouncementsFeedback.cs
+src/Rroms.Web/Data/Migrations/20261013005216_S4_Alex_AnnouncementsFeedback.cs
+src/Rroms.Web/Data/Migrations/20261013005216_S4_Alex_AnnouncementsFeedback.Designer.cs

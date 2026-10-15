@@ -1,0 +1,7 @@
+@using Rroms.Web.Constants
+<nav aria-label="Dining features" class="d-flex flex-wrap gap-3 mb-3">
+    @if (User.IsInRole(RoleNames.Customer))
+    { <a asp-area="Customer" asp-page="/Tracking/Index">Track my visit</a> }
+    @if (User.IsInRole(RoleNames.Staff) || User.IsInRole(RoleNames.Administrator))
+    { <a asp-area="Staff" asp-page="/Orders/Index">Kitchen orders</a> }
+</nav>
