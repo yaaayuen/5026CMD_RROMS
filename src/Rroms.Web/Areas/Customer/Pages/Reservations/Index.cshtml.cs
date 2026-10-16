@@ -45,13 +45,6 @@ public class IndexModel : PageModel
     /// <param name="status">The reservation's status.</param>
     public static string StatusBadgeClass(ReservationStatus status)
     {
-        return status switch
-        {
-            ReservationStatus.Pending => "text-bg-warning",
-            ReservationStatus.Confirmed => "text-bg-success",
-            ReservationStatus.Seated => "text-bg-primary",
-            ReservationStatus.Completed => "text-bg-secondary",
-            _ => "text-bg-light border"
-        };
+        return Rroms.Web.Common.ReservationStatusDisplay.BadgeClass(status);
     }
 }

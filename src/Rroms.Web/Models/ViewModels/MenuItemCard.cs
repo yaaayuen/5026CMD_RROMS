@@ -1,9 +1,8 @@
 ﻿namespace Rroms.Web.Models.ViewModels;
 
 /// <summary>
-/// Everything the customer menu needs to show one dish (YJ-2). 
-/// A view model: it carries only what the page displays, 
-/// so the page contains no pricing or availability logic of its own.
+/// Everything the customer menu needs to show one dish (YJ-2). A view model: it carries only what the page
+/// displays, so the page contains no pricing or availability logic of its own.
 /// </summary>
 public class MenuItemCard
 {
@@ -25,8 +24,7 @@ public class MenuItemCard
     /// <summary>The normal price in RM.</summary>
     public decimal NormalPrice { get; set; }
 
-    /// <summary>The price in RM a customer pays right now: 
-    /// the offer price while an offer is running.</summary>
+    /// <summary>The price in RM a customer pays right now: the offer price while an offer is running.</summary>
     public decimal CurrentPrice { get; set; }
 
     /// <summary>True while an offer is running right now.</summary>
@@ -38,7 +36,12 @@ public class MenuItemCard
     /// <summary>False when the restaurant has switched ordering off for this dish.</summary>
     public bool IsAvailable { get; set; }
 
-    /// <summary>True when the customer may add the dish to an order. 
-    /// Unavailable dishes can be seen but not added.</summary>
+    /// <summary>True for a dish without meat or fish.</summary>
+    public bool IsVegetarian { get; set; }
+
+    /// <summary>True for a hot, spicy dish.</summary>
+    public bool IsSpicy { get; set; }
+
+    /// <summary>True when the customer may add the dish to an order. Unavailable dishes can be seen but not added.</summary>
     public bool CanOrder { get; set; }
 }

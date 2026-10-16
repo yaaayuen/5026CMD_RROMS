@@ -7,7 +7,6 @@ namespace Rroms.Web.Models;
 /// Rules that compare several fields (for example, promo price below normal price)
 /// live in IMenuService, not here, so every failure comes back as a ServiceResult.
 /// </summary>
-
 public class MenuItem
 {
     /// <summary>Maximum length of the item name.</summary>
@@ -32,22 +31,27 @@ public class MenuItem
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Short description shown to customers.</summary>
-    [StringLength(DescriptionMaxLength)] 
+    [StringLength(DescriptionMaxLength)]
     public string Description { get; set; } = string.Empty;
 
-    /// <summary>Foreign key to WL MenuCategory.</summary>
+    /// <summary>Foreign key to WL's MenuCategory.</summary>
     public int MenuCategoryId { get; set; }
 
     /// <summary>The category this item belongs to.</summary>
     public MenuCategory? MenuCategory { get; set; }
 
-    /// <summary>Normal price in RM. Must be greater than zero. 
-    /// Stored as decimal (10,2) by the global convention.</summary>
+    /// <summary>Normal price in RM. Must be greater than zero. Stored as decimal(10,2) by the global convention.</summary>
     [Range(typeof(decimal), MinPriceText, MaxPriceText)]
     public decimal Price { get; set; }
 
-    /// <summary>When false, customers can see the item but cannot order it</summary>
+    /// <summary>When false, customers can see the item but cannot order it.</summary>
     public bool IsAvailable { get; set; } = true;
+
+    /// <summary>True for a dish without meat or fish. Shown as a badge; used by the "vegetarian only" filter and the recommendations.</summary>
+    public bool IsVegetarian { get; set; }
+
+    /// <summary>True for a hot, spicy dish. Shown as a badge; used by the recommendations.</summary>
+    public bool IsSpicy { get; set; }
 
     /// <summary>Promotional price in RM, or null when there is no offer.</summary>
     public decimal? PromoPrice { get; set; }
@@ -59,10 +63,9 @@ public class MenuItem
     public DateTime? PromoEndUtc { get; set; }
 
     /// <summary>
-    /// Stored image file name only (a generated GUID plus extension), 
-    /// never a full path, and never the name the user uploaded.
+    /// Stored image file name only (a generated GUID plus extension), never a full path
+    /// and never the name the user uploaded.
     /// </summary>
-
     [StringLength(ImageFileNameMaxLength)]
     public string? ImageFileName { get; set; }
 
@@ -71,5 +74,4 @@ public class MenuItem
 
     /// <summary>When the item was last changed (UTC).</summary>
     public DateTime UpdatedAtUtc { get; set; }
-
 }
