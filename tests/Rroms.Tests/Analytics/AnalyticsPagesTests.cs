@@ -78,12 +78,13 @@ public class AnalyticsPagesTests : IClassFixture<TestWebApplicationFactory>
         Assert.Contains("Table utilisation", html);
         Assert.Contains("How utilisation is worked out", html);
         Assert.Contains("Peak hours", html);
-        Assert.Contains("Reservation trend", html);
+        Assert.Contains("Bookings per day", html);
+        Assert.Contains("chart.umd.js", html);
     }
 
-    /// <summary>A chosen range is kept in the form and every day of it appears in the trend.</summary>
+    /// <summary>A chosen range is kept in the form, passed on to the charts, and the URL stays clean.</summary>
     [Fact]
-    public async Task Administrator_ChosenRange_IsKeptAndListed()
+    public async Task Administrator_ChosenRange_IsKeptAndPassedToCharts()
     {
         HttpClient client = await SignInAsAdministratorAsync();
 
@@ -91,9 +92,40 @@ public class AnalyticsPagesTests : IClassFixture<TestWebApplicationFactory>
 
         Assert.Contains("value=\"2026-10-05\"", html);
         Assert.Contains("value=\"2026-10-11\"", html);
-        Assert.Contains("Mon 5 Oct", html);
-        Assert.Contains("Sun 11 Oct", html);
-        Assert.DoesNotContain("Mon 12 Oct", html);
+        Assert.Contains("handler=Data", html);
+        Assert.Contains("From=2026-10-05", html);
+        Assert.DoesNotContain("__Invariant", html);
+    }
+
+    // ============================== Chart data (WL-5) ==============================//
+
+    /// <summary>The JSON for the charts lists every day of the range, quiet days included.</summary>
+    [Fact]
+    public async Task ChartData_ChosenRange_ReturnsOneLabelPerDay()
+    {
+        HttpClient client = await SignInAsAdministratorAsync();
+
+        HttpResponseMessage response = await client.GetAsync($"{AnalyticsUrl}?handler=Data&From=2026-10-05&To=2026-10-11");
+        string json = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        Assert.Contains("\"dayLabels\":[\"Mon 5 Oct\"", json);
+        Assert.Contains("\"Sun 11 Oct\"]", json);
+        Assert.Contains("\"salesAvailable\":false", json);
+    }
+
+    /// <summary>A refused range gives 400 with the message, so the charts can show an error instead of wrong numbers.</summary>
+    [Fact]
+    public async Task ChartData_EndBeforeStart_IsBadRequest()
+    {
+        HttpClient client = await SignInAsAdministratorAsync();
+
+        HttpResponseMessage response = await client.GetAsync($"{AnalyticsUrl}?handler=Data&From=2026-10-11&To=2026-10-05");
+        string json = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains(AnalyticsService.EndBeforeStartMessage, json);
     }
 
     /// <summary>An end date before the start date shows the service's message instead of a report.</summary>

@@ -43,9 +43,7 @@ public class IndexModel : PageModel
     /// <summary>Handles GET /Admin/Analytics, with or without a date range.</summary>
     public async Task OnGetAsync()
     {
-        DateOnly today = DateOnly.FromDateTime(MalaysiaTime.FromUtc(DateTime.UtcNow));
-        To ??= today;
-        From ??= To.Value.AddDays(-(DefaultRangeDays - 1));
+        ApplyDefaultRange();
 
         ServiceResult<OccupancyReport> result = await _analyticsService.GetOccupancyReportAsync(From.Value, To.Value);
         if (!result.Succeeded)
@@ -59,6 +57,31 @@ public class IndexModel : PageModel
         }
 
         Report = result.Value;
+    }
+
+    /// <summary>
+    /// Handles GET /Admin/Analytics?handler=Data&amp;From=...&amp;To=... for the Chart.js dashboard (WL-5).
+    /// Returns the same range's numbers as JSON, or 400 with the error messages when the range is refused.
+    /// </summary>
+    public async Task<IActionResult> OnGetDataAsync()
+    {
+        ApplyDefaultRange();
+
+        ServiceResult<OccupancyReport> result = await _analyticsService.GetOccupancyReportAsync(From.Value, To.Value);
+        if (!result.Succeeded)
+        {
+            return BadRequest(new { errors = result.Errors });
+        }
+
+        return new JsonResult(DashboardChartData.FromReport(result.Value!));
+    }
+
+    /// <summary>Fills in an empty range: To defaults to today and From to four weeks before it (Malaysia dates).</summary>
+    private void ApplyDefaultRange()
+    {
+        DateOnly today = DateOnly.FromDateTime(MalaysiaTime.FromUtc(DateTime.UtcNow));
+        To ??= today;
+        From ??= To.Value.AddDays(-(DefaultRangeDays - 1));
     }
 
     /// <summary>
