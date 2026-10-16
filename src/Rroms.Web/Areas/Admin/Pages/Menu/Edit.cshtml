@@ -62,6 +62,18 @@
 		</div>
 
 		<fieldset class="mb-3">
+			<legend class="h5">Dietary tags</legend>
+			<div class="form-check form-check-inline">
+				<input asp-for="Input.IsVegetarian" class="form-check-input" />
+				<label asp-for="Input.IsVegetarian" class="form-check-label"></label>
+			</div>
+			<div class="form-check form-check-inline">
+				<input asp-for="Input.IsSpicy" class="form-check-input" />
+				<label asp-for="Input.IsSpicy" class="form-check-label"></label>
+			</div>
+		</fieldset>
+
+		<fieldset class="mb-3">
 			<legend class="h5">Offer (optional)</legend>
 			<p class="text-secondary small">Fill in all three fields, or leave all three empty. The offer price must be lower than the normal price.</p>
 			<div class="row">

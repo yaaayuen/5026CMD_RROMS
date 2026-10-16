@@ -543,6 +543,12 @@ namespace Rroms.Web.Data.Migrations
                     b.Property<bool>("IsAvailable")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsSpicy")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsVegetarian")
+                        .HasColumnType("bit");
+
                     b.Property<int>("MenuCategoryId")
                         .HasColumnType("int");
 
