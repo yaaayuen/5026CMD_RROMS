@@ -1,0 +1,54 @@
+@page
+@model Rroms.Web.Areas.Staff.Pages.Billing.IndexModel
+@using Rroms.Web.Common
+@{
+    ViewData["Title"] = "Billing and payments";
+}
+<section class="hero hero-compact mb-4">
+    <span class="eyebrow">Staff · Billing</span>
+    <h1>Billing and payments</h1>
+    <p class="lead mb-0">Generate bills for completed orders and record payments received.</p>
+</section>
+<section class="tg-card h-auto">
+    <form method="get" class="d-flex flex-wrap gap-3 align-items-center mb-4">
+        <div class="form-check">
+            <input asp-for="IncludePaid" class="form-check-input" />
+            <label asp-for="IncludePaid" class="form-check-label">Include paid orders</label>
+        </div>
+        <button type="submit" class="btn btn-primary">Apply</button>
+    </form>
+    @if (Model.Bills.Count == 0)
+    {
+        <p class="text-secondary">No completed orders match this view. Orders appear here after staff complete them.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead><tr><th>Order</th><th>Customer / table</th><th>Ordered (Malaysia)</th><th class="text-end">Total (RM)</th><th>Payment</th><th>Action</th></tr></thead>
+                <tbody>
+                @foreach (var bill in Model.Bills)
+                {
+                    <tr>
+                        <th scope="row">#@bill.OrderId</th>
+                        <td>@bill.CustomerName <span class="text-secondary">· @bill.TableLabel</span></td>
+                        <td>@MalaysiaTime.FromUtc(bill.PlacedAtUtc).ToString("dd MMM yyyy, h:mm tt")</td>
+                        <td class="text-end">@bill.TotalAmount.ToString("N2")</td>
+                        @if (bill.PaidPaymentId.HasValue)
+                        {
+                            <td><span class="badge text-bg-success">Paid</span></td>
+                            <td><a asp-page="Receipt" asp-route-id="@bill.PaidPaymentId" class="btn btn-outline-primary btn-sm">Receipt</a></td>
+                        }
+                        else
+                        {
+                            <td><span class="badge text-bg-warning">Unpaid</span></td>
+                            <td><a asp-page="Details" asp-route-id="@bill.OrderId" class="btn btn-primary btn-sm">Generate bill</a></td>
+                        }
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+<p class="mt-3"><a asp-area="Staff" asp-page="/Index">Back to staff home</a></p>

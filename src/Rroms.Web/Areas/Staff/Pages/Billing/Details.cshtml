@@ -1,0 +1,47 @@
+@page "{id:int}"
+@model Rroms.Web.Areas.Staff.Pages.Billing.DetailsModel
+@using Rroms.Web.Contracts
+@using Rroms.Web.Services
+@{
+    ViewData["Title"] = "Bill for order #" + Model.Bill.OrderId;
+}
+<section class="hero hero-compact mb-4">
+    <span class="eyebrow">Three Grills · Bill</span>
+    <h1>Order #@Model.Bill.OrderId</h1>
+    <p class="lead mb-0">@Model.Bill.CustomerName · Table @Model.Bill.TableLabel</p>
+</section>
+<section class="tg-card h-auto mb-4">
+    <partial name="~/Pages/Shared/_BillingLines.cshtml" model="Model.Bill" />
+    <p class="h4 text-end">Bill total: RM @Model.Bill.TotalAmount.ToString("N2")</p>
+    <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+    @if (Model.Bill.PaidPaymentId.HasValue)
+    {
+        <div class="alert alert-success">This order has already been paid.</div>
+        <a asp-page="Receipt" asp-route-id="@Model.Bill.PaidPaymentId" class="btn btn-primary">Open receipt</a>
+    }
+    else if (Model.Bill.Status != OrderStatus.Completed)
+    {
+        <div class="alert alert-warning">@BillingService.NotCompletedMessage Current status: @Model.Bill.Status.</div>
+    }
+    else
+    {
+        <form method="post">
+            <label asp-for="Input.Method" class="form-label"></label>
+            <select asp-for="Input.Method" class="form-select mb-2" aria-describedby="payment-help demo-help">
+                <option value="">Choose a method</option>
+                <option value="@PaymentMethod.Cash">Cash</option>
+                <option value="@PaymentMethod.CardTerminal">Card terminal</option>
+                <option value="@PaymentMethod.EWallet">E-wallet</option>
+                <option value="@PaymentMethod.SimulatedOnline">Simulated online - DEMO ONLY</option>
+            </select>
+            <span asp-validation-for="Input.Method" class="text-danger"></span>
+            <p id="payment-help" class="text-secondary">For cash, card terminal or e-wallet, confirm the payment was received before recording it. Card and e-wallet details are not collected here.</p>
+            <div id="demo-help" class="alert alert-warning">Simulated online is a demo - no real payment processed.</div>
+            <button type="submit" class="btn btn-primary">Record payment</button>
+        </form>
+    }
+</section>
+<a asp-page="Index">Back to billing</a>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
