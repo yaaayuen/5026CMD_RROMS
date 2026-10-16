@@ -26,6 +26,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     /// <summary>Notification inbox rows (YY-6).</summary>
     public DbSet<Notification> Notifications => Set<Notification>();
 
+    /// <summary>Shared dietary tags (YY-9): customers avoid them, menu items contain them.</summary>
+    public DbSet<DietaryTag> DietaryTags => Set<DietaryTag>();
+
     // ----- Sprint 2 (WL): restaurant setup and reservations -----
 
     /// <summary>The restaurant's contact details (always one row).</summary>
@@ -119,6 +122,25 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             // this index answers it without scanning the table.
             notification.HasIndex(n => new { n.UserId, n.IsRead, n.CreatedAtUtc });
         });
+
+        // ----- Sprint 1 (YY): shared dietary tags and customer avoid-list (YY-9) -----
+        builder.Entity<DietaryTag>(tag =>
+        {
+            tag.HasIndex(t => t.Name).IsUnique();
+
+            // Fixed rows with fixed IDs, created by the migration (and by EnsureCreated in tests).
+            tag.HasData(DietaryTag.Seed);
+        });
+
+        // Many-to-many: one customer avoids many tags; one tag is avoided by many customers.
+        // EF Core creates the join table; naming it and its columns keeps SSMS and the ERD readable.
+        builder.Entity<ApplicationUser>()
+            .HasMany(user => user.AvoidedDietaryTags)
+            .WithMany()
+            .UsingEntity<Dictionary<string, object>>(
+                "CustomerAvoidedDietaryTags",
+                right => right.HasOne<DietaryTag>().WithMany().HasForeignKey("DietaryTagId"),
+                left => left.HasOne<ApplicationUser>().WithMany().HasForeignKey("UserId"));
 
         // Sprint 2 (WL): restaurant setup rules and seed data live in their own file.
         RestaurantSetupConfiguration.Configure(builder);

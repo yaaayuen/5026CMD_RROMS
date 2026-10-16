@@ -17,6 +17,9 @@ public class AccountService : IAccountService
     //Shown for every failed login attempt, only one same message to avoid revealing whether the email exists or not.
     public const string InvalidLoginMessage = "Invalid email or password.";
 
+    //Shown only when a suspended user enters the correct password (YY-8).
+    public const string SuspendedMessage = "Your account has been suspended. Please contact the restaurant for help.";
+
     //Shown when registering a new account with an email that already exists in the system.
     public const string DuplicateEmailMessage = "An account with this email already exists.";
 
@@ -142,8 +145,18 @@ public class AccountService : IAccountService
             return ServiceResult<SignInOutcome>.Failure(LockedOutMessage());
         }
 
-        // Wrong password, unknown email, deactivated account (NotAllowed), or an invited user who has
-        // not set a password yet: all get the same message.
+        if (result.IsNotAllowed)
+        {
+            // Identity refuses deactivated accounts ...
+            ServiceResult<SignInOutcome>? suspended = await CheckSuspendedAsync(cleanEmail, password);
+            if (suspended != null)
+            {
+                return suspended;
+            }
+        }
+
+        // Wrong password, unknown email, or an invited user who has not set a password yet:
+        // all get the same message.
         return ServiceResult<SignInOutcome>.Failure(InvalidLoginMessage);
     }
 
@@ -195,6 +208,35 @@ public class AccountService : IAccountService
     {
         await _signInManager.SignOutAsync();
     }
+
+    
+    //For a suspended account: returns the suspended message only if the password is correct.
+    //A wrong password still counts towards the lockout, so this cannot be used to guess passwords.
+    //Returns null when the generic message should be shown.
+    private async Task<ServiceResult<SignInOutcome>?> CheckSuspendedAsync(string email, string password)
+    {
+        ApplicationUser? user = await _userManager.FindByEmailAsync(email);
+        if (user == null || user.IsActive)
+        {
+            return null;
+        }
+
+        if (await _userManager.IsLockedOutAsync(user))
+        {
+            return ServiceResult<SignInOutcome>.Failure(LockedOutMessage());
+        }
+
+        bool passwordIsCorrect = await _userManager.CheckPasswordAsync(user, password);
+        if (!passwordIsCorrect)
+        {
+            await _userManager.AccessFailedAsync(user);
+            return null;
+        }
+
+        _logger.LogWarning("Suspended account {UserId} tried to sign in.", user.Id);
+        return ServiceResult<SignInOutcome>.Failure(SuspendedMessage);
+    }
+
     private string LockedOutMessage()
     {
         int minutes = (int)Math.Ceiling(_identityOptions.Lockout.DefaultLockoutTimeSpan.TotalMinutes);

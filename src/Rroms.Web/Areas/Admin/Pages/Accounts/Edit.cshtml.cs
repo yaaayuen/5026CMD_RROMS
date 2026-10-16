@@ -49,8 +49,6 @@ public class EditModel : PageModel
 
         Input = new EditAccountInput
         {
-            FullName = Account.FullName,
-            PhoneNumber = Account.PhoneNumber,
             RoleName = Account.RoleName,
             IsActive = Account.IsActive
         };
@@ -72,8 +70,8 @@ public class EditModel : PageModel
             return Page();
         }
 
-        ServiceResult result = await _userAdministration.UpdateUserAsync(
-            User.GetUserId(), Id, Input.FullName, Input.PhoneNumber, Input.RoleName, Input.IsActive);
+        ServiceResult result = await _userAdministration.UpdateAccessAsync(
+            User.GetUserId(), Id, Input.RoleName, Input.IsActive);
 
         if (!result.Succeeded)
         {
@@ -85,7 +83,7 @@ public class EditModel : PageModel
             return Page();
         }
 
-        TempData["StatusMessage"] = $"Account for {Input.FullName.Trim()} updated.";
+        TempData["StatusMessage"] = $"Access for {Account.FullName} updated.";
         return RedirectToPage("Index");
     }
 
@@ -106,18 +104,6 @@ public class EditModel : PageModel
     //Fields an administrator can change on an account
     public class EditAccountInput
     {
-        //Display name
-        [Required(ErrorMessage = "Enter the person's full name.")]
-        [StringLength(100, MinimumLength = 2)]
-        [Display(Name = "Full name")]
-        public string FullName { get; set; } = string.Empty;
-
-        //Optional phone number
-        [Phone(ErrorMessage = "Enter a valid phone number.")]
-        [StringLength(20)]
-        [Display(Name = "Phone (optional)")]
-        public string? PhoneNumber { get; set; }
-
         //The single role for this account
         [Required(ErrorMessage = "Choose a role.")]
         [Display(Name = "Role")]

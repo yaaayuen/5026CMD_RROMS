@@ -22,6 +22,6 @@ public interface IUserAdministrationService
     Task<ServiceResult<string>> CreateUserAsync(string fullName, string email, string? phoneNumber, string roleName);
 
     //Updates name, phone, role, and active status
-    Task<ServiceResult> UpdateUserAsync(string actingUserId, string userId, string fullName, string? phoneNumber, string roleName, bool isActive);
+    Task<ServiceResult> UpdateAccessAsync(string actingUserId, string userId, string roleName, bool isActive);
 
 }
