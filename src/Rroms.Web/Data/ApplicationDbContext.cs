@@ -69,6 +69,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     // ----- Sprint 5 (Darren): payments -----
 
+    /// <summary>Recorded payments and receipts (DA-1).</summary>
+    public DbSet<Payment> Payments => Set<Payment>();
+
     /// <summary>
     /// Conventions applied to every entity, so no member has to remember them individually.
     /// </summary>
@@ -127,5 +130,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         // YJ (Sprint 3): order rules
         OrderConfiguration.Configure(builder);
         DiningExperienceConfiguration.Configure(builder);
+
+        // ----- Sprint 5 (Darren): payment safeguards (DA-1) -----
+        PaymentConfiguration.Configure(builder);
     }
 }
