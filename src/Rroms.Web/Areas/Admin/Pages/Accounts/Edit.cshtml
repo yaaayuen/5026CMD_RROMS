@@ -17,19 +17,7 @@
 
 					<form method="post" novalidate>
 						<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
-
-						<div class="mb-3">
-							<label asp-for="Input.FullName" class="form-label fw-semibold"></label>
-							<input asp-for="Input.FullName" class="form-control" />
-							<span asp-validation-for="Input.FullName" class="text-danger small"></span>
-						</div>
-
-						<div class="mb-3">
-							<label asp-for="Input.PhoneNumber" class="form-label fw-semibold"></label>
-							<input asp-for="Input.PhoneNumber" class="form-control" />
-							<span asp-validation-for="Input.PhoneNumber" class="text-danger small"></span>
-						</div>
-
+dds
 						<div class="mb-3">
 							<label asp-for="Input.RoleName" class="form-label fw-semibold"></label>
 							@* Disabled controls are not posted, so for their own account the admin's current values are sent in hidden fields. *@
@@ -80,6 +68,10 @@
 					<dl class="mb-3">
 						<dt class="small text-secondary">Joined</dt>
 						<dd>@MalaysiaTime.FromUtc(Model.Account.CreatedAtUtc).ToString("d MMM yyyy, h:mm tt")</dd>
+						<dt class="small text-secondary">Name</dt>
+						<dd>@Model.Account.FullName</dd>
+						<dt class="small text-secondary">Phone</dt>
+						<dd>@(string.IsNullOrWhiteSpace(Model.Account.PhoneNumber) ? "Not given" : Model.Account.PhoneNumber)</dd>
 						<dt class="small text-secondary">Status</dt>
 						<dd>@(Model.Account.IsActive ? "Active" : "Deactivated")</dd>
 					</dl>

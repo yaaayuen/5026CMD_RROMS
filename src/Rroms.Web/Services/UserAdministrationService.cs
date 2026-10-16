@@ -3,29 +3,28 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Rroms.Web.Common;
 using Rroms.Web.Constants;
+using Rroms.Web.Contracts;
 using Rroms.Web.Data;
 using Rroms.Web.Models;
 using Rroms.Web.Models.ViewModels;
-using Rroms.Web.Contracts;
 
 namespace Rroms.Web.Services;
 
 /// <summary>
-/// Implements account administration
+/// Implements account administration with Identity's UserManager plus EF Core queries.
 /// </summary>
-
 public class UserAdministrationService : IUserAdministrationService
 {
-    //The account list showd at most this many rows; search function to narrow
+    /// <summary>The account list shows at most this many rows; use the search box to narrow it.</summary>
     public const int MaxResults = 200;
 
-    //Shown when an action/changes will delete all admin accounts
+    /// <summary>Shown when a change would leave the restaurant with no active administrator.</summary>
     public const string LastAdministratorMessage = "There must always be at least one active administrator.";
 
-    //Shown when admin try to change their own role or deactivate themselves
+    /// <summary>Shown when an administrator tries to demote or deactivate themselves.</summary>
     public const string SelfChangeMessage = "You cannot change your own role or deactivate your own account.";
 
-    //Shown then the requested account doesnt exist
+    /// <summary>Shown when the requested account does not exist.</summary>
     public const string UserNotFoundMessage = "That account could not be found.";
 
     private readonly ApplicationDbContext _context;
@@ -33,7 +32,7 @@ public class UserAdministrationService : IUserAdministrationService
     private readonly INotificationService _notificationService;
     private readonly ILogger<UserAdministrationService> _logger;
 
-    //All depencies are supplied by dependency injection
+    /// <summary>All dependencies are supplied by dependency injection.</summary>
     public UserAdministrationService(
         ApplicationDbContext context,
         UserManager<ApplicationUser> userManager,
@@ -46,6 +45,7 @@ public class UserAdministrationService : IUserAdministrationService
         _logger = logger;
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<UserSummary>> SearchUsersAsync(string? searchText, string? roleName, bool? isActive)
     {
         IQueryable<ApplicationUser> users = _context.Users.AsNoTracking();
@@ -64,8 +64,8 @@ public class UserAdministrationService : IUserAdministrationService
             users = users.Where(user => user.IsActive == isActive.Value);
         }
 
-        //Identity stores roles in a separate link table (AspNetUserRoles), so join users to their role name.
-        //Left joins keep users who have no role at all, so an administrator can spot and fix them.
+        // Identity stores roles in a separate link table (AspNetUserRoles), so join users to their role name.
+        // Left joins keep users who have no role at all, so an administrator can spot and fix them.
         IQueryable<UserSummary> query =
             from user in users
             join userRole in _context.UserRoles on user.Id equals userRole.UserId into userRoles
@@ -94,6 +94,7 @@ public class UserAdministrationService : IUserAdministrationService
             .ToListAsync();
     }
 
+    /// <inheritdoc />
     public async Task<UserSummary?> GetUserAsync(string userId)
     {
         ApplicationUser? user = await _userManager.FindByIdAsync(userId);
@@ -116,6 +117,7 @@ public class UserAdministrationService : IUserAdministrationService
         };
     }
 
+    /// <inheritdoc />
     public async Task<ServiceResult<string>> CreateUserAsync(
         string fullName, string email, string? phoneNumber, string roleName)
     {
@@ -129,7 +131,8 @@ public class UserAdministrationService : IUserAdministrationService
         {
             UserName = cleanEmail,
             Email = cleanEmail,
-            // Not confirmed yet: it becomes confirmed when the person proves they own the inbox by setting their password with an emailed code (YY-7).
+            // Not confirmed yet: it becomes confirmed when the person proves they own the inbox
+            // by setting their password with an emailed code (YY-7).
             EmailConfirmed = false,
             FullName = fullName.Trim(),
             PhoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber.Trim(),
@@ -137,9 +140,9 @@ public class UserAdministrationService : IUserAdministrationService
             CreatedAtUtc = DateTime.UtcNow
         };
 
-        //Creating the user and assigning the role are two database writes. Running them in one
-        //transaction means we never end up with a user who has no role.
-        //EnableRetryOnFailure is on, so a manual transaction must run inside the execution strategy.
+        // Creating the user and assigning the role are two database writes. Running them in one
+        // transaction means we never end up with a user who has no role.
+        // EnableRetryOnFailure is on, so a manual transaction must run inside the execution strategy.
         IExecutionStrategy strategy = _context.Database.CreateExecutionStrategy();
         ServiceResult<string> result = await strategy.ExecuteAsync(async () =>
         {
@@ -167,8 +170,9 @@ public class UserAdministrationService : IUserAdministrationService
 
         if (result.Succeeded)
         {
-            //Invitation (YY-7), sent only after the commit so nobody is invited to an account that was rolled back.
-            //The link only pre-fills the email on the "Set or reset your password" page; the secret part is the 6-digit code the person requests there, which goes to this inbox and expires in minutes.
+            // Invitation (YY-7), sent only after the commit so nobody is invited to an account that was rolled back.
+            // The link only pre-fills the email on the "Set or reset your password" page; the secret part is
+            // the 6-digit code the person requests there, which goes to this inbox and expires in minutes.
             await _notificationService.NotifyUserAsync(
                 user.Id,
                 NotificationType.General,
@@ -180,8 +184,9 @@ public class UserAdministrationService : IUserAdministrationService
         return result;
     }
 
-    public async Task<ServiceResult> UpdateUserAsync(
-        string actingUserId, string userId, string fullName, string? phoneNumber, string roleName, bool isActive)
+    /// <inheritdoc />
+    public async Task<ServiceResult> UpdateAccessAsync(
+        string actingUserId, string userId, string roleName, bool isActive)
     {
         if (!RoleNames.All.Contains(roleName))
         {
@@ -198,13 +203,13 @@ public class UserAdministrationService : IUserAdministrationService
         bool roleChanging = currentRole != roleName;
         bool activeChanging = user.IsActive != isActive;
 
-        //Rule 1: an administrator cannot lock themselves out by mistake.
+        // Rule 1: an administrator cannot lock themselves out by mistake.
         if (actingUserId == userId && (roleChanging || !isActive))
         {
             return ServiceResult.Failure(SelfChangeMessage);
         }
 
-        //Rule 2: never remove the last active administrator.
+        // Rule 2: never remove the last active administrator.
         bool losingAdministrator = currentRole == RoleNames.Administrator
             && user.IsActive
             && (roleName != RoleNames.Administrator || !isActive);
@@ -220,12 +225,11 @@ public class UserAdministrationService : IUserAdministrationService
         }
 
         IExecutionStrategy strategy = _context.Database.CreateExecutionStrategy();
-        return await strategy.ExecuteAsync(async () =>
+        ServiceResult result = await strategy.ExecuteAsync(async () =>
         {
             await using IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
 
-            user.FullName = fullName.Trim();
-            user.PhoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber.Trim();
+            // Name and phone are deliberately not touched: only the account owner changes them (YY-9).
             user.IsActive = isActive;
 
             IdentityResult updateResult = await _userManager.UpdateAsync(user);
@@ -236,7 +240,7 @@ public class UserAdministrationService : IUserAdministrationService
 
             if (roleChanging)
             {
-                //One role per user: remove every existing role, then add the new one.
+                // One role per user: remove every existing role, then add the new one.
                 IList<string> existingRoles = await _userManager.GetRolesAsync(user);
                 IdentityResult removeResult = await _userManager.RemoveFromRolesAsync(user, existingRoles);
                 if (!removeResult.Succeeded)
@@ -253,21 +257,52 @@ public class UserAdministrationService : IUserAdministrationService
 
             if (roleChanging || activeChanging)
             {
-                //The user's cookie still contains their old role. Changing the security stamp makes
-                //Identity reject that cookie at its next check (every minute, set in Program.cs),
-                //so a deactivated or demoted user is signed out everywhere.
+                // The user's cookie still contains their old role. Changing the security stamp makes
+                // Identity reject that cookie at its next check (every minute, set in Program.cs),
+                // so a deactivated or demoted user is signed out everywhere.
                 await _userManager.UpdateSecurityStampAsync(user);
             }
 
             await transaction.CommitAsync();
             _logger.LogInformation(
-                "Administrator {ActingUserId} updated account {UserId} (role {Role}, active {IsActive}).",
+                "Administrator {ActingUserId} changed access for account {UserId} (role {Role}, active {IsActive}).",
                 actingUserId, userId, roleName, isActive);
             return ServiceResult.Success();
         });
+
+        if (result.Succeeded && activeChanging)
+        {
+            // Sent after the commit, so nobody is told about a change that was rolled back.
+            // The email still reaches a suspended user, who can no longer open the inbox.
+            await NotifyStatusChangeAsync(user.Id, isActive);
+        }
+
+        return result;
     }
 
-    //Returns the user's role, or an empty string if they have none.
+    /// <summary>Tells the account owner that their account was suspended or reactivated (YY-9).</summary>
+    private async Task NotifyStatusChangeAsync(string userId, bool isActive)
+    {
+        if (isActive)
+        {
+            await _notificationService.NotifyUserAsync(
+                userId,
+                NotificationType.General,
+                "Your account has been reactivated",
+                $"Your {SiteInfo.RestaurantName} account is active again. You can sign in as usual.",
+                "/Account/Login");
+            return;
+        }
+
+        await _notificationService.NotifyUserAsync(
+            userId,
+            NotificationType.General,
+            "Your account has been suspended",
+            $"An administrator has suspended your {SiteInfo.RestaurantName} account, so you can no longer sign in. "
+                + "If you think this is a mistake, please contact the restaurant.");
+    }
+
+    /// <summary>Returns the user's role, or an empty string if they have none.</summary>
     private async Task<string> GetSingleRoleAsync(ApplicationUser user)
     {
         IList<string> roles = await _userManager.GetRolesAsync(user);
