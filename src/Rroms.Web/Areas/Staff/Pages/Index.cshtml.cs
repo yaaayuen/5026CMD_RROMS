@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 
 using Rroms.Web.Models.ViewModels;
 
@@ -26,7 +26,15 @@ public class IndexModel : PageModel
                 "Today's reservations",
                 "Confirm, change or cancel bookings and see special requests.",
                 "calendar",
-                "Sprint 5 · Darren"),
+                "Sprint 2 · WL",
+                "/Staff/Reservations"),
+            // DA-7 (Darren): separate from WL's daily status-actions page.
+            new ModuleTileViewModel(
+                "Reservation history and filters",
+                "Filter bookings, read dining preferences and view customer history.",
+                "calendar",
+                "Sprint 5 · Darren",
+                "/Staff/Reservations/History"),
             new ModuleTileViewModel(
                 "Order queue",
                 "Move orders from Preparing to Ready to Serve to Served.",
@@ -37,7 +45,8 @@ public class IndexModel : PageModel
                 "Billing and payments",
                 "Generate bills and record cash, card or e-wallet payments.",
                 "receipt",
-                "Sprint 5 · Darren"),
+                "Sprint 5 · Darren",
+                "/Staff/Billing"),
             new ModuleTileViewModel(
                 "My profile",
                 "Update your contact details and password.",

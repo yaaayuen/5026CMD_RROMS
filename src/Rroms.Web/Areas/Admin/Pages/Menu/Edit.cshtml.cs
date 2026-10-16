@@ -129,6 +129,8 @@ public class EditModel : PageModel
             MenuCategoryId = item.MenuCategoryId,
             Price = item.Price,
             IsAvailable = item.IsAvailable,
+            IsVegetarian = item.IsVegetarian,
+            IsSpicy = item.IsSpicy,
             PromoPrice = item.PromoPrice
         };
 

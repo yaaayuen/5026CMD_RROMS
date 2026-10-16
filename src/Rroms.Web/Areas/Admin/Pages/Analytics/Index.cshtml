@@ -1,0 +1,227 @@
+﻿@page
+@model IndexModel
+@using System.Globalization
+@{
+	ViewData["Title"] = "Analytics dashboard";
+	OccupancyReport? report = Model.Report;
+	DateOnly today = DateOnly.FromDateTime(Rroms.Web.Common.MalaysiaTime.FromUtc(DateTime.UtcNow));
+	DateOnly monthStart = new DateOnly(today.Year, today.Month, 1);
+	string Iso(DateOnly date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+}
+
+<section class="hero hero-compact mb-4" aria-labelledby="analytics-heading">
+	<span class="hero-bubble one" aria-hidden="true"></span>
+	<div class="position-relative">
+		<span class="eyebrow">Analytics</span>
+		<h1 id="analytics-heading" class="mb-1">Analytics dashboard</h1>
+		<p class="lead mb-0">How full the tables really were, the busiest hours, and how bookings are trending.</p>
+	</div>
+</section>
+
+<section class="tg-card h-auto mb-4" aria-labelledby="range-heading">
+	<h2 id="range-heading" class="h5 mb-3">Date range</h2>
+
+	@* Plain inputs (not asp-for) so the URL stays short: ?From=2026-10-01&To=2026-10-31 *@
+	<form method="get" class="row g-3 align-items-end">
+		<div class="col-sm-4">
+			<label for="From" class="form-label fw-semibold">From</label>
+			<input id="From" name="From" type="date" class="form-control" value="@(Model.From.HasValue ? Iso(Model.From.Value) : "")" />
+		</div>
+		<div class="col-sm-4">
+			<label for="To" class="form-label fw-semibold">To</label>
+			<input id="To" name="To" type="date" class="form-control" value="@(Model.To.HasValue ? Iso(Model.To.Value) : "")" />
+		</div>
+		<div class="col-sm-4">
+			<button type="submit" class="btn btn-primary">Show</button>
+		</div>
+	</form>
+
+	<div class="d-flex flex-wrap gap-2 mt-3" aria-label="Quick ranges">
+		<a class="btn btn-sm btn-outline-primary" href="?From=@Iso(today.AddDays(-6))&To=@Iso(today)">Last 7 days</a>
+		<a class="btn btn-sm btn-outline-primary" href="?From=@Iso(today.AddDays(-27))&To=@Iso(today)">Last 4 weeks</a>
+		<a class="btn btn-sm btn-outline-primary" href="?From=@Iso(monthStart)&To=@Iso(today)">This month</a>
+		<a class="btn btn-sm btn-outline-primary" href="?From=@Iso(monthStart.AddMonths(-1))&To=@Iso(monthStart.AddDays(-1))">Last month</a>
+	</div>
+
+	<div asp-validation-summary="All" class="text-danger mt-3" role="alert"></div>
+</section>
+
+@if (report != null)
+{
+	<div class="row g-4 mb-4">
+		<div class="col-md-4">
+			<section class="tg-card h-100" aria-labelledby="utilisation-heading">
+				<h2 id="utilisation-heading" class="h6 text-secondary mb-2">Table utilisation</h2>
+				<p class="display-6 fw-bold mb-1">@report.UtilisationPercent.ToString("0.0", CultureInfo.InvariantCulture)%</p>
+				<p class="small text-secondary mb-0">
+					@report.OccupiedTableHours.ToString("0.#", CultureInfo.InvariantCulture) of
+					@report.AvailableTableHours.ToString("0.#", CultureInfo.InvariantCulture) table-hours used
+				</p>
+			</section>
+		</div>
+		<div class="col-md-4">
+			<section class="tg-card h-100" aria-labelledby="served-heading">
+				<h2 id="served-heading" class="h6 text-secondary mb-2">Guests served</h2>
+				<p class="display-6 fw-bold mb-1">@report.DailyTrend.Sum(d => d.GuestsServed)</p>
+				<p class="small text-secondary mb-0">
+					@report.DailyTrend.Sum(d => d.Total) bookings ·
+					@report.DailyTrend.Sum(d => d.Cancelled) cancelled ·
+					@report.DailyTrend.Sum(d => d.NoShow) no-show
+				</p>
+			</section>
+		</div>
+		<div class="col-md-4">
+			<section class="tg-card h-100" aria-labelledby="upcoming-heading">
+				<h2 id="upcoming-heading" class="h6 text-secondary mb-2">Confirmed, next @report.UpcomingDays days</h2>
+				<p class="display-6 fw-bold mb-1">@report.UpcomingConfirmedBookings</p>
+				<p class="small text-secondary mb-0">bookings · @report.UpcomingConfirmedGuests guests expected</p>
+			</section>
+		</div>
+	</div>
+
+	<p class="small text-secondary mb-4">
+		<strong>How utilisation is worked out:</strong> table-hours really used (Seated or Completed bookings, counted in 30-minute slots)
+		÷ table-hours available (opening hours × active tables, for every open day in the range) × 100.
+		Cancelled and no-show bookings free their table, and guests who leave early free the rest of their slot.
+	</p>
+
+	@* WL-5: the charts load their numbers from ?handler=Data for the same range, so they always match the tables below. *@
+	<div id="dashboard-charts" data-url="@Url.Page("Index", "Data", new { From = Iso(report.From), To = Iso(report.To) })">
+		<div class="row g-4 mb-4">
+			<div class="col-lg-8">
+				<section class="tg-card h-100" aria-labelledby="bookings-chart-heading">
+					<h2 id="bookings-chart-heading" class="h5 mb-1">Bookings per day</h2>
+					<p class="text-secondary small mb-3">Bars: bookings by status. Line: guests who really dined.</p>
+					<div style="position: relative; height: 320px;">
+						<canvas id="bookings-chart" role="img" aria-label="Bookings per day by status, with guests served"></canvas>
+					</div>
+				</section>
+			</div>
+			<div class="col-lg-4">
+				<section class="tg-card h-100" aria-labelledby="hours-chart-heading">
+					<h2 id="hours-chart-heading" class="h5 mb-1">Busiest hours</h2>
+					<p class="text-secondary small mb-3">Table-hours used in each hour, all days added together.</p>
+					<div style="position: relative; height: 320px;">
+						<canvas id="hours-chart" role="img" aria-label="Table-hours used by hour of the day"></canvas>
+					</div>
+				</section>
+			</div>
+		</div>
+
+		<section class="tg-card h-auto mb-4" aria-labelledby="sales-heading">
+			<h2 id="sales-heading" class="h5 mb-1">Sales and popular dishes</h2>
+			<p id="sales-note" class="text-secondary small mb-0">
+				These charts use Darren's sales report (DA-3) so the totals match it exactly. They appear here once DA-3 is merged.
+			</p>
+		</section>
+		<p id="charts-error" class="text-danger small d-none" role="alert">The charts could not be loaded. The tables below still show every number.</p>
+	</div>
+
+	<section class="tg-card h-auto mb-4" aria-labelledby="heatmap-heading">
+		<h2 id="heatmap-heading" class="h4 mb-1">Peak hours by weekday</h2>
+		<p class="text-secondary small mb-3">Table-hours used in each hour (Malaysia time), added up over the range. Darker means busier.</p>
+
+		@if (report.Heatmap.Hours.Count == 0)
+		{
+			<p class="mb-0">The restaurant is closed every day, so there are no hours to show.</p>
+		}
+		else
+		{
+			<div class="table-responsive">
+				<table class="table table-sm table-bordered text-center align-middle mb-0">
+					<thead>
+						<tr>
+							<th scope="col" class="text-start">Day</th>
+							@foreach (int hour in report.Heatmap.Hours)
+							{
+								<th scope="col">@hour.ToString("00"):00</th>
+							}
+						</tr>
+					</thead>
+					<tbody>
+						@for (int row = 0; row < report.Heatmap.Days.Count; row++)
+						{
+							<tr>
+								<th scope="row" class="text-start">@report.Heatmap.Days[row]</th>
+								@for (int column = 0; column < report.Heatmap.Hours.Count; column++)
+								{
+									double value = report.Heatmap.Cells[row][column];
+									<td style="background-color: @IndexModel.HeatColour(value, report.Heatmap.MaxCell); color: @IndexModel.HeatTextColour(value, report.Heatmap.MaxCell);">
+										@(value > 0 ? value.ToString("0.#", CultureInfo.InvariantCulture) : "")
+									</td>
+								}
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	</section>
+
+	var busyDays = report.DailyTrend.Where(d => d.Total > 0).ToList();
+	<section class="tg-card h-auto" aria-labelledby="trend-heading">
+		<details>
+			<summary class="h5 mb-0" id="trend-heading">Daily numbers (@busyDays.Count day(s) with bookings)</summary>
+			<p class="text-secondary small mt-2 mb-3">Days without bookings are left out of this table; the chart above still shows them as zero.</p>
+
+			@if (busyDays.Count == 0)
+			{
+				<p class="mb-0">No bookings in this range.</p>
+			}
+			else
+			{
+				<div class="table-responsive">
+					<table class="table table-sm align-middle mb-0">
+						<thead>
+							<tr>
+								<th scope="col">Date</th>
+								<th scope="col" class="text-end">Pending</th>
+								<th scope="col" class="text-end">Confirmed</th>
+								<th scope="col" class="text-end">Seated</th>
+								<th scope="col" class="text-end">Completed</th>
+								<th scope="col" class="text-end">Cancelled</th>
+								<th scope="col" class="text-end">No-show</th>
+								<th scope="col" class="text-end">Total</th>
+								<th scope="col" class="text-end">Guests served</th>
+							</tr>
+						</thead>
+						<tbody>
+							@foreach (DailyReservationCount day in busyDays)
+							{
+								<tr>
+									<th scope="row">@day.Date.ToString("ddd d MMM", CultureInfo.InvariantCulture)</th>
+									<td class="text-end">@day.Pending</td>
+									<td class="text-end">@day.Confirmed</td>
+									<td class="text-end">@day.Seated</td>
+									<td class="text-end">@day.Completed</td>
+									<td class="text-end">@day.Cancelled</td>
+									<td class="text-end">@day.NoShow</td>
+									<td class="text-end fw-semibold">@day.Total</td>
+									<td class="text-end">@day.GuestsServed</td>
+								</tr>
+							}
+						</tbody>
+						<tfoot>
+							<tr class="fw-semibold">
+								<th scope="row">Total</th>
+								<td class="text-end">@busyDays.Sum(d => d.Pending)</td>
+								<td class="text-end">@busyDays.Sum(d => d.Confirmed)</td>
+								<td class="text-end">@busyDays.Sum(d => d.Seated)</td>
+								<td class="text-end">@busyDays.Sum(d => d.Completed)</td>
+								<td class="text-end">@busyDays.Sum(d => d.Cancelled)</td>
+								<td class="text-end">@busyDays.Sum(d => d.NoShow)</td>
+								<td class="text-end">@busyDays.Sum(d => d.Total)</td>
+								<td class="text-end">@busyDays.Sum(d => d.GuestsServed)</td>
+							</tr>
+						</tfoot>
+					</table>
+				</div>
+			}
+		</details>
+	</section>
+}
+
+@section Scripts {
+	<script src="~/lib/chart.js/dist/chart.umd.js"></script>
+	<script src="~/js/analytics-dashboard.js" asp-append-version="true"></script>
+}

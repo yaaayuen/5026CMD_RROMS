@@ -69,6 +69,20 @@ else
 												<strong>RM @dish.CurrentPrice.ToString("N2")</strong>
 											}
 										</p>
+
+										@if (dish.IsVegetarian || dish.IsSpicy)
+										{
+											<p class="mb-0 mt-1">
+												@if (dish.IsVegetarian)
+												{
+													<span class="badge text-bg-light border">Vegetarian</span>
+												}
+												@if (dish.IsSpicy)
+												{
+													<span class="badge text-bg-danger">Spicy</span>
+												}
+											</p>
+										}
 									</div>
 
 									@if (dish.CanOrder)

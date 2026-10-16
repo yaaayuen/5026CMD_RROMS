@@ -147,6 +147,8 @@ builder.Services.AddScoped<IRestaurantService, RestaurantService>();
 // Booking time rules: visit length, slot grid and overlap check, all from ReservationRules (WL-2).
 builder.Services.AddScoped<ReservationTimeRules>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
+// Table occupancy and reservation analytics (WL-4).
+builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 
 // Menu items: dishes, prices, availability and offers (YJ-1).
 builder.Services.AddScoped<IMenuService, MenuService>();
@@ -154,8 +156,9 @@ builder.Services.AddScoped<IMenuService, MenuService>();
 // Dish photos: validation, resizing and storage (YJ-1).
 builder.Services.AddScoped<IMenuImageStorage, MenuImageStorage>();
 
-// Local chatbot with request rate limiting.
-builder.Services.AddScoped<IChatbotService, ChatbotService>();
+// Chatbot: local answers first, optional API fallback, and request rate limiting.
+builder.Services.Configure<ChatbotOptions>(builder.Configuration.GetSection(ChatbotOptions.SectionName));
+builder.Services.AddHttpClient<IChatbotService, ChatbotService>();
 builder.Services.AddRateLimiter(options => options.AddPolicy("AlexChat", context =>
     RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 12, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 })));
@@ -167,6 +170,12 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderProcessingService, OrderProcessingService>();
 builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
+
+// ----- Sprint 5 (Darren): billing and receipts (DA-1) -----
+builder.Services.AddScoped<IBillingService, BillingService>();
+
+// ----- Sprint 5 (Darren): reservation history and filters (DA-7) -----
+builder.Services.AddScoped<IMonitoringService, MonitoringService>();
 
 // ----- Notifications (YY-6) -----
 // One class serves both interfaces: modules publish through INotificationService,

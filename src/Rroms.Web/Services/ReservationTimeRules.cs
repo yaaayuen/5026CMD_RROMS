@@ -9,7 +9,7 @@ namespace Rroms.Web.Services;
 /// which slots a booking holds, and when two bookings overlap.
 /// </summary>
 /// <remarks>
-/// Booking, availability search and analytics (WL-5) all use this class, and every number comes from
+/// Booking, availability search and analytics (WL-4) all use this class, and every number comes from
 /// <see cref="ReservationRulesOptions"/>. So "make visits 90 minutes" is one edit in appsettings.json,
 /// and "add a cleaning buffer" is one edit in <see cref="BlockedLength"/>.
 /// It has no database access, so tests create it directly without an interface.

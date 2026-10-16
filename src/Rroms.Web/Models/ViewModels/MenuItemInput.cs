@@ -6,9 +6,8 @@ namespace Rroms.Web.Models.ViewModels;
 /// Form data for creating or editing a menu item (YJ-1).
 /// </summary>
 /// <remarks>
-/// A separate class from <see cref="MenuItem"/> 
-/// so a browser can never set fields it should not control (Id, image file name, timestamps). 
-/// The offer times are UTC here: the admin page converts
+/// A separate class from <see cref="MenuItem"/> so a browser can never set fields it should not
+/// control (Id, image file name, timestamps). The offer times are UTC here: the admin page converts
 /// the form's Malaysia time with MalaysiaTime.ToUtc before calling the service.
 /// </remarks>
 public class MenuItemInput
@@ -34,6 +33,14 @@ public class MenuItemInput
     /// <summary>False means customers can see the dish but cannot order it.</summary>
     [Display(Name = "Available to order")]
     public bool IsAvailable { get; set; } = true;
+
+    /// <summary>Tick for a dish without meat or fish.</summary>
+    [Display(Name = "Vegetarian")]
+    public bool IsVegetarian { get; set; }
+
+    /// <summary>Tick for a hot, spicy dish.</summary>
+    [Display(Name = "Spicy")]
+    public bool IsSpicy { get; set; }
 
     /// <summary>Offer price in RM. Leave empty (with the two dates) for no offer.</summary>
     [Display(Name = "Offer price (RM)")]

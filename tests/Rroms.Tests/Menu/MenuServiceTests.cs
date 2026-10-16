@@ -610,6 +610,98 @@ public class MenuServiceTests : IDisposable
         Assert.Equal("/uploads/menu/photo1.png", card.PhotoUrl);
     }
 
+    //================================================== Dietary tags ==================================================//
+
+    [Fact]
+    public async Task CreateMenuItem_WithDietaryTags_SavesThem()
+    {
+        // Arrange
+        MenuItemInput input = CreateValidInput("Veggie Burger");
+        input.IsVegetarian = true;
+        input.IsSpicy = true;
+
+        // Act
+        ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        MenuItem? saved = await _service.GetMenuItemAsync(result.Value);
+        Assert.NotNull(saved);
+        Assert.True(saved.IsVegetarian);
+        Assert.True(saved.IsSpicy);
+    }
+
+    [Fact]
+    public async Task CreateMenuItem_WithoutDietaryTags_DefaultsToNeither()
+    {
+        // Arrange
+        MenuItemInput input = CreateValidInput("Plain Burger");
+
+        // Act
+        ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
+
+        // Assert
+        MenuItem? saved = await _service.GetMenuItemAsync(result.Value);
+        Assert.NotNull(saved);
+        Assert.False(saved.IsVegetarian);
+        Assert.False(saved.IsSpicy);
+    }
+
+    [Fact]
+    public async Task UpdateMenuItem_ChangesTheDietaryTags()
+    {
+        // Arrange: starts without tags.
+        ServiceResult<int> created = await _service.CreateMenuItemAsync(CreateValidInput("Burger"));
+        MenuItemInput edit = CreateValidInput("Burger");
+        edit.IsSpicy = true;
+
+        // Act
+        ServiceResult result = await _service.UpdateMenuItemAsync(created.Value, edit);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        MenuItem? saved = await _service.GetMenuItemAsync(created.Value);
+        Assert.NotNull(saved);
+        Assert.True(saved.IsSpicy);
+        Assert.False(saved.IsVegetarian);
+    }
+
+    [Fact]
+    public async Task SearchMenu_VegetarianOnly_ListsOnlyVegetarianDishes()
+    {
+        // Arrange
+        MenuItemInput veggie = CreateValidInput("Veggie Burger");
+        veggie.IsVegetarian = true;
+        await _service.CreateMenuItemAsync(veggie);
+        await _service.CreateMenuItemAsync(CreateValidInput("Beef Burger"));
+
+        // Act
+        IReadOnlyList<MenuItemCard> cards = await _service.SearchMenuAsync(
+            new MenuSearchCriteria { VegetarianOnly = true });
+
+        // Assert
+        MenuItemCard card = Assert.Single(cards);
+        Assert.Equal("Veggie Burger", card.Name);
+    }
+
+    [Fact]
+    public async Task SearchMenu_Card_CarriesTheDietaryTags()
+    {
+        // Arrange
+        MenuItemInput input = CreateValidInput("Hot Veggie Wrap");
+        input.IsVegetarian = true;
+        input.IsSpicy = true;
+        await _service.CreateMenuItemAsync(input);
+
+        // Act
+        IReadOnlyList<MenuItemCard> cards = await _service.SearchMenuAsync(new MenuSearchCriteria());
+
+        // Assert
+        MenuItemCard card = Assert.Single(cards);
+        Assert.True(card.IsVegetarian);
+        Assert.True(card.IsSpicy);
+    }
+
     //================================================== Photos ==================================================//
 
     [Fact]
