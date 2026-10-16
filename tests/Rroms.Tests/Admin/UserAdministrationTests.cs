@@ -10,7 +10,8 @@ using Rroms.Web.Services;
 namespace Rroms.Tests.Admin;
 
 /// <summary>
-/// YY-5 acceptance: an account deactivated by an administrator can no longer sign in.
+/// YY-5 / YY-9 acceptance: a suspended account cannot sign in, its owner is emailed,
+/// and the "suspended" message is only shown to someone who knows the password.
 /// </summary>
 public class UserAdministrationTests : IClassFixture<TestWebApplicationFactory>
 {
@@ -36,24 +37,45 @@ public class UserAdministrationTests : IClassFixture<TestWebApplicationFactory>
         return admin!.Id;
     }
 
-    [Fact]
-    public async Task DeactivatedUser_CannotSignIn()
+    /// <summary>Creates a customer and suspends it through the real service, as the seeded admin.</summary>
+    private async Task<string> CreateSuspendedCustomerAsync()
     {
         string email = UniqueEmail();
         ApplicationUser user = await _factory.CreateUserAsync(email, Password, RoleNames.Customer);
         string adminId = await GetSeededAdminIdAsync();
 
-        using (IServiceScope scope = _factory.Services.CreateScope())
-        {
-            IUserAdministrationService service = scope.ServiceProvider.GetRequiredService<IUserAdministrationService>();
-            ServiceResult result = await service.UpdateUserAsync(adminId, user.Id, "Test User", null, RoleNames.Customer, false);
-            Assert.True(result.Succeeded);
-        }
+        using IServiceScope scope = _factory.Services.CreateScope();
+        IUserAdministrationService service = scope.ServiceProvider.GetRequiredService<IUserAdministrationService>();
+        ServiceResult result = await service.UpdateAccessAsync(adminId, user.Id, RoleNames.Customer, false);
+        Assert.True(result.Succeeded);
+
+        return email;
+    }
+
+    [Fact]
+    public async Task SuspendedUser_IsEmailed_AndSeesSuspendedMessage_WithCorrectPassword()
+    {
+        string email = await CreateSuspendedCustomerAsync();
 
         HttpClient client = _factory.CreateSecureClient();
         HttpResponseMessage response = await FormHelper.LoginAsync(client, email, Password);
         string html = await response.Content.ReadAsStringAsync();
 
+        Assert.Contains(AccountService.SuspendedMessage, html);
+        Assert.Contains(_factory.EmailQueue.Queued, message => message.ToAddress == email && message.Subject.Contains("suspended"));
+    }
+
+    [Fact]
+    public async Task SuspendedUser_WithWrongPassword_GetsGenericMessage()
+    {
+        string email = await CreateSuspendedCustomerAsync();
+
+        HttpClient client = _factory.CreateSecureClient();
+        HttpResponseMessage response = await FormHelper.LoginAsync(client, email, "Wrong!Password1");
+        string html = await response.Content.ReadAsStringAsync();
+
+        // Without the right password nobody learns that the account exists or is suspended.
         Assert.Contains(AccountService.InvalidLoginMessage, html);
+        Assert.DoesNotContain(AccountService.SuspendedMessage, html);
     }
 }

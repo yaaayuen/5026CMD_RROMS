@@ -16,9 +16,6 @@ public class ProfileDetails
     //Optional contact number
     public string? PhoneNumber { get; set; }
 
-    //Free-text dining preferences (customers)
-    public string? DiningPreferences { get; set; }
-
     //User's role shown as a label
     public string RoleName { get; set; } = string.Empty;
 
@@ -27,4 +24,10 @@ public class ProfileDetails
 
     //True when email two step sign in is on
     public bool TwoStepEnabled { get; set; }
+
+    //True when the customer has agreed to their dietary tags being stored and used 
+    public bool HasDietaryConsent { get; set; }
+
+    //IDs of the dietary tags the customer avoids
+    public IReadOnlyList<int> AvoidedTagIds { get; set; } = new List<int>();
 }

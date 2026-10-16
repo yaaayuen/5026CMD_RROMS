@@ -101,3 +101,16 @@ Inject `IOptions<ReservationRulesOptions>`; never hard-code these numbers.
 - `/// <summary>` on every public class and method; inline comments explain **why**.
 - No magic numbers: use constants or `Options` classes.
 - Server-side validation always, even when the form also validates in the browser.
+
+## 9. Dietary tags (YY-10)
+
+Shared lookup table `DietaryTags`, seeded with fixed IDs in `Models/DietaryTag.cs`:
+1 Animal products · 2 Dairy · 3 Spicy (proof of concept; more tags are future work).
+Every tag means "the dish CONTAINS this". Vegan customers avoid "Animal products", so tag every dish with meat, fish, egg, dairy or honey as Animal products (and dairy dishes also as Dairy).
+
+- **Customers** pick the tags they AVOID on their profile (S1). Stored in `CustomerAvoidedDietaryTags`, only with consent.
+- **Menu items** list the tags they CONTAIN (S3, YJ adds its own join table, e.g. `MenuItemDietaryTags`).
+- Read a customer's avoid-list with `IProfileService.GetAvoidedTagIdsAsync(userId)`. It returns an empty list
+  when the customer has not consented: never read the join table directly.
+- Never change or reuse an existing tag ID. A new tag is a new seed row + migration, agreed with YY and YJ.
+- Wording: the filter is not an allergy guarantee. Do not label anything "allergy-safe".
