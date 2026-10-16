@@ -14,10 +14,10 @@
 				<section class="tg-card" aria-labelledby="edit-heading">
 					<h1 id="edit-heading" class="h3 mb-1">@Model.Account.FullName</h1>
 					<p class="text-secondary mb-4">@Model.Account.Email</p>
+					<p class="small text-secondary">Turning the switch off suspends the account: the person is signed out within a minute and is emailed that their account is suspended.</p>
 
 					<form method="post" novalidate>
 						<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
-dds
 						<div class="mb-3">
 							<label asp-for="Input.RoleName" class="form-label fw-semibold"></label>
 							@* Disabled controls are not posted, so for their own account the admin's current values are sent in hidden fields. *@

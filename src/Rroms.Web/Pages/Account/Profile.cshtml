@@ -1,12 +1,14 @@
 ﻿@page
 @model Rroms.Web.Pages.Account.ProfileModel
 @using Rroms.Web.Common
+@using Rroms.Web.Models
 @using Rroms.Web.Security
 @{
 	ViewData["Title"] = "My profile";
 }
 
 <a href="@User.GetHomePath()" class="d-inline-block mb-3">&larr; Back to dashboard</a>
+
 <section class="hero hero-compact mb-4" aria-labelledby="profile-heading">
 	<span class="hero-bubble one" aria-hidden="true"></span>
 	<div class="position-relative">
@@ -18,7 +20,7 @@
 
 <div class="row g-4">
 	<div class="col-lg-8">
-		<section class="tg-card" aria-labelledby="details-heading">
+		<section class="tg-card h-auto" aria-labelledby="details-heading">
 			<h2 id="details-heading" class="h4 mb-3">Your details</h2>
 
 			<form method="post" novalidate>
@@ -36,24 +38,55 @@
 					<span asp-validation-for="Input.PhoneNumber" class="text-danger small"></span>
 				</div>
 
-				@if (Model.ShowDiningPreferences)
-				{
-					<div class="mb-3">
-						<label asp-for="Input.DiningPreferences" class="form-label fw-semibold"></label>
-						<textarea asp-for="Input.DiningPreferences" class="form-control" rows="3"
-								  placeholder="e.g. Window seat, no peanuts, prefers medium-rare"
-								  aria-describedby="preferences-help"></textarea>
-						<div id="preferences-help" class="form-text">Staff see this with your bookings, and we use it to suggest dishes you'll like.</div>
-						<span asp-validation-for="Input.DiningPreferences" class="text-danger small"></span>
-					</div>
-				}
-				                <button type="submit" class="btn btn-primary">Save changes</button>
+				<button type="submit" class="btn btn-primary">Save changes</button>
 			</form>
 		</section>
+
+		@if (Model.ShowDiningPreferences)
+		{
+			<section class="tg-card h-auto mt-4" aria-labelledby="dietary-heading">
+				<h2 id="dietary-heading" class="h4 mb-1">Dietary preferences</h2>
+				<p class="text-secondary mb-3">Tick what you don't eat and we'll leave those dishes out of your recommendations.</p>
+
+				<div class="alert alert-warning small" role="note">
+					<strong>Allergies:</strong> this filter helps you choose, but it is not an allergy guarantee.
+					Kitchens handle many ingredients, so always tell our staff about allergies when you order.
+				</div>
+
+				<form method="post" asp-page-handler="Dietary">
+					<fieldset class="mb-3">
+						<legend class="small fw-semibold">I avoid dishes that contain</legend>
+						<p class="form-text mt-0">Vegan? Tick <strong>Animal products</strong>.</p>
+						<div class="row row-cols-1 row-cols-sm-3 g-2">
+							@foreach (DietaryTag tag in Model.DietaryTags)
+							{
+								<div class="col">
+									<div class="form-check">
+										<input class="form-check-input" type="checkbox" name="AvoidTagIds" value="@tag.Id"
+											   id="tag-@tag.Id" checked="@Model.AvoidTagIds.Contains(tag.Id)" />
+										<label class="form-check-label" for="tag-@tag.Id">@tag.Name</label>
+									</div>
+								</div>
+							}
+						</div>
+					</fieldset>
+
+					<div class="form-check mb-3">
+						<input asp-for="DietaryConsent" class="form-check-input" />
+						<label asp-for="DietaryConsent" class="form-check-label small">
+							I agree that @SiteInfo.RestaurantName may store these choices and use them to filter my dish
+							recommendations. I can clear them at any time.
+						</label>
+					</div>
+
+					<button type="submit" class="btn btn-primary">Save dietary preferences</button>
+				</form>
+			</section>
+		}
 	</div>
 
 	<div class="col-lg-4">
-		<aside class="tg-card" aria-labelledby="account-heading">
+		<aside class="tg-card h-auto" aria-labelledby="account-heading">
 			<h2 id="account-heading" class="h5">Account</h2>
 			<dl class="mb-3">
 				<dt class="small text-secondary">Email (sign-in)</dt>
@@ -63,10 +96,10 @@
 				<dt class="small text-secondary">Member since</dt>
 				<dd>@MalaysiaTime.FromUtc(Model.Details.CreatedAtUtc).ToString("d MMM yyyy")</dd>
 			</dl>
-				<a class="btn btn-outline-primary w-100 mb-2" asp-page="/Account/ChangePassword">Change password</a>
-				<a class="btn btn-outline-primary w-100" asp-page="/Account/TwoStep">
-					Two-step sign-in: @(Model.Details.TwoStepEnabled ? "On" : "Off")
-				</a>
+			<a class="btn btn-outline-primary w-100 mb-2" asp-page="/Account/ChangePassword">Change password</a>
+			<a class="btn btn-outline-primary w-100" asp-page="/Account/TwoStep">
+				Two-step sign-in: @(Model.Details.TwoStepEnabled ? "On" : "Off")
+			</a>
 		</aside>
 	</div>
 </div>
