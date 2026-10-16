@@ -31,7 +31,8 @@ public class IndexModel : PageModel
                 "Order queue",
                 "Move orders from Preparing to Ready to Serve to Served.",
                 "flame",
-                "Sprint 4 · Alex"),
+                "Sprint 4 · Alex",
+                "/Staff/Orders"),
             new ModuleTileViewModel(
                 "Billing and payments",
                 "Generate bills and record cash, card or e-wallet payments.",
