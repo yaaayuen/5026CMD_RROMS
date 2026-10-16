@@ -1,0 +1,74 @@
+@page
+@model Rroms.Web.Areas.Staff.Pages.Reservations.HistoryModel
+@using Rroms.Web.Common
+@using Rroms.Web.Contracts
+@{
+    ViewData["Title"] = "Reservation history and filters";
+}
+<div class="hero mb-4">
+    <h1>Reservation history and filters</h1>
+    <p>Bookings, special requests and customer history. All times are Malaysia time (UTC+8).</p>
+</div>
+<p>Use Manage to open the booking date on WL's reservations page for Confirm, Seat, Complete, Cancel or No-show.</p>
+<div class="tg-card p-4 mb-4">
+    <form method="get" class="row g-3 align-items-end">
+        <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+        <div class="col-md-3">
+            <label asp-for="Filter.Date" class="form-label">Reservation date</label>
+            <input asp-for="Filter.Date" asp-format="{0:yyyy-MM-dd}" type="date" class="form-control" required />
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Filter.Status" class="form-label">Status</label>
+            <select asp-for="Filter.Status" asp-items="Html.GetEnumSelectList<ReservationStatus>()" class="form-select">
+                <option value="">All statuses</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Filter.AreaId" class="form-label">Dining area</label>
+            <select asp-for="Filter.AreaId" class="form-select">
+                <option value="">All areas</option>
+                @foreach (var area in Model.Areas)
+                {
+                    <option value="@area.Id">@area.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+            <button class="btn btn-primary" type="submit">Apply filters</button>
+            <a asp-page="History" class="btn btn-outline-secondary">Today / Reset</a>
+        </div>
+    </form>
+</div>
+@if (Model.Loaded)
+{
+    <p><strong>@Model.Rows.Count reservation(s)</strong> · @Model.Rows.Sum(r => r.Reservation.PartySize) guest(s) in these results, including any cancelled/no-show bookings.</p>
+    @if (Model.Rows.Count == 0)
+    {
+        <div class="tg-card p-4">No reservations match these filters.</div>
+    }
+    else
+    {
+        <div class="tg-card p-3 table-responsive">
+            <table class="table align-middle">
+                <caption>Reservations for @Model.Filter.Date.ToString("dd MMM yyyy"). Preferences reflect the current customer profile.</caption>
+                <thead><tr><th>Booking / time</th><th>Customer</th><th>Guests / table</th><th>Status</th><th>Special requests</th><th>Current dining preferences</th><th>History / actions</th></tr></thead>
+                <tbody>
+                @foreach (var row in Model.Rows)
+                {
+                    var booking = row.Reservation;
+                    <tr>
+                        <td>#@booking.Id<br />@MalaysiaTime.FromUtc(booking.StartUtc).ToString("HH:mm") – @MalaysiaTime.FromUtc(booking.EndUtc).ToString("dd MMM HH:mm")</td>
+                        <td>@booking.CustomerName</td>
+                        <td>@booking.PartySize guest(s)<br />@booking.TableLabel · @booking.AreaName</td>
+                        <td>@booking.Status</td>
+                        <td class="text-break">@(string.IsNullOrWhiteSpace(booking.SpecialRequests) ? "None provided" : booking.SpecialRequests)</td>
+                        <td class="text-break">@(string.IsNullOrWhiteSpace(row.DiningPreferences) ? "None provided" : row.DiningPreferences)</td>
+                        <td><a asp-page="CustomerHistory" asp-route-reservationId="@booking.Id" class="btn btn-sm btn-outline-primary" aria-label="View reservation history for @booking.CustomerName">View history</a>
+                            <a asp-page="Index" asp-route-Date="@MalaysiaTime.FromUtc(booking.StartUtc).ToString("yyyy-MM-dd")" class="btn btn-sm btn-outline-secondary mt-2" aria-label="Manage booking @booking.Id on the staff reservations page">Manage #@booking.Id</a></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+}

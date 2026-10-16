@@ -28,6 +28,13 @@ public class IndexModel : PageModel
                 "calendar",
                 "Sprint 2 · WL",
                 "/Staff/Reservations"),
+            // DA-7 (Darren): separate from WL's daily status-actions page.
+            new ModuleTileViewModel(
+                "Reservation history and filters",
+                "Filter bookings, read dining preferences and view customer history.",
+                "calendar",
+                "Sprint 5 · Darren",
+                "/Staff/Reservations/History"),
             new ModuleTileViewModel(
                 "Order queue",
                 "Move orders from Preparing to Ready to Serve to Served.",

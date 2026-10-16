@@ -1,0 +1,44 @@
+@page "{reservationId:int}"
+@model Rroms.Web.Areas.Staff.Pages.Reservations.CustomerHistoryModel
+@using Rroms.Web.Common
+@{
+    ViewData["Title"] = "Customer reservation history";
+}
+<div class="hero mb-4">
+    <h1>Customer reservation history</h1>
+    <p>@Model.History.CustomerName · selected from booking #@Model.History.ReservationId</p>
+</div>
+<a asp-page="History" class="btn btn-outline-secondary mb-3">Back to reservation filters</a>
+<div class="tg-card p-4 mb-4">
+    <h2 class="h5">Current dining preferences</h2>
+    <p class="text-break">@(string.IsNullOrWhiteSpace(Model.History.DiningPreferences) ? "None provided" : Model.History.DiningPreferences)</p>
+    <p class="mb-0">These are current profile preferences, not a snapshot from previous visits.</p>
+</div>
+<p>@Model.History.Reservations.Count past reservation(s). Scheduled end time has passed; cancelled and no-show bookings are included. All times are Malaysia time (UTC+8).</p>
+@if (Model.History.Reservations.Count == 0)
+{
+    <div class="tg-card p-4">This customer has no past reservations.</div>
+}
+else
+{
+    <div class="tg-card p-3 table-responsive">
+        <table class="table align-middle">
+            <caption>Past reservations, newest first.</caption>
+            <thead><tr><th>Booking</th><th>Visit</th><th>Guests</th><th>Table / area</th><th>Status</th><th>Special requests</th><th>Actions</th></tr></thead>
+            <tbody>
+            @foreach (var booking in Model.History.Reservations)
+            {
+                <tr>
+                    <td>#@booking.Id</td>
+                    <td>@MalaysiaTime.FromUtc(booking.StartUtc).ToString("dd MMM yyyy HH:mm")<br />to @MalaysiaTime.FromUtc(booking.EndUtc).ToString("dd MMM yyyy HH:mm")</td>
+                    <td>@booking.PartySize</td>
+                    <td>@booking.TableLabel · @booking.AreaName</td>
+                    <td>@booking.Status</td>
+                    <td class="text-break">@(string.IsNullOrWhiteSpace(booking.SpecialRequests) ? "None provided" : booking.SpecialRequests)</td>
+                    <td><a asp-page="Index" asp-route-Date="@MalaysiaTime.FromUtc(booking.StartUtc).ToString("yyyy-MM-dd")" class="btn btn-sm btn-outline-secondary">Manage #@booking.Id</a></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}
