@@ -26,7 +26,8 @@ public class IndexModel : PageModel
                 "Today's reservations",
                 "Confirm, change or cancel bookings and see special requests.",
                 "calendar",
-                "Sprint 5 · Darren"),
+                "Sprint 2 · WL",
+                "/Staff/Reservations"),
             new ModuleTileViewModel(
                 "Order queue",
                 "Move orders from Preparing to Ready to Serve to Served.",

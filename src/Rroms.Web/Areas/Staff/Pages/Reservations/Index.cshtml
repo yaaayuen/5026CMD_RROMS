@@ -1,0 +1,96 @@
+﻿@page
+@model IndexModel
+@using System.Globalization
+@using Rroms.Web.Common
+@using Rroms.Web.Contracts
+@using Rroms.Web.Services
+@{
+	ViewData["Title"] = "Reservations";
+	DateOnly day = Model.Date!.Value;
+}
+
+<section class="hero hero-compact mb-4" aria-labelledby="reservations-heading">
+	<span class="hero-bubble one" aria-hidden="true"></span>
+	<div class="position-relative">
+		<span class="eyebrow">Staff</span>
+		<h1 id="reservations-heading" class="mb-1">Reservations for @day.ToString("dddd d MMMM", CultureInfo.InvariantCulture)</h1>
+		<p class="lead mb-0">Confirm new bookings, seat guests when they arrive, and close each visit.</p>
+	</div>
+</section>
+
+<section class="tg-card h-auto mb-4" aria-labelledby="day-heading">
+	<h2 id="day-heading" class="visually-hidden">Choose a day</h2>
+	<div class="d-flex flex-wrap align-items-end gap-2">
+		<a class="btn btn-outline-primary" asp-route-Date="@day.AddDays(-1).ToString("yyyy-MM-dd")">&larr; Previous day</a>
+		<form method="get" class="d-flex align-items-end gap-2">
+			<div>
+				<label asp-for="Date" class="form-label fw-semibold mb-1">Day</label>
+				<input asp-for="Date" type="date" class="form-control" />
+			</div>
+			<button type="submit" class="btn btn-primary">Show</button>
+		</form>
+		<a class="btn btn-outline-primary" asp-route-Date="@day.AddDays(1).ToString("yyyy-MM-dd")">Next day &rarr;</a>
+	</div>
+</section>
+
+<section class="tg-card h-auto" aria-labelledby="list-heading">
+	<h2 id="list-heading" class="h4 mb-3">@Model.Bookings.Count booking(s)</h2>
+
+	@if (Model.Bookings.Count == 0)
+	{
+		<p class="mb-0 text-secondary">No bookings on this day.</p>
+	}
+	else
+	{
+		<div class="table-responsive">
+			<table class="table align-middle mb-0">
+				<thead>
+					<tr>
+						<th scope="col">Time</th>
+						<th scope="col">Table</th>
+						<th scope="col">Guests</th>
+						<th scope="col">Customer</th>
+						<th scope="col">Special requests</th>
+						<th scope="col">Status</th>
+						<th scope="col">Actions</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (ReservationDetails booking in Model.Bookings)
+					{
+						DateTime start = MalaysiaTime.FromUtc(booking.StartUtc);
+						DateTime end = MalaysiaTime.FromUtc(booking.EndUtc);
+						<tr>
+							<td>@start.ToString("h:mm tt", CultureInfo.InvariantCulture) – @end.ToString("h:mm tt", CultureInfo.InvariantCulture)</td>
+							<td>@booking.TableLabel <span class="text-secondary small">@booking.AreaName</span></td>
+							<td>@booking.PartySize</td>
+							<td>
+								@booking.CustomerName
+								@if (!string.IsNullOrEmpty(booking.CustomerPhone))
+								{
+									<div class="small text-secondary">@booking.CustomerPhone</div>
+								}
+							</td>
+							<td class="small">@(string.IsNullOrEmpty(booking.SpecialRequests) ? "–" : booking.SpecialRequests)</td>
+							<td><span class="badge @ReservationStatusDisplay.BadgeClass(booking.Status)">@booking.Status</span></td>
+							<td>
+								<div class="d-flex flex-wrap gap-1">
+									@foreach (ReservationStatus next in ReservationStatusRules.NextStatuses(booking.Status))
+									{
+										bool risky = next == ReservationStatus.Cancelled || next == ReservationStatus.NoShow;
+										<form method="post" asp-page-handler="Move" asp-route-Date="@day.ToString("yyyy-MM-dd")"
+											  onsubmit="@(risky ? $"return confirm('{ReservationStatusDisplay.ActionLabel(next)} booking #{booking.Id}?');" : null)">
+											<input type="hidden" name="id" value="@booking.Id" />
+											<input type="hidden" name="to" value="@next" />
+											<button type="submit" class="btn btn-sm @(risky ? "btn-outline-danger" : "btn-primary")">@ReservationStatusDisplay.ActionLabel(next)</button>
+										</form>
+									}
+								</div>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+</section>
