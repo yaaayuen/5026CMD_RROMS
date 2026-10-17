@@ -12,41 +12,50 @@ namespace Rroms.Web.Services;
 /// </summary>
 public class MenuService : IMenuService
 {
-    /// <summary>Smallest price allowed: one sen.</summary>
+    /// Smallest price allowed: one sen.
     public const decimal MinPrice = 0.01m;
 
-    /// <summary>Error shown when the name is empty.</summary>
+    /// Error shown when the name is empty.
     public const string NameRequiredMessage = "Enter a name for the dish.";
 
-    /// <summary>Error shown when the price is zero or negative.</summary>
+    /// Error shown when the price is zero or negative.
     public const string PriceMessage = "The price must be greater than zero.";
 
-    /// <summary>Error shown when the chosen category does not exist.</summary>
+    /// Error shown when the chosen category does not exist.
     public const string CategoryNotFoundMessage = "That menu category does not exist.";
 
-    /// <summary>Error shown when the chosen category is switched off.</summary>
+    /// Error shown when the chosen category is switched off.
     public const string InactiveCategoryMessage = "That menu category is not active. Choose another one.";
 
-    /// <summary>Error shown when another item in the category already has this name.</summary>
-    public const string DuplicateNameMessage = "This category already has a dish with that name.";
+    /// Error shown when another dish anywhere on the menu already has this name.
+    public const string DuplicateNameMessage = "A dish with that name is already on the menu. Dish names must be unique.";
 
-    /// <summary>Error shown when only some of the offer fields are filled in.</summary>
+    /// Error shown when only some of the offer fields are filled in.
     public const string PromoIncompleteMessage = "An offer needs a price, a start time and an end time. Fill in all three or leave all three empty.";
 
-    /// <summary>Error shown when the offer is not cheaper than the normal price.</summary>
+    /// Error shown when the offer is not cheaper than the normal price.
     public const string PromoBelowPriceMessage = "The offer price must be greater than zero and lower than the normal price.";
 
-    /// <summary>Error shown when the offer ends before it starts.</summary>
+    /// Error shown when the offer ends before it starts.
     public const string PromoDatesMessage = "The offer must end after it starts.";
 
-    /// <summary>Error shown when the item does not exist.</summary>
+    /// Error shown when an offer starts or ends in the past.
+    public const string PromoInPastMessage = "An offer cannot start or end in the past. Choose a time from now on.";
+
+    /// Error shown when the item does not exist.
     public const string ItemNotFoundMessage = "That menu item does not exist.";
 
-    /// <summary>Error shown when someone tries to delete a dish that customers have already ordered.</summary>
+    /// Error shown when someone tries to delete a dish that customers have already ordered.
     public const string ItemHasOrdersMessage = "This dish has been ordered, so it cannot be deleted. Mark it unavailable instead.";
 
-    /// <summary>Passed to validation when there is no existing item or category to compare with.</summary>
+    /// Passed to validation when there is no existing item or category to compare with.
     private const int NoExistingId = 0;
+
+    /// <summary>
+    /// How far in the past an offer start may be. A form picks a time to the minute, so "start now" is
+    /// already a few seconds old when it arrives; this keeps it valid without allowing real back-dating.
+    /// </summary>
+    private const int OfferStartGraceMinutes = 5;
 
     private readonly ApplicationDbContext _context;
     private readonly IRestaurantService _restaurantService;
@@ -156,7 +165,7 @@ public class MenuService : IMenuService
     /// <inheritdoc />
     public async Task<ServiceResult<int>> CreateMenuItemAsync(MenuItemInput input)
     {
-        List<string> errors = await ValidateAsync(input, NoExistingId, NoExistingId);
+        List<string> errors = await ValidateAsync(input, null);
 
         if (errors.Count > 0)
         {
@@ -188,7 +197,7 @@ public class MenuService : IMenuService
             return ServiceResult.Failure(ItemNotFoundMessage);
         }
 
-        List<string> errors = await ValidateAsync(input, item.Id, item.MenuCategoryId);
+        List<string> errors = await ValidateAsync(input, item);
 
         if (errors.Count > 0)
         {
@@ -351,10 +360,19 @@ public class MenuService : IMenuService
     /// Checks every business rule and returns all the problems at once, so the admin can fix them in one go.
     /// </summary>
     /// <param name="input">The values to check.</param>
-    /// <param name="existingItemId">The item being edited, or 0 when creating. It is left out of the duplicate-name check.</param>
-    /// <param name="currentCategoryId">The category the item is in now, or 0 when creating. An edit may keep a category that was switched off since.</param>
-    private async Task<List<string>> ValidateAsync(MenuItemInput input, int existingItemId, int currentCategoryId)
+    /// <param name="existing">The item being edited, or null when creating. It is left out of the duplicate-name check,
+    /// may keep a category that was switched off since, and may keep an offer time it already has.</param>
+    private async Task<List<string>> ValidateAsync(MenuItemInput input, MenuItem? existing)
     {
+        int existingItemId = NoExistingId;
+        int currentCategoryId = NoExistingId;
+
+        if (existing != null)
+        {
+            existingItemId = existing.Id;
+            currentCategoryId = existing.MenuCategoryId;
+        }
+
         List<string> errors = new List<string>();
         string name = input.Name.Trim();
 
@@ -379,14 +397,14 @@ public class MenuService : IMenuService
             errors.Add(InactiveCategoryMessage);
         }
 
-        if (name.Length > 0 && category != null)
+        if (name.Length > 0)
         {
+            // A dish name is unique on the WHOLE menu, not just inside one category.
             // Lower-case both sides: SQL Server ignores case but the SQLite test database does not.
             string lowerName = name.ToLower();
 
             bool duplicate = await _context.MenuItems.AnyAsync(item =>
-                item.MenuCategoryId == input.MenuCategoryId
-                && item.Id != existingItemId
+                item.Id != existingItemId
                 && item.Name.ToLower() == lowerName);
 
             if (duplicate)
@@ -395,7 +413,7 @@ public class MenuService : IMenuService
             }
         }
 
-        AddPromoErrors(input, errors);
+        AddPromoErrors(input, existing, errors);
 
         return errors;
     }
@@ -403,7 +421,7 @@ public class MenuService : IMenuService
     /// <summary>
     /// An offer is either completely empty or completely filled in, cheaper than the normal price, with sensible dates.
     /// </summary>
-    private static void AddPromoErrors(MenuItemInput input, List<string> errors)
+    private static void AddPromoErrors(MenuItemInput input, MenuItem? existing, List<string> errors)
     {
         decimal? promoPrice = input.PromoPrice;
         DateTime? start = input.PromoStartUtc;
@@ -429,7 +447,43 @@ public class MenuService : IMenuService
             {
                 errors.Add(PromoDatesMessage);
             }
+
+            AddPastOfferErrors(start.Value, end.Value, existing, errors);
         }
+    }
+
+    /// <summary>
+    /// An offer cannot be set to start or end in the past. Only times the administrator actually changed are
+    /// checked, so a dish whose offer is already running (its start is in the past) can still be edited.
+    /// </summary>
+    private static void AddPastOfferErrors(DateTime start, DateTime end, MenuItem? existing, List<string> errors)
+    {
+        DateTime now = DateTime.UtcNow;
+
+        bool startChanged = existing == null || !IsSameMinute(existing.PromoStartUtc, start);
+        bool endChanged = existing == null || !IsSameMinute(existing.PromoEndUtc, end);
+
+        bool startInPast = startChanged && start < now.AddMinutes(-OfferStartGraceMinutes);
+        bool endInPast = endChanged && end <= now;
+
+        if (startInPast || endInPast)
+        {
+            errors.Add(PromoInPastMessage);
+        }
+    }
+
+    /// <summary>True when the stored time and the submitted time are the same minute (forms only send whole minutes).</summary>
+    private static bool IsSameMinute(DateTime? stored, DateTime submitted)
+    {
+        if (!stored.HasValue)
+        {
+            return false;
+        }
+
+        long storedMinute = stored.Value.Ticks / TimeSpan.TicksPerMinute;
+        long submittedMinute = submitted.Ticks / TimeSpan.TicksPerMinute;
+
+        return storedMinute == submittedMinute;
     }
 
     /// <summary>Copies the validated form values onto the entity.</summary>

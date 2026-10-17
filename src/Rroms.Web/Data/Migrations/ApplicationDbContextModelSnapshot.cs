@@ -636,6 +636,9 @@ namespace Rroms.Web.Data.Migrations
 
                     b.HasIndex("MenuCategoryId");
 
+                    b.HasIndex("Name")
+                        .IsUnique();
+
                     b.ToTable("MenuItems", t =>
                         {
                             t.HasCheckConstraint("CK_MenuItems_PricePositive", "[Price] > 0");

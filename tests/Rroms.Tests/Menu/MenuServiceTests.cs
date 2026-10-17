@@ -39,8 +39,9 @@ public class MenuServiceTests : IDisposable
     private const decimal NormalPrice = 20.00m;
     private const decimal OfferPrice = 15.00m;
 
-    private static readonly DateTime OfferStart = new DateTime(2026, 10, 10, 0, 0, 0, DateTimeKind.Utc);
-    private static readonly DateTime OfferEnd = new DateTime(2026, 10, 17, 0, 0, 0, DateTimeKind.Utc);
+    /// <summary>Offers cannot start in the past any more, so test offers start tomorrow and end a week later.</summary>
+    private readonly DateTime _offerStart = DateTime.UtcNow.AddDays(1);
+    private readonly DateTime _offerEnd = DateTime.UtcNow.AddDays(8);
 
     private readonly SqliteConnection _connection;
     private readonly ApplicationDbContext _context;
@@ -193,17 +194,139 @@ public class MenuServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateMenuItem_SameNameInDifferentCategory_Succeeds()
+    public async Task CreateMenuItem_SameNameInDifferentCategory_IsRejected()
     {
-        // Arrange: a "House Special" starter and a "House Special" grill are different dishes.
-        await _service.CreateMenuItemAsync(CreateValidInput(name: "House Special", categoryId: StartersId));
-        MenuItemInput grill = CreateValidInput(name: "House Special", categoryId: GrillsId);
+        // Arrange: "Tiramisu" is a dessert; the same name as a starter is still the same dish name.
+        await _service.CreateMenuItemAsync(CreateValidInput(name: "Tiramisu", categoryId: 4));
+        MenuItemInput starter = CreateValidInput(name: "tiramisu", categoryId: StartersId);
 
         // Act
-        ServiceResult<int> result = await _service.CreateMenuItemAsync(grill);
+        ServiceResult<int> result = await _service.CreateMenuItemAsync(starter);
+
+        // Assert: refused whatever the category or capital letters.
+        Assert.False(result.Succeeded);
+        Assert.Contains(MenuService.DuplicateNameMessage, result.Errors);
+    }
+
+    [Fact]
+    public async Task UpdateMenuItem_RenamedToANameUsedInAnotherCategory_IsRejected()
+    {
+        // Arrange: two different dishes in two categories, then the second is renamed like the first.
+        await _service.CreateMenuItemAsync(CreateValidInput(name: "Tiramisu", categoryId: 4));
+        ServiceResult<int> created = await _service.CreateMenuItemAsync(CreateValidInput(name: "Garlic Bread", categoryId: StartersId));
+        MenuItemInput rename = CreateValidInput(name: "Tiramisu", categoryId: StartersId);
+
+        // Act
+        ServiceResult result = await _service.UpdateMenuItemAsync(created.Value, rename);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains(MenuService.DuplicateNameMessage, result.Errors);
+    }
+
+    [Fact]
+    public async Task Database_DuplicateNameThatBypassesTheService_IsBlockedByTheUniqueIndex()
+    {
+        // Arrange: skip the service and write straight to the database, like a bug or two administrators
+        // saving at the same moment. Two dishes in different categories with the same name.
+        DateTime now = DateTime.UtcNow;
+        _context.MenuItems.Add(new MenuItem { Name = "Tiramisu", MenuCategoryId = 4, Price = 12.00m, CreatedAtUtc = now, UpdatedAtUtc = now });
+        _context.MenuItems.Add(new MenuItem { Name = "Tiramisu", MenuCategoryId = StartersId, Price = 12.00m, CreatedAtUtc = now, UpdatedAtUtc = now });
+
+        // Act + Assert: the unique index on Name refuses the second one.
+        await Assert.ThrowsAsync<DbUpdateException>(() => _context.SaveChangesAsync());
+    }
+
+    //================================================== Offers cannot be back-dated ==================================================//
+
+    [Fact]
+    public async Task CreateMenuItem_OfferStartingInThePast_IsRejected()
+    {
+        // Arrange: the offer is said to have started two days ago.
+        MenuItemInput input = CreateValidInput();
+        input.PromoPrice = OfferPrice;
+        input.PromoStartUtc = DateTime.UtcNow.AddDays(-2);
+        input.PromoEndUtc = DateTime.UtcNow.AddDays(1);
+
+        // Act
+        ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains(MenuService.PromoInPastMessage, result.Errors);
+    }
+
+    [Fact]
+    public async Task CreateMenuItem_OfferEndingInThePast_IsRejected()
+    {
+        // Arrange: an offer that is already over.
+        MenuItemInput input = CreateValidInput();
+        input.PromoPrice = OfferPrice;
+        input.PromoStartUtc = DateTime.UtcNow.AddDays(-3);
+        input.PromoEndUtc = DateTime.UtcNow.AddDays(-1);
+
+        // Act
+        ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains(MenuService.PromoInPastMessage, result.Errors);
+    }
+
+    [Fact]
+    public async Task CreateMenuItem_OfferStartingNow_IsAccepted()
+    {
+        // Arrange: "start now" arrives a few seconds old, which the small grace period allows.
+        MenuItemInput input = CreateValidInput();
+        input.PromoPrice = OfferPrice;
+        input.PromoStartUtc = DateTime.UtcNow.AddSeconds(-30);
+        input.PromoEndUtc = DateTime.UtcNow.AddDays(1);
+
+        // Act
+        ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
 
         // Assert
         Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task UpdateMenuItem_RunningOfferLeftUnchanged_CanStillBeSaved()
+    {
+        // Arrange: an offer that started yesterday is running. Only the normal price is changed.
+        int id = await AddDishWithOfferAsync("Offer Burger", startOffsetDays: -1, endOffsetDays: 1);
+        MenuItem dish = await _context.MenuItems.SingleAsync(item => item.Id == id);
+
+        MenuItemInput edit = CreateValidInput("Offer Burger");
+        edit.Price = 22.00m;
+        edit.PromoPrice = dish.PromoPrice;
+        edit.PromoStartUtc = dish.PromoStartUtc;
+        edit.PromoEndUtc = dish.PromoEndUtc;
+
+        // Act
+        ServiceResult result = await _service.UpdateMenuItemAsync(id, edit);
+
+        // Assert: the start is in the past, but it was not changed, so it is not checked again.
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task UpdateMenuItem_MovingTheOfferEndIntoThePast_IsRejected()
+    {
+        // Arrange: the running offer is given an end time of one hour ago.
+        int id = await AddDishWithOfferAsync("Offer Burger", startOffsetDays: -1, endOffsetDays: 1);
+        MenuItem dish = await _context.MenuItems.SingleAsync(item => item.Id == id);
+
+        MenuItemInput edit = CreateValidInput("Offer Burger");
+        edit.PromoPrice = dish.PromoPrice;
+        edit.PromoStartUtc = dish.PromoStartUtc;
+        edit.PromoEndUtc = DateTime.UtcNow.AddHours(-1);
+
+        // Act
+        ServiceResult result = await _service.UpdateMenuItemAsync(id, edit);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains(MenuService.PromoInPastMessage, result.Errors);
     }
 
     //================================================== Offers ==================================================//
@@ -214,8 +337,8 @@ public class MenuServiceTests : IDisposable
         // Arrange
         MenuItemInput input = CreateValidInput();
         input.PromoPrice = OfferPrice;
-        input.PromoStartUtc = OfferStart;
-        input.PromoEndUtc = OfferEnd;
+        input.PromoStartUtc = _offerStart;
+        input.PromoEndUtc = _offerEnd;
 
         // Act
         ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
@@ -225,8 +348,8 @@ public class MenuServiceTests : IDisposable
         MenuItem? saved = await _service.GetMenuItemAsync(result.Value);
         Assert.NotNull(saved);
         Assert.Equal(OfferPrice, saved.PromoPrice);
-        Assert.Equal(OfferStart, saved.PromoStartUtc);
-        Assert.Equal(OfferEnd, saved.PromoEndUtc);
+        Assert.Equal(_offerStart, saved.PromoStartUtc);
+        Assert.Equal(_offerEnd, saved.PromoEndUtc);
     }
 
     [Fact]
@@ -250,8 +373,8 @@ public class MenuServiceTests : IDisposable
         // Arrange: an "offer" of RM 25 on a RM 20 dish makes no sense.
         MenuItemInput input = CreateValidInput();
         input.PromoPrice = 25.00m;
-        input.PromoStartUtc = OfferStart;
-        input.PromoEndUtc = OfferEnd;
+        input.PromoStartUtc = _offerStart;
+        input.PromoEndUtc = _offerEnd;
 
         // Act
         ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
@@ -267,8 +390,8 @@ public class MenuServiceTests : IDisposable
         // Arrange: start and end swapped.
         MenuItemInput input = CreateValidInput();
         input.PromoPrice = OfferPrice;
-        input.PromoStartUtc = OfferEnd;
-        input.PromoEndUtc = OfferStart;
+        input.PromoStartUtc = _offerEnd;
+        input.PromoEndUtc = _offerStart;
 
         // Act
         ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
@@ -433,18 +556,23 @@ public class MenuServiceTests : IDisposable
         return result.Value;
     }
 
-    /// <summary>Creates a dish with an offer from <paramref name="startOffsetDays"/> to <paramref name="endOffsetDays"/> days from now.</summary>
+    /// <summary>
+    /// Creates a dish with an offer from <paramref name="startOffsetDays"/> to <paramref name="endOffsetDays"/> days from now.
+    /// The offer is written straight into the database: the service refuses back-dated offers, but the menu must still
+    /// handle one that started yesterday (a running offer) or ended yesterday (an expired one).
+    /// </summary>
     private async Task<int> AddDishWithOfferAsync(string name, int startOffsetDays, int endOffsetDays)
     {
         DateTime now = DateTime.UtcNow;
 
-        MenuItemInput input = CreateValidInput(name);
-        input.PromoPrice = OfferPrice;
-        input.PromoStartUtc = now.AddDays(startOffsetDays);
-        input.PromoEndUtc = now.AddDays(endOffsetDays);
-
-        ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
+        ServiceResult<int> result = await _service.CreateMenuItemAsync(CreateValidInput(name));
         Assert.True(result.Succeeded);
+
+        MenuItem dish = await _context.MenuItems.SingleAsync(item => item.Id == result.Value);
+        dish.PromoPrice = OfferPrice;
+        dish.PromoStartUtc = now.AddDays(startOffsetDays);
+        dish.PromoEndUtc = now.AddDays(endOffsetDays);
+        await _context.SaveChangesAsync();
 
         return result.Value;
     }
