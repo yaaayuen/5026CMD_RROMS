@@ -27,6 +27,9 @@ public class EditModel : PageModel
 {
     private const long BytesPerMegabyte = 1024 * 1024;
 
+    /// <summary>The text format an HTML date-time box accepts, down to the minute.</summary>
+    private const string DateTimeBoxFormat = "yyyy-MM-ddTHH:mm";
+
     private readonly IMenuService _menuService;
     private readonly IRestaurantService _restaurantService;
     private readonly IMenuImageStorage _imageStorage;
@@ -93,6 +96,28 @@ public class EditModel : PageModel
             long megabytes = _imageOptions.MaxFileSizeBytes / BytesPerMegabyte;
             return $"JPG, PNG or WebP, up to {megabytes} MB. Wider photos are scaled down automatically.";
         }
+    }
+
+    /// <summary>
+    /// The earliest time the "Offer starts" box accepts, so the browser's picker greys out the past.
+    /// Null (no limit) when the box already holds a time that has passed, which happens when you edit an
+    /// offer that is already running: the saved start must not block the form. The service checks again.
+    /// </summary>
+    public string? MinStartText => BuildMinText(PromoStartLocal);
+
+    /// <summary>The earliest time the "Offer ends" box accepts. Null when the saved end has already passed.</summary>
+    public string? MinEndText => BuildMinText(PromoEndLocal);
+
+    private static string? BuildMinText(DateTime? savedValue)
+    {
+        DateTime malaysiaNow = MalaysiaTime.FromUtc(DateTime.UtcNow);
+
+        if (savedValue.HasValue && savedValue.Value < malaysiaNow)
+        {
+            return null;
+        }
+
+        return malaysiaNow.ToString(DateTimeBoxFormat, CultureInfo.InvariantCulture);
     }
 
     /// <summary>The smallest price, formatted for an HTML number field.</summary>
