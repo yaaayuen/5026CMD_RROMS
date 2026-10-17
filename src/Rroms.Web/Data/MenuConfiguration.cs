@@ -35,6 +35,16 @@ public static class MenuConfiguration
                 .HasForeignKey(i => i.MenuCategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // A dish contains many dietary tags and a tag is on many dishes. YY owns the DietaryTags table and
+            // its three fixed rows; this join table (named like YY's CustomerAvoidedDietaryTags) links to it.
+            // Deleting a dish or a tag removes only the link rows.
+            item.HasMany(i => i.DietaryTags)
+                .WithMany()
+                .UsingEntity<Dictionary<string, object>>(
+                    "MenuItemDietaryTags",
+                    right => right.HasOne<DietaryTag>().WithMany().HasForeignKey("DietaryTagId"),
+                    left => left.HasOne<MenuItem>().WithMany().HasForeignKey("MenuItemId"));
+
             // A dish name appears only once on the whole menu. SQL Server compares names without regard to
             // case, so "Tiramisu" and "tiramisu" also clash. The service checks this too, because the SQLite
             // test database is case-sensitive.

@@ -12,43 +12,46 @@ namespace Rroms.Web.Services;
 /// </summary>
 public class MenuService : IMenuService
 {
-    /// Smallest price allowed: one sen.
+    /// <summary>Smallest price allowed: one sen.</summary>
     public const decimal MinPrice = 0.01m;
 
-    /// Error shown when the name is empty.
+    /// <summary>Error shown when the name is empty.</summary>
     public const string NameRequiredMessage = "Enter a name for the dish.";
 
-    /// Error shown when the price is zero or negative.
+    /// <summary>Error shown when the price is zero or negative.</summary>
     public const string PriceMessage = "The price must be greater than zero.";
 
-    /// Error shown when the chosen category does not exist.
+    /// <summary>Error shown when the chosen category does not exist.</summary>
     public const string CategoryNotFoundMessage = "That menu category does not exist.";
 
-    /// Error shown when the chosen category is switched off.
+    /// <summary>Error shown when the chosen category is switched off.</summary>
     public const string InactiveCategoryMessage = "That menu category is not active. Choose another one.";
 
-    /// Error shown when another dish anywhere on the menu already has this name.
+    /// <summary>Error shown when another dish anywhere on the menu already has this name.</summary>
     public const string DuplicateNameMessage = "A dish with that name is already on the menu. Dish names must be unique.";
 
-    /// Error shown when only some of the offer fields are filled in.
+    /// <summary>Error shown when only some of the offer fields are filled in.</summary>
     public const string PromoIncompleteMessage = "An offer needs a price, a start time and an end time. Fill in all three or leave all three empty.";
 
-    /// Error shown when the offer is not cheaper than the normal price.
+    /// <summary>Error shown when the offer is not cheaper than the normal price.</summary>
     public const string PromoBelowPriceMessage = "The offer price must be greater than zero and lower than the normal price.";
 
-    /// Error shown when the offer ends before it starts.
+    /// <summary>Error shown when the offer ends before it starts.</summary>
     public const string PromoDatesMessage = "The offer must end after it starts.";
 
-    /// Error shown when an offer starts or ends in the past.
+    /// <summary>Error shown when an offer starts or ends in the past.</summary>
     public const string PromoInPastMessage = "An offer cannot start or end in the past. Choose a time from now on.";
 
-    /// Error shown when the item does not exist.
+    /// <summary>Error shown when a chosen dietary tag does not exist.</summary>
+    public const string DietaryTagNotFoundMessage = "One of the chosen dietary tags does not exist.";
+
+    /// <summary>Error shown when the item does not exist.</summary>
     public const string ItemNotFoundMessage = "That menu item does not exist.";
 
-    /// Error shown when someone tries to delete a dish that customers have already ordered.
+    /// <summary>Error shown when someone tries to delete a dish that customers have already ordered.</summary>
     public const string ItemHasOrdersMessage = "This dish has been ordered, so it cannot be deleted. Mark it unavailable instead.";
 
-    /// Passed to validation when there is no existing item or category to compare with.
+    /// <summary>Passed to validation when there is no existing item or category to compare with.</summary>
     private const int NoExistingId = 0;
 
     /// <summary>
@@ -77,7 +80,9 @@ public class MenuService : IMenuService
     /// <inheritdoc />
     public async Task<IReadOnlyList<MenuItem>> GetMenuItemsAsync(int? categoryId)
     {
-        IQueryable<MenuItem> query = _context.MenuItems.Include(item => item.MenuCategory);
+        IQueryable<MenuItem> query = _context.MenuItems
+            .Include(item => item.MenuCategory)
+            .Include(item => item.DietaryTags);
 
         if (categoryId.HasValue)
         {
@@ -97,6 +102,7 @@ public class MenuService : IMenuService
     {
         MenuItem? item = await _context.MenuItems
             .Include(i => i.MenuCategory)
+            .Include(i => i.DietaryTags)
             .FirstOrDefaultAsync(i => i.Id == id);
 
         return item;
@@ -108,6 +114,7 @@ public class MenuService : IMenuService
         // Dishes in a hidden category are hidden from customers too.
         IQueryable<MenuItem> query = _context.MenuItems
             .Include(item => item.MenuCategory)
+            .Include(item => item.DietaryTags)
             .Where(item => item.MenuCategory!.IsActive);
 
         if (criteria.MenuCategoryId.HasValue)
@@ -115,9 +122,12 @@ public class MenuService : IMenuService
             query = query.Where(item => item.MenuCategoryId == criteria.MenuCategoryId.Value);
         }
 
-        if (criteria.VegetarianOnly)
+        if (criteria.ExcludeTagIds.Count > 0)
         {
-            query = query.Where(item => item.IsVegetarian);
+            // Hide a dish when it contains ANY of the tags the customer wants to avoid.
+            List<int> excludedTagIds = criteria.ExcludeTagIds.Distinct().ToList();
+
+            query = query.Where(item => !item.DietaryTags.Any(tag => excludedTagIds.Contains(tag.Id)));
         }
 
         // Lower-case both sides: SQL Server ignores case but the SQLite test database does not.
@@ -179,7 +189,7 @@ public class MenuService : IMenuService
             CreatedAtUtc = now
         };
 
-        ApplyInput(item, input, now);
+        await ApplyInputAsync(item, input, now);
 
         _context.MenuItems.Add(item);
         await _context.SaveChangesAsync();
@@ -190,7 +200,9 @@ public class MenuService : IMenuService
     /// <inheritdoc />
     public async Task<ServiceResult> UpdateMenuItemAsync(int id, MenuItemInput input)
     {
-        MenuItem? item = await _context.MenuItems.FirstOrDefaultAsync(i => i.Id == id);
+        MenuItem? item = await _context.MenuItems
+            .Include(i => i.DietaryTags)
+            .FirstOrDefaultAsync(i => i.Id == id);
 
         if (item == null)
         {
@@ -204,7 +216,7 @@ public class MenuService : IMenuService
             return ServiceResult.Failure(errors.ToArray());
         }
 
-        ApplyInput(item, input, DateTime.UtcNow);
+        await ApplyInputAsync(item, input, DateTime.UtcNow);
         await _context.SaveChangesAsync();
 
         return ServiceResult.Success();
@@ -348,8 +360,10 @@ public class MenuService : IMenuService
             IsOfferActive = offerActive,
             OfferEndsAtUtc = offerEndsAtUtc,
             IsAvailable = item.IsAvailable,
-            IsVegetarian = item.IsVegetarian,
-            IsSpicy = item.IsSpicy,
+            DietaryTags = item.DietaryTags
+                .OrderBy(tag => tag.DisplayOrder)
+                .Select(tag => tag.Name)
+                .ToList(),
             CanOrder = item.IsAvailable
         };
 
@@ -410,6 +424,18 @@ public class MenuService : IMenuService
             if (duplicate)
             {
                 errors.Add(DuplicateNameMessage);
+            }
+        }
+
+        List<int> tagIds = input.DietaryTagIds.Distinct().ToList();
+
+        if (tagIds.Count > 0)
+        {
+            int foundTags = await _context.DietaryTags.CountAsync(tag => tagIds.Contains(tag.Id));
+
+            if (foundTags != tagIds.Count)
+            {
+                errors.Add(DietaryTagNotFoundMessage);
             }
         }
 
@@ -486,19 +512,46 @@ public class MenuService : IMenuService
         return storedMinute == submittedMinute;
     }
 
-    /// <summary>Copies the validated form values onto the entity.</summary>
-    private static void ApplyInput(MenuItem item, MenuItemInput input, DateTime now)
+    /// <summary>Copies the validated form values onto the entity, including its dietary tags.</summary>
+    private async Task ApplyInputAsync(MenuItem item, MenuItemInput input, DateTime now)
     {
         item.Name = input.Name.Trim();
         item.Description = input.Description.Trim();
         item.MenuCategoryId = input.MenuCategoryId;
         item.Price = input.Price;
         item.IsAvailable = input.IsAvailable;
-        item.IsVegetarian = input.IsVegetarian;
-        item.IsSpicy = input.IsSpicy;
         item.PromoPrice = input.PromoPrice;
         item.PromoStartUtc = input.PromoStartUtc;
         item.PromoEndUtc = input.PromoEndUtc;
         item.UpdatedAtUtc = now;
+
+        await ApplyDietaryTagsAsync(item, input.DietaryTagIds);
+    }
+
+    /// <summary>Makes the dish's tags exactly the chosen ones: removes the unticked, adds the newly ticked.</summary>
+    private async Task ApplyDietaryTagsAsync(MenuItem item, List<int> chosenIds)
+    {
+        List<int> tagIds = chosenIds.Distinct().ToList();
+
+        List<DietaryTag> chosenTags = await _context.DietaryTags
+            .Where(tag => tagIds.Contains(tag.Id))
+            .ToListAsync();
+
+        List<DietaryTag> toRemove = item.DietaryTags.Where(tag => !tagIds.Contains(tag.Id)).ToList();
+
+        foreach (DietaryTag tag in toRemove)
+        {
+            item.DietaryTags.Remove(tag);
+        }
+
+        foreach (DietaryTag tag in chosenTags)
+        {
+            bool alreadyThere = item.DietaryTags.Any(existing => existing.Id == tag.Id);
+
+            if (!alreadyThere)
+            {
+                item.DietaryTags.Add(tag);
+            }
+        }
     }
 }
