@@ -64,6 +64,8 @@
 	}
 </section>
 
+<partial name="_DishSuggestions" model="Model.Popular" />
+
 @if (Model.Dishes.Count == 0)
 {
 	<p class="text-secondary" role="status">No dishes match. Try a different search or filter.</p>

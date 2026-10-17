@@ -3,6 +3,9 @@
 /// <summary>One line of an order as shown on the confirmation page (YJ-3).</summary>
 public class OrderSummaryLine
 {
+    /// <summary>The dish's Id, used to find dishes ordered together with it.</summary>
+    public int MenuItemId { get; set; }
+
     /// <summary>The dish name.</summary>
     public string DishName { get; set; } = string.Empty;
 

@@ -268,6 +268,7 @@ public class OrderService : IOrderService
         {
             summary.Lines.Add(new OrderSummaryLine
             {
+                MenuItemId = item.MenuItemId,
                 DishName = item.MenuItem?.Name ?? string.Empty,
                 Quantity = item.Quantity,
                 UnitPrice = item.UnitPrice,

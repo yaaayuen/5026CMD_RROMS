@@ -41,6 +41,8 @@ else
 			Your food is prepared once you are seated at your table. You can order now and we will have it ready for you.
 		</p>
 
+		<partial name="_DishSuggestions" model="Model.Recommended" />
+
 		@foreach (IGrouping<string, MenuItemCard> group in Model.Dishes.GroupBy(dish => dish.CategoryName))
 		{
 			<section class="mb-4" aria-label="@group.Key">
