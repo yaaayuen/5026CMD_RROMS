@@ -34,13 +34,8 @@ public class MenuItemInput
     [Display(Name = "Available to order")]
     public bool IsAvailable { get; set; } = true;
 
-    /// <summary>Tick for a dish without meat or fish.</summary>
-    [Display(Name = "Vegetarian")]
-    public bool IsVegetarian { get; set; }
-
-    /// <summary>Tick for a hot, spicy dish.</summary>
-    [Display(Name = "Spicy")]
-    public bool IsSpicy { get; set; }
+    /// <summary>The Ids of the dietary tags this dish contains (ticked boxes). Empty means none.</summary>
+    public List<int> DietaryTagIds { get; set; } = new List<int>();
 
     /// <summary>Offer price in RM. Leave empty (with the two dates) for no offer.</summary>
     [Display(Name = "Offer price (RM)")]

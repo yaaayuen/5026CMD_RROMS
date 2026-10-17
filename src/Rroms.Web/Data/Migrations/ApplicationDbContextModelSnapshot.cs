@@ -37,6 +37,21 @@ namespace Rroms.Web.Data.Migrations
                     b.ToTable("CustomerAvoidedDietaryTags");
                 });
 
+            modelBuilder.Entity("MenuItemDietaryTags", b =>
+                {
+                    b.Property<int>("DietaryTagId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MenuItemId")
+                        .HasColumnType("int");
+
+                    b.HasKey("DietaryTagId", "MenuItemId");
+
+                    b.HasIndex("MenuItemId");
+
+                    b.ToTable("MenuItemDietaryTags");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -601,12 +616,6 @@ namespace Rroms.Web.Data.Migrations
                     b.Property<bool>("IsAvailable")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("IsSpicy")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsVegetarian")
-                        .HasColumnType("bit");
-
                     b.Property<int>("MenuCategoryId")
                         .HasColumnType("int");
 
@@ -1096,6 +1105,21 @@ namespace Rroms.Web.Data.Migrations
                     b.HasOne("Rroms.Web.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MenuItemDietaryTags", b =>
+                {
+                    b.HasOne("Rroms.Web.Models.DietaryTag", null)
+                        .WithMany()
+                        .HasForeignKey("DietaryTagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Rroms.Web.Models.MenuItem", null)
+                        .WithMany()
+                        .HasForeignKey("MenuItemId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

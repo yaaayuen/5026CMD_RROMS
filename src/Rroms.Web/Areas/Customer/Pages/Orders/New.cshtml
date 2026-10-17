@@ -70,16 +70,12 @@ else
 											}
 										</p>
 
-										@if (dish.IsVegetarian || dish.IsSpicy)
+										@if (dish.DietaryTags.Count > 0)
 										{
 											<p class="mb-0 mt-1">
-												@if (dish.IsVegetarian)
+												@foreach (string tagName in dish.DietaryTags)
 												{
-													<span class="badge text-bg-light border">Vegetarian</span>
-												}
-												@if (dish.IsSpicy)
-												{
-													<span class="badge text-bg-danger">Spicy</span>
+													<span class="badge text-bg-light border">@tagName</span>
 												}
 											</p>
 										}

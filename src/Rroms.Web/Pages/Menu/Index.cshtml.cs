@@ -25,14 +25,17 @@ public class IndexModel : PageModel
 
     private readonly IMenuService _menuService;
     private readonly IRestaurantService _restaurantService;
+    private readonly IProfileService _profileService;
 
     /// <summary>Receives the services from dependency injection.</summary>
     /// <param name="menuService">Searches the menu.</param>
     /// <param name="restaurantService">Gives the active categories for the filter drop-down.</param>
-    public IndexModel(IMenuService menuService, IRestaurantService restaurantService)
+    /// <param name="profileService">Gives the shared dietary tags (YY's table) for the "hide dishes that contain" boxes.</param>
+    public IndexModel(IMenuService menuService, IRestaurantService restaurantService, IProfileService profileService)
     {
         _menuService = menuService;
         _restaurantService = restaurantService;
+        _profileService = profileService;
     }
 
     /// <summary>Words to look for in dish names and descriptions (address part ?q=).</summary>
@@ -43,9 +46,9 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true, Name = "categoryId")]
     public int? CategoryId { get; set; }
 
-    /// <summary>True to show only vegetarian dishes (address part ?vegetarian=true).</summary>
-    [BindProperty(SupportsGet = true, Name = "vegetarian")]
-    public bool VegetarianOnly { get; set; }
+    /// <summary>Hide dishes that contain these dietary tags (address part ?hide=2&amp;hide=3, by tag Id).</summary>
+    [BindProperty(SupportsGet = true, Name = "hide")]
+    public List<int> HideTagIds { get; set; } = new List<int>();
 
     /// <summary>Lowest price to show (address part ?minPrice=).</summary>
     [BindProperty(SupportsGet = true, Name = "minPrice")]
@@ -61,6 +64,9 @@ public class IndexModel : PageModel
     /// <summary>The categories customers can pick in the filter.</summary>
     public IReadOnlyList<MenuCategory> Categories { get; private set; } = new List<MenuCategory>();
 
+    /// <summary>Every dietary tag, in display order, for the "hide dishes that contain" boxes.</summary>
+    public IReadOnlyList<DietaryTag> TagChoices { get; private set; } = new List<DietaryTag>();
+
     /// <summary>True when any filter is in use, so the page can offer a "show everything" link.</summary>
     public bool HasFilters
     {
@@ -68,7 +74,7 @@ public class IndexModel : PageModel
         {
             bool hasText = !string.IsNullOrWhiteSpace(SearchText);
 
-            return hasText || CategoryId.HasValue || VegetarianOnly || MinPrice.HasValue || MaxPrice.HasValue;
+            return hasText || CategoryId.HasValue || HideTagIds.Count > 0 || MinPrice.HasValue || MaxPrice.HasValue;
         }
     }
 
@@ -76,12 +82,13 @@ public class IndexModel : PageModel
     public async Task OnGetAsync()
     {
         Categories = await _restaurantService.GetMenuCategoriesAsync(includeInactive: false);
+        TagChoices = await _profileService.GetDietaryTagsAsync();
 
         var criteria = new MenuSearchCriteria
         {
             SearchText = SearchText ?? string.Empty,
             MenuCategoryId = CategoryId,
-            VegetarianOnly = VegetarianOnly,
+            ExcludeTagIds = HideTagIds,
             MinPrice = MinPrice,
             MaxPrice = MaxPrice
         };

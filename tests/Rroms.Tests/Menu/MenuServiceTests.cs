@@ -30,6 +30,14 @@ public class MenuServiceTests : IDisposable
     /// <summary>Id of the seeded "Beverages" category.</summary>
     private const int BeveragesId = 5;
 
+    /// <summary>Ids of YY's three seeded dietary tags (fixed by DietaryTag.Seed).</summary>
+    private const int AnimalProductsTagId = 1;
+    private const int DairyTagId = 2;
+    private const int SpicyTagId = 3;
+
+    /// <summary>A dietary tag Id that does not exist.</summary>
+    private const int UnknownTagId = 999;
+
     /// <summary>A category Id that does not exist.</summary>
     private const int UnknownCategoryId = 999;
 
@@ -740,13 +748,30 @@ public class MenuServiceTests : IDisposable
 
     //================================================== Dietary tags ==================================================//
 
+    /// <summary>The tag Ids a saved dish has, sorted so the comparison does not depend on order.</summary>
+    private static List<int> TagIdsOf(MenuItem item)
+    {
+        return item.DietaryTags.Select(tag => tag.Id).OrderBy(id => id).ToList();
+    }
+
+    /// <summary>Saves a dish with the given tags straight through the service.</summary>
+    private async Task<int> AddTaggedDishAsync(string name, params int[] tagIds)
+    {
+        MenuItemInput input = CreateValidInput(name);
+        input.DietaryTagIds = tagIds.ToList();
+
+        ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
+        Assert.True(result.Succeeded);
+
+        return result.Value;
+    }
+
     [Fact]
     public async Task CreateMenuItem_WithDietaryTags_SavesThem()
     {
         // Arrange
-        MenuItemInput input = CreateValidInput("Veggie Burger");
-        input.IsVegetarian = true;
-        input.IsSpicy = true;
+        MenuItemInput input = CreateValidInput("Cheesy Hot Wings");
+        input.DietaryTagIds = new List<int> { DairyTagId, SpicyTagId, AnimalProductsTagId };
 
         // Act
         ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
@@ -755,15 +780,14 @@ public class MenuServiceTests : IDisposable
         Assert.True(result.Succeeded);
         MenuItem? saved = await _service.GetMenuItemAsync(result.Value);
         Assert.NotNull(saved);
-        Assert.True(saved.IsVegetarian);
-        Assert.True(saved.IsSpicy);
+        Assert.Equal(new List<int> { AnimalProductsTagId, DairyTagId, SpicyTagId }, TagIdsOf(saved));
     }
 
     [Fact]
-    public async Task CreateMenuItem_WithoutDietaryTags_DefaultsToNeither()
+    public async Task CreateMenuItem_WithoutDietaryTags_HasNone()
     {
         // Arrange
-        MenuItemInput input = CreateValidInput("Plain Burger");
+        MenuItemInput input = CreateValidInput("Plain Salad");
 
         // Act
         ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
@@ -771,63 +795,170 @@ public class MenuServiceTests : IDisposable
         // Assert
         MenuItem? saved = await _service.GetMenuItemAsync(result.Value);
         Assert.NotNull(saved);
-        Assert.False(saved.IsVegetarian);
-        Assert.False(saved.IsSpicy);
+        Assert.Empty(saved.DietaryTags);
     }
 
     [Fact]
-    public async Task UpdateMenuItem_ChangesTheDietaryTags()
+    public async Task CreateMenuItem_WithAnUnknownTag_IsRejected()
     {
-        // Arrange: starts without tags.
-        ServiceResult<int> created = await _service.CreateMenuItemAsync(CreateValidInput("Burger"));
+        // Arrange
+        MenuItemInput input = CreateValidInput("Mystery Dish");
+        input.DietaryTagIds = new List<int> { DairyTagId, UnknownTagId };
+
+        // Act
+        ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
+
+        // Assert: nothing is saved.
+        Assert.False(result.Succeeded);
+        Assert.Contains(MenuService.DietaryTagNotFoundMessage, result.Errors);
+        Assert.Empty(await _service.GetMenuItemsAsync(null));
+    }
+
+    [Fact]
+    public async Task CreateMenuItem_WithTheSameTagTwice_SavesItOnce()
+    {
+        // Arrange: a browser could send the same box twice.
+        MenuItemInput input = CreateValidInput("Double Spicy");
+        input.DietaryTagIds = new List<int> { SpicyTagId, SpicyTagId };
+
+        // Act
+        ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        MenuItem? saved = await _service.GetMenuItemAsync(result.Value);
+        Assert.NotNull(saved);
+        Assert.Equal(new List<int> { SpicyTagId }, TagIdsOf(saved));
+    }
+
+    [Fact]
+    public async Task UpdateMenuItem_ReplacesTheDietaryTags()
+    {
+        // Arrange: starts with dairy and spicy.
+        int id = await AddTaggedDishAsync("Burger", DairyTagId, SpicyTagId);
         MenuItemInput edit = CreateValidInput("Burger");
-        edit.IsSpicy = true;
+        edit.DietaryTagIds = new List<int> { SpicyTagId, AnimalProductsTagId };
 
         // Act
-        ServiceResult result = await _service.UpdateMenuItemAsync(created.Value, edit);
+        ServiceResult result = await _service.UpdateMenuItemAsync(id, edit);
 
-        // Assert
+        // Assert: dairy is gone, animal products is new, spicy stays.
         Assert.True(result.Succeeded);
-        MenuItem? saved = await _service.GetMenuItemAsync(created.Value);
+        MenuItem? saved = await _service.GetMenuItemAsync(id);
         Assert.NotNull(saved);
-        Assert.True(saved.IsSpicy);
-        Assert.False(saved.IsVegetarian);
+        Assert.Equal(new List<int> { AnimalProductsTagId, SpicyTagId }, TagIdsOf(saved));
     }
 
     [Fact]
-    public async Task SearchMenu_VegetarianOnly_ListsOnlyVegetarianDishes()
+    public async Task UpdateMenuItem_WithNoTagsTicked_RemovesAllTags()
     {
         // Arrange
-        MenuItemInput veggie = CreateValidInput("Veggie Burger");
-        veggie.IsVegetarian = true;
-        await _service.CreateMenuItemAsync(veggie);
-        await _service.CreateMenuItemAsync(CreateValidInput("Beef Burger"));
+        int id = await AddTaggedDishAsync("Burger", DairyTagId, SpicyTagId);
+        MenuItemInput edit = CreateValidInput("Burger");
+
+        // Act
+        ServiceResult result = await _service.UpdateMenuItemAsync(id, edit);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        MenuItem? saved = await _service.GetMenuItemAsync(id);
+        Assert.NotNull(saved);
+        Assert.Empty(saved.DietaryTags);
+    }
+
+    [Fact]
+    public async Task UpdateMenuItem_WithAnUnknownTag_IsRejectedAndKeepsTheOldTags()
+    {
+        // Arrange
+        int id = await AddTaggedDishAsync("Burger", DairyTagId);
+        MenuItemInput edit = CreateValidInput("Burger");
+        edit.DietaryTagIds = new List<int> { UnknownTagId };
+
+        // Act
+        ServiceResult result = await _service.UpdateMenuItemAsync(id, edit);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains(MenuService.DietaryTagNotFoundMessage, result.Errors);
+        MenuItem? saved = await _service.GetMenuItemAsync(id);
+        Assert.NotNull(saved);
+        Assert.Equal(new List<int> { DairyTagId }, TagIdsOf(saved));
+    }
+
+    [Fact]
+    public async Task DeleteMenuItem_WithTags_DeletesTheDishAndKeepsTheTags()
+    {
+        // Arrange
+        int id = await AddTaggedDishAsync("Burger", DairyTagId, SpicyTagId);
+
+        // Act
+        ServiceResult result = await _service.DeleteMenuItemAsync(id);
+
+        // Assert: the dish is gone, but YY's three tag rows are untouched.
+        Assert.True(result.Succeeded);
+        Assert.Null(await _service.GetMenuItemAsync(id));
+        Assert.Equal(3, await _context.DietaryTags.CountAsync());
+    }
+
+    [Fact]
+    public async Task SearchMenu_HidingATag_HidesDishesThatContainIt()
+    {
+        // Arrange
+        await AddTaggedDishAsync("Cheese Pizza", DairyTagId);
+        await AddTaggedDishAsync("Fruit Salad");
 
         // Act
         IReadOnlyList<MenuItemCard> cards = await _service.SearchMenuAsync(
-            new MenuSearchCriteria { VegetarianOnly = true });
+            new MenuSearchCriteria { ExcludeTagIds = new List<int> { DairyTagId } });
 
         // Assert
         MenuItemCard card = Assert.Single(cards);
-        Assert.Equal("Veggie Burger", card.Name);
+        Assert.Equal("Fruit Salad", card.Name);
     }
 
     [Fact]
-    public async Task SearchMenu_Card_CarriesTheDietaryTags()
+    public async Task SearchMenu_HidingSeveralTags_HidesADishThatHasAnyOfThem()
     {
         // Arrange
-        MenuItemInput input = CreateValidInput("Hot Veggie Wrap");
-        input.IsVegetarian = true;
-        input.IsSpicy = true;
-        await _service.CreateMenuItemAsync(input);
+        await AddTaggedDishAsync("Hot Wings", AnimalProductsTagId, SpicyTagId);
+        await AddTaggedDishAsync("Cheese Pizza", DairyTagId);
+        await AddTaggedDishAsync("Fruit Salad");
+
+        // Act: hide animal products and spicy.
+        IReadOnlyList<MenuItemCard> cards = await _service.SearchMenuAsync(
+            new MenuSearchCriteria { ExcludeTagIds = new List<int> { AnimalProductsTagId, SpicyTagId } });
+
+        // Assert: the wings are hidden because they have both; the pizza stays because dairy was not hidden.
+        List<string> names = cards.Select(card => card.Name).OrderBy(name => name).ToList();
+        Assert.Equal(new List<string> { "Cheese Pizza", "Fruit Salad" }, names);
+    }
+
+    [Fact]
+    public async Task SearchMenu_WithoutAnyTagFilter_ShowsEveryDish()
+    {
+        // Arrange
+        await AddTaggedDishAsync("Cheese Pizza", DairyTagId);
+        await AddTaggedDishAsync("Fruit Salad");
 
         // Act
         IReadOnlyList<MenuItemCard> cards = await _service.SearchMenuAsync(new MenuSearchCriteria());
 
         // Assert
+        Assert.Equal(2, cards.Count);
+    }
+
+    [Fact]
+    public async Task SearchMenu_Card_CarriesTheTagNamesInDisplayOrder()
+    {
+        // Arrange: saved in a different order from the display order.
+        await AddTaggedDishAsync("Hot Cheese Wings", SpicyTagId, AnimalProductsTagId, DairyTagId);
+
+        // Act
+        IReadOnlyList<MenuItemCard> cards = await _service.SearchMenuAsync(new MenuSearchCriteria());
+
+        // Assert: animal products, dairy, spicy (YY's display order).
         MenuItemCard card = Assert.Single(cards);
-        Assert.True(card.IsVegetarian);
-        Assert.True(card.IsSpicy);
+        Assert.Equal(new List<string> { "Animal products", "Dairy", "Spicy" }, card.DietaryTags.ToList());
     }
 
     //================================================== Photos ==================================================//
