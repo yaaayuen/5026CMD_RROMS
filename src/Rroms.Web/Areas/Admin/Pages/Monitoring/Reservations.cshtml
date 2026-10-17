@@ -1,0 +1,36 @@
+@page
+@model Rroms.Web.Areas.Admin.Pages.Monitoring.ReservationsModel
+@using Rroms.Web.Common
+@using Rroms.Web.Contracts
+@{ ViewData["Title"] = "Monitor reservations"; }
+<div class="hero mb-4"><h1>Monitor reservations</h1><p>Filter by reservation start date. Both dates are inclusive, in Malaysia time (UTC+8). Refresh to see updates.</p></div>
+<partial name="_MonitoringNav" />
+<div class="tg-card p-4 mb-4"><form method="get" class="row g-3 align-items-end">
+<div asp-validation-summary="All" class="text-danger" role="alert"></div>
+<div class="col-md-3"><label asp-for="Filter.From" class="form-label">From date</label><input asp-for="Filter.From" asp-format="{0:yyyy-MM-dd}" type="date" required class="form-control" /></div>
+<div class="col-md-3"><label asp-for="Filter.To" class="form-label">To date</label><input asp-for="Filter.To" asp-format="{0:yyyy-MM-dd}" type="date" required class="form-control" /></div>
+<div class="col-md-3"><label asp-for="Filter.Status" class="form-label">Status</label><select asp-for="Filter.Status" asp-items="Html.GetEnumSelectList<ReservationStatus>()" class="form-select"><option value="">All statuses</option></select></div>
+<div class="col-md-3"><label asp-for="Filter.AreaId" class="form-label">Dining area</label>
+<select asp-for="Filter.AreaId" class="form-select"><option value="">All areas</option>
+@foreach (var area in Model.Areas) { <option value="@area.Id">@area.Name</option> }
+</select></div>
+<div class="col-12 d-flex gap-2"><button type="submit" class="btn btn-primary">Apply filters</button><a asp-page="Reservations" class="btn btn-outline-secondary">Today / Reset</a></div>
+</form></div>
+@if (Model.Loaded)
+{
+    <p><strong>@Model.Results.Count reservation(s) · @Model.Results.GuestTotal guest(s)</strong>. Totals include every filtered row, including cancelled/no-show bookings; this is not occupancy.</p>
+    @if (Model.Results.Count == 0) { <div class="tg-card p-4">No reservations match these filters.</div> }
+    else
+    {
+        <div class="tg-card p-3 table-responsive"><table class="table align-middle"><caption>All matching reservations, newest first. Totals cover these results.</caption>
+        <thead><tr><th>Booking</th><th>Customer</th><th>Start (Malaysia)</th><th>Guests</th><th>Table / area</th><th>Status</th><th>Links</th></tr></thead><tbody>
+        @foreach (var row in Model.Results.Rows)
+        {
+            <tr><td>#@row.Id</td><td>@row.CustomerName</td><td>@MalaysiaTime.FromUtc(row.StartUtc).ToString("dd MMM yyyy HH:mm")</td>
+<td>@row.PartySize</td><td>@row.TableLabel · @row.AreaName</td><td>@row.Status</td>
+<td><a asp-area="Staff" asp-page="/Reservations/Index" asp-route-Date="@MalaysiaTime.FromUtc(row.StartUtc).ToString("yyyy-MM-dd")">Manage #@row.Id</a><br />
+<a asp-area="Staff" asp-page="/Reservations/CustomerHistory" asp-route-reservationId="@row.Id">Customer history</a></td></tr>
+        }
+        </tbody></table></div>
+    }
+}
