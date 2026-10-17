@@ -1,10 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Rroms.Web.Common;
+using Rroms.Web.Contracts;
 using Rroms.Web.Data;
 using Rroms.Web.Models;
 using Rroms.Web.Models.ViewModels;
 namespace Rroms.Web.Services;
-/// <summary>DA-7 composes WL's reservation queries with YY's current dining preferences.</summary>
+/// <summary>Darren's DA-7 staff history and DA-2 administrator monitoring queries.</summary>
 public class MonitoringService : IMonitoringService
 {
     private readonly ApplicationDbContext _context;
@@ -103,5 +104,104 @@ public class MonitoringService : IMonitoringService
         }
         return "Avoids: " + string.Join(", ", customer.AvoidedDietaryTags
             .OrderBy(t => t.DisplayOrder).ThenBy(t => t.Id).Select(t => t.Name));
+    }
+
+    // ----- DA-2 (Darren): read-only administrator monitoring -----
+
+    /// <inheritdoc />
+    public async Task<ServiceResult<ReservationMonitoringResult>> GetReservationMonitoringAsync(ReservationMonitoringFilter filter)
+    {
+        string? error = ValidateRange(filter);
+        if (error != null) { return ServiceResult<ReservationMonitoringResult>.Failure(error); }
+        if (filter.Status.HasValue && !Enum.IsDefined(filter.Status.Value))
+        {
+            return ServiceResult<ReservationMonitoringResult>.Failure("Choose a valid reservation status.");
+        }
+        if (filter.AreaId.HasValue && !await _context.DiningAreas.AnyAsync(a => a.Id == filter.AreaId.Value))
+        {
+            return ServiceResult<ReservationMonitoringResult>.Failure("Choose an existing dining area.");
+        }
+        (DateTime fromUtc, DateTime untilUtc) = GetUtcRange(filter);
+        IQueryable<Reservation> query = _context.Reservations.AsNoTracking()
+            .Where(r => r.StartUtc >= fromUtc && r.StartUtc < untilUtc);
+        if (filter.Status.HasValue) { query = query.Where(r => r.Status == filter.Status.Value); }
+        if (filter.AreaId.HasValue) { query = query.Where(r => r.DiningTable!.DiningAreaId == filter.AreaId.Value); }
+        List<ReservationMonitoringRow> rows = await query.OrderByDescending(r => r.StartUtc).ThenByDescending(r => r.Id)
+            .Select(r => new ReservationMonitoringRow
+            {
+                Id = r.Id, CustomerName = r.Customer!.FullName, StartUtc = r.StartUtc,
+                PartySize = r.PartySize, TableLabel = r.DiningTable!.Label,
+                AreaName = r.DiningTable.DiningArea!.Name, Status = r.Status
+            }).ToListAsync();
+        return ServiceResult<ReservationMonitoringResult>.Success(new ReservationMonitoringResult { Rows = rows });
+    }
+
+    /// <inheritdoc />
+    public async Task<ServiceResult<OrderMonitoringResult>> GetOrderMonitoringAsync(OrderMonitoringFilter filter)
+    {
+        string? error = ValidateRange(filter);
+        if (error != null) { return ServiceResult<OrderMonitoringResult>.Failure(error); }
+        if (filter.Status.HasValue && !Enum.IsDefined(filter.Status.Value))
+        {
+            return ServiceResult<OrderMonitoringResult>.Failure("Choose a valid order status.");
+        }
+        (DateTime fromUtc, DateTime untilUtc) = GetUtcRange(filter);
+        IQueryable<Order> query = _context.Orders.AsNoTracking()
+            .Where(o => o.PlacedAtUtc >= fromUtc && o.PlacedAtUtc < untilUtc);
+        if (filter.Status.HasValue) { query = query.Where(o => o.Status == filter.Status.Value); }
+        List<OrderMonitoringRow> rows = await query.OrderByDescending(o => o.PlacedAtUtc).ThenByDescending(o => o.Id)
+            .Select(o => new OrderMonitoringRow
+            {
+                Id = o.Id, ReservationId = o.ReservationId, CustomerName = o.Customer!.FullName,
+                PlacedAtUtc = o.PlacedAtUtc, TableLabel = o.Reservation!.DiningTable!.Label,
+                Status = o.Status, TotalAmount = o.TotalAmount
+            }).ToListAsync();
+        return ServiceResult<OrderMonitoringResult>.Success(new OrderMonitoringResult { Rows = rows });
+    }
+
+    /// <inheritdoc />
+    public async Task<ServiceResult<TransactionMonitoringResult>> GetTransactionMonitoringAsync(TransactionMonitoringFilter filter)
+    {
+        string? error = ValidateRange(filter);
+        if (error != null) { return ServiceResult<TransactionMonitoringResult>.Failure(error); }
+        if (filter.Status.HasValue && !Enum.IsDefined(filter.Status.Value))
+        {
+            return ServiceResult<TransactionMonitoringResult>.Failure("Choose a valid payment status.");
+        }
+        if (filter.Method.HasValue && !Enum.IsDefined(filter.Method.Value))
+        {
+            return ServiceResult<TransactionMonitoringResult>.Failure("Choose a valid payment method.");
+        }
+        (DateTime fromUtc, DateTime untilUtc) = GetUtcRange(filter);
+        IQueryable<Payment> query = _context.Payments.AsNoTracking()
+            .Where(p => p.PaidAtUtc >= fromUtc && p.PaidAtUtc < untilUtc);
+        if (filter.Status.HasValue) { query = query.Where(p => p.Status == filter.Status.Value); }
+        if (filter.Method.HasValue) { query = query.Where(p => p.Method == filter.Method.Value); }
+        List<TransactionMonitoringRow> rows = await query.OrderByDescending(p => p.PaidAtUtc).ThenByDescending(p => p.Id)
+            .Select(p => new TransactionMonitoringRow
+            {
+                Id = p.Id, OrderId = p.OrderId, CustomerName = p.Order!.Customer!.FullName,
+                StaffName = p.Staff!.FullName, PaidAtUtc = p.PaidAtUtc,
+                Status = p.Status, Method = p.Method, Amount = p.Amount
+            }).ToListAsync();
+        // Aggregate the projected rows in decimal: SQLite cannot aggregate decimal SUM like SQL Server.
+        return ServiceResult<TransactionMonitoringResult>.Success(new TransactionMonitoringResult { Rows = rows });
+    }
+
+    private static string? ValidateRange(MonitoringDateFilter filter)
+    {
+        if (filter.From <= DateOnly.MinValue || filter.To >= DateOnly.MaxValue)
+        {
+            return "Choose dates between 0001-01-02 and 9999-12-30.";
+        }
+        if (filter.From > filter.To) { return "The from date must be on or before the to date."; }
+        return null;
+    }
+
+    private static (DateTime FromUtc, DateTime UntilUtc) GetUtcRange(MonitoringDateFilter filter)
+    {
+        // The inclusive calendar end becomes an exclusive UTC boundary, retaining fractional seconds.
+        return (MalaysiaTime.ToUtc(filter.From.ToDateTime(TimeOnly.MinValue)),
+            MalaysiaTime.ToUtc(filter.To.AddDays(1).ToDateTime(TimeOnly.MinValue)));
     }
 }

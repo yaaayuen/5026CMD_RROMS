@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 
 using Rroms.Web.Models.ViewModels;
 
@@ -58,9 +58,10 @@ public class IndexModel : PageModel
                 "Sprint 5 · Darren"),
             new ModuleTileViewModel(
                 "Monitoring",
-                "Live view of reservations, orders and transactions.",
+                "Filter reservations, orders and payment records.",
                 "calendar",
-                "Sprint 5 · Darren"),
+                "Sprint 5 · Darren",
+                "/Admin/Monitoring/Reservations"),
             new ModuleTileViewModel(
                 "Customer feedback",
                 "Ratings and comments from completed visits.",
