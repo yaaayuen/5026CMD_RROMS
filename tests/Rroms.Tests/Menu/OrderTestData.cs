@@ -1,4 +1,5 @@
-﻿using Rroms.Web.Contracts;
+﻿using Microsoft.EntityFrameworkCore;
+using Rroms.Web.Contracts;
 using Rroms.Web.Data;
 using Rroms.Web.Models;
 
@@ -85,9 +86,19 @@ public static class OrderTestData
     {
         DateTime now = DateTime.UtcNow;
 
+        // Dish names must be unique on the whole menu, so a repeated name gets a number added.
+        string uniqueName = name;
+        int copy = 2;
+
+        while (await context.MenuItems.AnyAsync(item => item.Name.ToLower() == uniqueName.ToLower()))
+        {
+            uniqueName = $"{name} {copy}";
+            copy++;
+        }
+
         var dish = new MenuItem
         {
-            Name = name,
+            Name = uniqueName,
             Description = "Made for a test",
             MenuCategoryId = categoryId,
             Price = price,
