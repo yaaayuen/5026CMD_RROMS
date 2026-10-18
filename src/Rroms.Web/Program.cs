@@ -177,6 +177,9 @@ builder.Services.AddScoped<IBillingService, BillingService>();
 // ----- Sprint 5 (Darren): reservation history and filters (DA-7) -----
 builder.Services.AddScoped<IMonitoringService, MonitoringService>();
 
+// ----- Sprint 5 (Darren): administrator reports (DA-3) -----
+builder.Services.AddScoped<IReportService, ReportService>();
+
 // ----- Notifications (YY-6) -----
 // One class serves both interfaces: modules publish through INotificationService,
 // the inbox page and bell read through INotificationInbox.

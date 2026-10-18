@@ -44,8 +44,7 @@ public class IndexModel : PageModel
                 "Announcements",
                 "Promotional campaigns and restaurant notices.",
                 "megaphone",
-                "Sprint 4 · Alex",
-                "/Admin/Announcements"),
+                "Sprint 4 · Alex"),
             new ModuleTileViewModel(
                 "Analytics dashboard",
                 "Sales, reservations, table occupancy and popular dishes.",
@@ -53,10 +52,11 @@ public class IndexModel : PageModel
                 "Sprint 2 · WL",
                 "/Admin/Analytics"),
             new ModuleTileViewModel(
-                "Reports and exports",
-                "Filtered reports with CSV, Excel and PDF export.",
+                "Reports",
+                "Reservation, sales, popular-item and customer-activity reports.",
                 "receipt",
-                "Sprint 5 · Darren"),
+                "Sprint 5 · Darren",
+                "/Admin/Reports"),
             new ModuleTileViewModel(
                 "Monitoring",
                 "Filter reservations, orders and payment records.",
@@ -67,8 +67,7 @@ public class IndexModel : PageModel
                 "Customer feedback",
                 "Ratings and comments from completed visits.",
                 "star",
-                "Sprint 4 · Alex",
-                "/Admin/Feedback")
+                "Sprint 4 · Alex")
         };
     }
 }

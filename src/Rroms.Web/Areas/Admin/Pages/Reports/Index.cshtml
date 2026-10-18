@@ -1,0 +1,61 @@
+@page
+@model Rroms.Web.Areas.Admin.Pages.Reports.IndexModel
+@using Rroms.Web.Models.ViewModels
+@{ ViewData["Title"] = "Reports"; }
+<h1>Reports</h1>
+<p>Reservation, sales, popular item and customer activity reports. All dates use Malaysia time.</p>
+<a href="/Admin">Back to admin dashboard</a>
+<div asp-validation-summary="All" class="text-danger"></div>
+<form method="get" class="tg-card card card-body my-3">
+    <div class="row g-3">
+        <div class="col-md-3"><label asp-for="Filter.Period" class="form-label">Period</label><select asp-for="Filter.Period" asp-items="Html.GetEnumSelectList<ReportPeriod>()" class="form-select"></select></div>
+        <div class="col-md-3"><label asp-for="Filter.Anchor" class="form-label">Date for daily / weekly / monthly</label><input asp-for="Filter.Anchor" type="date" asp-format="{0:yyyy-MM-dd}" class="form-control" /></div>
+        <div class="col-md-3"><label asp-for="Filter.From" class="form-label">Custom from</label><input asp-for="Filter.From" type="date" asp-format="{0:yyyy-MM-dd}" class="form-control" /></div>
+        <div class="col-md-3"><label asp-for="Filter.To" class="form-label">Custom to</label><input asp-for="Filter.To" type="date" asp-format="{0:yyyy-MM-dd}" class="form-control" /></div>
+    </div>
+    <p class="text-muted mt-2">Weeks run Monday–Sunday. Custom ranges include both dates, up to 366 days. Custom dates apply only when Custom is selected.</p>
+    <div><button class="btn btn-primary" type="submit">View report</button> <a href="/Admin/Reports" class="btn btn-outline-secondary">Reset</a></div>
+</form>
+@if (Model.Loaded)
+{
+    var r = Model.Results;
+    <h2>@r.Range.From.ToString("dd MMM yyyy") – @r.Range.To.ToString("dd MMM yyyy")</h2>
+    <nav class="my-3" aria-label="Report sections"><a href="#reservations">Reservations</a> · <a href="#sales">Sales</a> · <a href="#items">Popular items</a> · <a href="#customers">Customer activity</a></nav>
+    <section id="reservations" class="mb-4">
+        <h2>Reservations</h2><p>Based on reservation start date. All statuses are included; guest totals are booked guests, not attendance or occupancy.</p>
+        <p><strong>@r.ReservationCount reservations · @r.GuestCount guests</strong></p>
+        <div class="table-responsive"><table class="table table-striped"><thead><tr><th>Status</th><th>Reservations</th><th>Guests</th></tr></thead><tbody>
+        @foreach (var row in r.Reservations) { <tr><td>@row.Status</td><td>@row.Count</td><td>@row.Guests</td></tr> }
+        </tbody></table></div>
+    </section>
+    <section id="sales" class="mb-4">
+        <h2>Sales</h2><p>Recorded Paid payments, based on payment date. Unpaid and voided payments are excluded.</p>
+        <div class="alert alert-info">SimulatedOnline is demo activity; no real online payment is processed. Inclusive totals contain demo payments.</div>
+        <p><strong>@r.PaidCount paid payments · Inclusive RM @r.PaidTotal.ToString("N2") · Non-demo RM @r.NonDemoPaidTotal.ToString("N2") · Demo RM @r.DemoPaidTotal.ToString("N2")</strong></p>
+        <div class="table-responsive"><table class="table table-striped"><thead><tr><th>Payment method</th><th>Count</th><th>Amount (RM)</th></tr></thead><tbody>
+        @foreach (var row in r.SalesMethods) { <tr><td>@row.Method</td><td>@row.Count</td><td>@row.Amount.ToString("N2")</td></tr> }
+        </tbody></table></div>
+        <h3>Daily sales</h3>
+        <div class="table-responsive"><table class="table table-striped"><thead><tr><th>Date</th><th>Payments</th><th>Inclusive (RM)</th><th>Non-demo (RM)</th><th>Demo (RM)</th></tr></thead><tbody>
+        @foreach (var row in r.DailySales) { <tr><td>@row.Date.ToString("dd MMM yyyy")</td><td>@row.Count</td><td>@row.PaidAmount.ToString("N2")</td><td>@row.NonDemoAmount.ToString("N2")</td><td>@row.DemoAmount.ToString("N2")</td></tr> }
+        </tbody></table></div>
+    </section>
+    <section id="items" class="mb-4">
+        <h2>Popular items</h2><p>Ranked by quantity in orders paid during this period, including demo orders. Ties use item ID. Names are current; line values use saved unit prices and may differ from recorded payment totals.</p>
+        @if (r.PopularItems.Count == 0) { <p>No paid items in this period.</p> }
+        else {
+        <div class="table-responsive"><table class="table table-striped"><thead><tr><th>Rank</th><th>Item</th><th>Quantity</th><th>Demo quantity</th><th>Line value (RM)</th><th>Demo line value (RM)</th></tr></thead><tbody>
+        @foreach (var row in r.PopularItems) { <tr><td>@row.Rank</td><td>@row.Name <small>(#@row.MenuItemId)</small></td><td>@row.Quantity</td><td>@row.DemoQuantity</td><td>@row.LineValue.ToString("N2")</td><td>@row.DemoLineValue.ToString("N2")</td></tr> }
+        </tbody></table></div>
+        }
+    </section>
+    <section id="customers" class="mb-4">
+        <h2>Customer activity</h2><p>Reservation counts use start date; order counts use placement date (all statuses); paid amounts use payment date. These are independent activities, not one booking cohort. Includes historical activity of inactive accounts. Names are current.</p>
+        @if (r.Customers.Count == 0) { <p>No customer activity in this period.</p> }
+        else {
+        <div class="table-responsive"><table class="table table-striped"><thead><tr><th>Customer</th><th>Reservations</th><th>Orders</th><th>Payments</th><th>Inclusive (RM)</th><th>Non-demo (RM)</th><th>Demo (RM)</th></tr></thead><tbody>
+        @foreach (var row in r.Customers) { <tr><td>@row.CustomerName <small class="d-block">@row.CustomerId</small></td><td>@row.ReservationCount</td><td>@row.OrderCount</td><td>@row.PaidCount</td><td>@row.PaidAmount.ToString("N2")</td><td>@row.NonDemoAmount.ToString("N2")</td><td>@row.DemoAmount.ToString("N2")</td></tr> }
+        </tbody></table></div>
+        }
+    </section>
+}
