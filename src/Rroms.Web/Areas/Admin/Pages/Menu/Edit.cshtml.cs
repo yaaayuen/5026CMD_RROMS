@@ -27,25 +27,32 @@ public class EditModel : PageModel
 {
     private const long BytesPerMegabyte = 1024 * 1024;
 
+    /// <summary>The text format an HTML date-time box accepts, down to the minute.</summary>
+    private const string DateTimeBoxFormat = "yyyy-MM-ddTHH:mm";
+
     private readonly IMenuService _menuService;
     private readonly IRestaurantService _restaurantService;
     private readonly IMenuImageStorage _imageStorage;
+    private readonly IProfileService _profileService;
     private readonly MenuImageOptions _imageOptions;
 
     /// <summary>Receives the services and photo limits from dependency injection.</summary>
     /// <param name="menuService">The menu item service.</param>
     /// <param name="restaurantService">Gives the menu categories for the drop-down.</param>
     /// <param name="imageStorage">Turns a stored photo name into a web address.</param>
+    /// <param name="profileService">Gives the shared dietary tags (YY's table) for the tick boxes.</param>
     /// <param name="imageOptions">The photo limits, shown to the administrator as a hint.</param>
     public EditModel(
         IMenuService menuService,
         IRestaurantService restaurantService,
         IMenuImageStorage imageStorage,
+        IProfileService profileService,
         IOptions<MenuImageOptions> imageOptions)
     {
         _menuService = menuService;
         _restaurantService = restaurantService;
         _imageStorage = imageStorage;
+        _profileService = profileService;
         _imageOptions = imageOptions.Value;
     }
 
@@ -82,6 +89,9 @@ public class EditModel : PageModel
     /// <summary>The web address of the current photo, or null when the dish has none.</summary>
     public string? CurrentPhotoUrl { get; private set; }
 
+    /// <summary>Every dietary tag, in display order, for the tick boxes.</summary>
+    public IReadOnlyList<DietaryTag> DietaryTagChoices { get; private set; } = new List<DietaryTag>();
+
     /// <summary>The categories offered in the drop-down.</summary>
     public IReadOnlyList<SelectListItem> CategoryChoices { get; private set; } = new List<SelectListItem>();
 
@@ -93,6 +103,28 @@ public class EditModel : PageModel
             long megabytes = _imageOptions.MaxFileSizeBytes / BytesPerMegabyte;
             return $"JPG, PNG or WebP, up to {megabytes} MB. Wider photos are scaled down automatically.";
         }
+    }
+
+    /// <summary>
+    /// The earliest time the "Offer starts" box accepts, so the browser's picker greys out the past.
+    /// Null (no limit) when the box already holds a time that has passed, which happens when you edit an
+    /// offer that is already running: the saved start must not block the form. The service checks again.
+    /// </summary>
+    public string? MinStartText => BuildMinText(PromoStartLocal);
+
+    /// <summary>The earliest time the "Offer ends" box accepts. Null when the saved end has already passed.</summary>
+    public string? MinEndText => BuildMinText(PromoEndLocal);
+
+    private static string? BuildMinText(DateTime? savedValue)
+    {
+        DateTime malaysiaNow = MalaysiaTime.FromUtc(DateTime.UtcNow);
+
+        if (savedValue.HasValue && savedValue.Value < malaysiaNow)
+        {
+            return null;
+        }
+
+        return malaysiaNow.ToString(DateTimeBoxFormat, CultureInfo.InvariantCulture);
     }
 
     /// <summary>The smallest price, formatted for an HTML number field.</summary>
@@ -107,7 +139,7 @@ public class EditModel : PageModel
     {
         if (!id.HasValue)
         {
-            await LoadCategoryChoicesAsync(null);
+            await LoadChoicesAsync(null);
             return Page();
         }
 
@@ -129,15 +161,14 @@ public class EditModel : PageModel
             MenuCategoryId = item.MenuCategoryId,
             Price = item.Price,
             IsAvailable = item.IsAvailable,
-            IsVegetarian = item.IsVegetarian,
-            IsSpicy = item.IsSpicy,
+            DietaryTagIds = item.DietaryTags.Select(tag => tag.Id).ToList(),
             PromoPrice = item.PromoPrice
         };
 
         PromoStartLocal = ToMalaysiaTime(item.PromoStartUtc);
         PromoEndLocal = ToMalaysiaTime(item.PromoEndUtc);
 
-        await LoadCategoryChoicesAsync(item.MenuCategoryId);
+        await LoadChoicesAsync(item.MenuCategoryId);
         return Page();
     }
 
@@ -169,7 +200,7 @@ public class EditModel : PageModel
 
         if (!ModelState.IsValid)
         {
-            await LoadCategoryChoicesAsync(originalCategoryId);
+            await LoadChoicesAsync(originalCategoryId);
             return Page();
         }
 
@@ -182,7 +213,7 @@ public class EditModel : PageModel
             if (!updateResult.Succeeded)
             {
                 AddErrorsToModelState(updateResult.Errors);
-                await LoadCategoryChoicesAsync(originalCategoryId);
+                await LoadChoicesAsync(originalCategoryId);
                 return Page();
             }
 
@@ -195,7 +226,7 @@ public class EditModel : PageModel
             if (!createResult.Succeeded)
             {
                 AddErrorsToModelState(createResult.Errors);
-                await LoadCategoryChoicesAsync(originalCategoryId);
+                await LoadChoicesAsync(originalCategoryId);
                 return Page();
             }
 
@@ -245,6 +276,15 @@ public class EditModel : PageModel
         }
 
         return null;
+    }
+
+    /// <summary>Fills everything the form needs to draw its choices: the categories and the dietary tags.</summary>
+    /// <param name="keepCategoryId">The dish's current category, or null when adding.</param>
+    private async Task LoadChoicesAsync(int? keepCategoryId)
+    {
+        DietaryTagChoices = await _profileService.GetDietaryTagsAsync();
+
+        await LoadCategoryChoicesAsync(keepCategoryId);
     }
 
     /// <summary>

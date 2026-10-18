@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Globalization;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 
@@ -48,6 +49,12 @@ public class MenuPagesTests : IClassFixture<TestWebApplicationFactory>
     private const uint PhotoHeight = 50;
 
     private const decimal NormalPrice = 20.00m;
+
+    /// <summary>The text format an HTML date-time box sends, down to the minute.</summary>
+    private const string DateTimeBoxFormat = "yyyy-MM-ddTHH:mm";
+
+    /// <summary>Malaysia is UTC+8 all year (no daylight saving).</summary>
+    private const int MalaysiaHoursAheadOfUtc = 8;
 
     private readonly TestWebApplicationFactory _factory;
 
@@ -173,8 +180,12 @@ public class MenuPagesTests : IClassFixture<TestWebApplicationFactory>
         string name = NewDishName();
         Dictionary<string, string> fields = ValidDishFields(name);
         fields["Input.PromoPrice"] = "15.00";
-        fields["PromoStartLocal"] = "2026-10-10T10:00";
-        fields["PromoEndLocal"] = "2026-10-17T10:00";
+
+        // 10:00 Malaysia time, two days from now (offers cannot start in the past) until a week later.
+        DateTime startLocal = MalaysiaTime.FromUtc(DateTime.UtcNow).Date.AddDays(2).AddHours(10);
+        DateTime endLocal = startLocal.AddDays(7);
+        fields["PromoStartLocal"] = startLocal.ToString(DateTimeBoxFormat, CultureInfo.InvariantCulture);
+        fields["PromoEndLocal"] = endLocal.ToString(DateTimeBoxFormat, CultureInfo.InvariantCulture);
 
         HttpResponseMessage response = await FormHelper.PostFormAsync(client, EditUrl, EditUrl, fields);
         MenuItem? saved = await FindDishAsync(name);
@@ -182,8 +193,47 @@ public class MenuPagesTests : IClassFixture<TestWebApplicationFactory>
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.NotNull(saved);
         Assert.Equal(15.00m, saved.PromoPrice);
-        Assert.Equal(new DateTime(2026, 10, 10, 2, 0, 0), saved.PromoStartUtc);
-        Assert.Equal(new DateTime(2026, 10, 17, 2, 0, 0), saved.PromoEndUtc);
+        Assert.Equal(startLocal.AddHours(-MalaysiaHoursAheadOfUtc), saved.PromoStartUtc);
+        Assert.Equal(endLocal.AddHours(-MalaysiaHoursAheadOfUtc), saved.PromoEndUtc);
+    }
+
+    /// <summary>An offer that starts yesterday is refused and the service's message is shown.</summary>
+    [Fact]
+    public async Task Add_OfferStartingInThePast_ShowsServiceError()
+    {
+        HttpClient client = await SignInAsAdministratorAsync();
+        Dictionary<string, string> fields = ValidDishFields(NewDishName());
+        fields["Input.PromoPrice"] = "15.00";
+
+        DateTime yesterday = MalaysiaTime.FromUtc(DateTime.UtcNow).Date.AddDays(-1).AddHours(10);
+        fields["PromoStartLocal"] = yesterday.ToString(DateTimeBoxFormat, CultureInfo.InvariantCulture);
+        fields["PromoEndLocal"] = yesterday.AddDays(7).ToString(DateTimeBoxFormat, CultureInfo.InvariantCulture);
+
+        HttpResponseMessage response = await FormHelper.PostFormAsync(client, EditUrl, EditUrl, fields);
+        string html = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains(MenuService.PromoInPastMessage, html);
+    }
+
+    /// <summary>The same dish name in another category is refused, because names are unique on the whole menu.</summary>
+    [Fact]
+    public async Task Add_SameNameAsADishInAnotherCategory_ShowsServiceError()
+    {
+        HttpClient client = await SignInAsAdministratorAsync();
+        string name = NewDishName();
+        Dictionary<string, string> first = ValidDishFields(name);
+        first["Input.MenuCategoryId"] = GrillsId.ToString();
+        await FormHelper.PostFormAsync(client, EditUrl, EditUrl, first);
+
+        Dictionary<string, string> second = ValidDishFields(name);
+        second["Input.MenuCategoryId"] = StartersId.ToString();
+
+        HttpResponseMessage response = await FormHelper.PostFormAsync(client, EditUrl, EditUrl, second);
+        string html = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains(MenuService.DuplicateNameMessage, html);
     }
 
     // ============================== Photos ==============================//

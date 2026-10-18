@@ -11,8 +11,8 @@ public class MenuSearchCriteria
     /// <summary>Only dishes in this category, or null for every category.</summary>
     public int? MenuCategoryId { get; set; }
 
-    /// <summary>True to show only vegetarian dishes.</summary>
-    public bool VegetarianOnly { get; set; }
+    /// <summary>Hide every dish that contains any of these dietary tags (by tag Id). Empty means hide nothing.</summary>
+    public List<int> ExcludeTagIds { get; set; } = new List<int>();
 
     /// <summary>Lowest price in RM the customer would pay today (an offer price counts), or null for no minimum.</summary>
     public decimal? MinPrice { get; set; }

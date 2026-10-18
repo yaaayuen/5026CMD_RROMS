@@ -58,12 +58,7 @@ public class IndexModel : PageModel
                 "users",
                 "Sprint 1 · YY",
                 "/Account/Profile"),
-            new ModuleTileViewModel(
-                "Ask our assistant",
-                "Questions about the menu, hours or booking.",
-                "chat",
-                "Sprint 4 · Alex",
-                "/Chat")
+
         };
     }
 }

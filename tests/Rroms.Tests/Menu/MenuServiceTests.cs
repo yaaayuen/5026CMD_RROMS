@@ -30,6 +30,14 @@ public class MenuServiceTests : IDisposable
     /// <summary>Id of the seeded "Beverages" category.</summary>
     private const int BeveragesId = 5;
 
+    /// <summary>Ids of YY's three seeded dietary tags (fixed by DietaryTag.Seed).</summary>
+    private const int AnimalProductsTagId = 1;
+    private const int DairyTagId = 2;
+    private const int SpicyTagId = 3;
+
+    /// <summary>A dietary tag Id that does not exist.</summary>
+    private const int UnknownTagId = 999;
+
     /// <summary>A category Id that does not exist.</summary>
     private const int UnknownCategoryId = 999;
 
@@ -39,8 +47,9 @@ public class MenuServiceTests : IDisposable
     private const decimal NormalPrice = 20.00m;
     private const decimal OfferPrice = 15.00m;
 
-    private static readonly DateTime OfferStart = new DateTime(2026, 10, 10, 0, 0, 0, DateTimeKind.Utc);
-    private static readonly DateTime OfferEnd = new DateTime(2026, 10, 17, 0, 0, 0, DateTimeKind.Utc);
+    /// <summary>Offers cannot start in the past any more, so test offers start tomorrow and end a week later.</summary>
+    private readonly DateTime _offerStart = DateTime.UtcNow.AddDays(1);
+    private readonly DateTime _offerEnd = DateTime.UtcNow.AddDays(8);
 
     private readonly SqliteConnection _connection;
     private readonly ApplicationDbContext _context;
@@ -193,17 +202,139 @@ public class MenuServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateMenuItem_SameNameInDifferentCategory_Succeeds()
+    public async Task CreateMenuItem_SameNameInDifferentCategory_IsRejected()
     {
-        // Arrange: a "House Special" starter and a "House Special" grill are different dishes.
-        await _service.CreateMenuItemAsync(CreateValidInput(name: "House Special", categoryId: StartersId));
-        MenuItemInput grill = CreateValidInput(name: "House Special", categoryId: GrillsId);
+        // Arrange: "Tiramisu" is a dessert; the same name as a starter is still the same dish name.
+        await _service.CreateMenuItemAsync(CreateValidInput(name: "Tiramisu", categoryId: 4));
+        MenuItemInput starter = CreateValidInput(name: "tiramisu", categoryId: StartersId);
 
         // Act
-        ServiceResult<int> result = await _service.CreateMenuItemAsync(grill);
+        ServiceResult<int> result = await _service.CreateMenuItemAsync(starter);
+
+        // Assert: refused whatever the category or capital letters.
+        Assert.False(result.Succeeded);
+        Assert.Contains(MenuService.DuplicateNameMessage, result.Errors);
+    }
+
+    [Fact]
+    public async Task UpdateMenuItem_RenamedToANameUsedInAnotherCategory_IsRejected()
+    {
+        // Arrange: two different dishes in two categories, then the second is renamed like the first.
+        await _service.CreateMenuItemAsync(CreateValidInput(name: "Tiramisu", categoryId: 4));
+        ServiceResult<int> created = await _service.CreateMenuItemAsync(CreateValidInput(name: "Garlic Bread", categoryId: StartersId));
+        MenuItemInput rename = CreateValidInput(name: "Tiramisu", categoryId: StartersId);
+
+        // Act
+        ServiceResult result = await _service.UpdateMenuItemAsync(created.Value, rename);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains(MenuService.DuplicateNameMessage, result.Errors);
+    }
+
+    [Fact]
+    public async Task Database_DuplicateNameThatBypassesTheService_IsBlockedByTheUniqueIndex()
+    {
+        // Arrange: skip the service and write straight to the database, like a bug or two administrators
+        // saving at the same moment. Two dishes in different categories with the same name.
+        DateTime now = DateTime.UtcNow;
+        _context.MenuItems.Add(new MenuItem { Name = "Tiramisu", MenuCategoryId = 4, Price = 12.00m, CreatedAtUtc = now, UpdatedAtUtc = now });
+        _context.MenuItems.Add(new MenuItem { Name = "Tiramisu", MenuCategoryId = StartersId, Price = 12.00m, CreatedAtUtc = now, UpdatedAtUtc = now });
+
+        // Act + Assert: the unique index on Name refuses the second one.
+        await Assert.ThrowsAsync<DbUpdateException>(() => _context.SaveChangesAsync());
+    }
+
+    //================================================== Offers cannot be back-dated ==================================================//
+
+    [Fact]
+    public async Task CreateMenuItem_OfferStartingInThePast_IsRejected()
+    {
+        // Arrange: the offer is said to have started two days ago.
+        MenuItemInput input = CreateValidInput();
+        input.PromoPrice = OfferPrice;
+        input.PromoStartUtc = DateTime.UtcNow.AddDays(-2);
+        input.PromoEndUtc = DateTime.UtcNow.AddDays(1);
+
+        // Act
+        ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains(MenuService.PromoInPastMessage, result.Errors);
+    }
+
+    [Fact]
+    public async Task CreateMenuItem_OfferEndingInThePast_IsRejected()
+    {
+        // Arrange: an offer that is already over.
+        MenuItemInput input = CreateValidInput();
+        input.PromoPrice = OfferPrice;
+        input.PromoStartUtc = DateTime.UtcNow.AddDays(-3);
+        input.PromoEndUtc = DateTime.UtcNow.AddDays(-1);
+
+        // Act
+        ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains(MenuService.PromoInPastMessage, result.Errors);
+    }
+
+    [Fact]
+    public async Task CreateMenuItem_OfferStartingNow_IsAccepted()
+    {
+        // Arrange: "start now" arrives a few seconds old, which the small grace period allows.
+        MenuItemInput input = CreateValidInput();
+        input.PromoPrice = OfferPrice;
+        input.PromoStartUtc = DateTime.UtcNow.AddSeconds(-30);
+        input.PromoEndUtc = DateTime.UtcNow.AddDays(1);
+
+        // Act
+        ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
 
         // Assert
         Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task UpdateMenuItem_RunningOfferLeftUnchanged_CanStillBeSaved()
+    {
+        // Arrange: an offer that started yesterday is running. Only the normal price is changed.
+        int id = await AddDishWithOfferAsync("Offer Burger", startOffsetDays: -1, endOffsetDays: 1);
+        MenuItem dish = await _context.MenuItems.SingleAsync(item => item.Id == id);
+
+        MenuItemInput edit = CreateValidInput("Offer Burger");
+        edit.Price = 22.00m;
+        edit.PromoPrice = dish.PromoPrice;
+        edit.PromoStartUtc = dish.PromoStartUtc;
+        edit.PromoEndUtc = dish.PromoEndUtc;
+
+        // Act
+        ServiceResult result = await _service.UpdateMenuItemAsync(id, edit);
+
+        // Assert: the start is in the past, but it was not changed, so it is not checked again.
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task UpdateMenuItem_MovingTheOfferEndIntoThePast_IsRejected()
+    {
+        // Arrange: the running offer is given an end time of one hour ago.
+        int id = await AddDishWithOfferAsync("Offer Burger", startOffsetDays: -1, endOffsetDays: 1);
+        MenuItem dish = await _context.MenuItems.SingleAsync(item => item.Id == id);
+
+        MenuItemInput edit = CreateValidInput("Offer Burger");
+        edit.PromoPrice = dish.PromoPrice;
+        edit.PromoStartUtc = dish.PromoStartUtc;
+        edit.PromoEndUtc = DateTime.UtcNow.AddHours(-1);
+
+        // Act
+        ServiceResult result = await _service.UpdateMenuItemAsync(id, edit);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains(MenuService.PromoInPastMessage, result.Errors);
     }
 
     //================================================== Offers ==================================================//
@@ -214,8 +345,8 @@ public class MenuServiceTests : IDisposable
         // Arrange
         MenuItemInput input = CreateValidInput();
         input.PromoPrice = OfferPrice;
-        input.PromoStartUtc = OfferStart;
-        input.PromoEndUtc = OfferEnd;
+        input.PromoStartUtc = _offerStart;
+        input.PromoEndUtc = _offerEnd;
 
         // Act
         ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
@@ -225,8 +356,8 @@ public class MenuServiceTests : IDisposable
         MenuItem? saved = await _service.GetMenuItemAsync(result.Value);
         Assert.NotNull(saved);
         Assert.Equal(OfferPrice, saved.PromoPrice);
-        Assert.Equal(OfferStart, saved.PromoStartUtc);
-        Assert.Equal(OfferEnd, saved.PromoEndUtc);
+        Assert.Equal(_offerStart, saved.PromoStartUtc);
+        Assert.Equal(_offerEnd, saved.PromoEndUtc);
     }
 
     [Fact]
@@ -250,8 +381,8 @@ public class MenuServiceTests : IDisposable
         // Arrange: an "offer" of RM 25 on a RM 20 dish makes no sense.
         MenuItemInput input = CreateValidInput();
         input.PromoPrice = 25.00m;
-        input.PromoStartUtc = OfferStart;
-        input.PromoEndUtc = OfferEnd;
+        input.PromoStartUtc = _offerStart;
+        input.PromoEndUtc = _offerEnd;
 
         // Act
         ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
@@ -267,8 +398,8 @@ public class MenuServiceTests : IDisposable
         // Arrange: start and end swapped.
         MenuItemInput input = CreateValidInput();
         input.PromoPrice = OfferPrice;
-        input.PromoStartUtc = OfferEnd;
-        input.PromoEndUtc = OfferStart;
+        input.PromoStartUtc = _offerEnd;
+        input.PromoEndUtc = _offerStart;
 
         // Act
         ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
@@ -433,18 +564,23 @@ public class MenuServiceTests : IDisposable
         return result.Value;
     }
 
-    /// <summary>Creates a dish with an offer from <paramref name="startOffsetDays"/> to <paramref name="endOffsetDays"/> days from now.</summary>
+    /// <summary>
+    /// Creates a dish with an offer from <paramref name="startOffsetDays"/> to <paramref name="endOffsetDays"/> days from now.
+    /// The offer is written straight into the database: the service refuses back-dated offers, but the menu must still
+    /// handle one that started yesterday (a running offer) or ended yesterday (an expired one).
+    /// </summary>
     private async Task<int> AddDishWithOfferAsync(string name, int startOffsetDays, int endOffsetDays)
     {
         DateTime now = DateTime.UtcNow;
 
-        MenuItemInput input = CreateValidInput(name);
-        input.PromoPrice = OfferPrice;
-        input.PromoStartUtc = now.AddDays(startOffsetDays);
-        input.PromoEndUtc = now.AddDays(endOffsetDays);
-
-        ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
+        ServiceResult<int> result = await _service.CreateMenuItemAsync(CreateValidInput(name));
         Assert.True(result.Succeeded);
+
+        MenuItem dish = await _context.MenuItems.SingleAsync(item => item.Id == result.Value);
+        dish.PromoPrice = OfferPrice;
+        dish.PromoStartUtc = now.AddDays(startOffsetDays);
+        dish.PromoEndUtc = now.AddDays(endOffsetDays);
+        await _context.SaveChangesAsync();
 
         return result.Value;
     }
@@ -612,13 +748,30 @@ public class MenuServiceTests : IDisposable
 
     //================================================== Dietary tags ==================================================//
 
+    /// <summary>The tag Ids a saved dish has, sorted so the comparison does not depend on order.</summary>
+    private static List<int> TagIdsOf(MenuItem item)
+    {
+        return item.DietaryTags.Select(tag => tag.Id).OrderBy(id => id).ToList();
+    }
+
+    /// <summary>Saves a dish with the given tags straight through the service.</summary>
+    private async Task<int> AddTaggedDishAsync(string name, params int[] tagIds)
+    {
+        MenuItemInput input = CreateValidInput(name);
+        input.DietaryTagIds = tagIds.ToList();
+
+        ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
+        Assert.True(result.Succeeded);
+
+        return result.Value;
+    }
+
     [Fact]
     public async Task CreateMenuItem_WithDietaryTags_SavesThem()
     {
         // Arrange
-        MenuItemInput input = CreateValidInput("Veggie Burger");
-        input.IsVegetarian = true;
-        input.IsSpicy = true;
+        MenuItemInput input = CreateValidInput("Cheesy Hot Wings");
+        input.DietaryTagIds = new List<int> { DairyTagId, SpicyTagId, AnimalProductsTagId };
 
         // Act
         ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
@@ -627,15 +780,14 @@ public class MenuServiceTests : IDisposable
         Assert.True(result.Succeeded);
         MenuItem? saved = await _service.GetMenuItemAsync(result.Value);
         Assert.NotNull(saved);
-        Assert.True(saved.IsVegetarian);
-        Assert.True(saved.IsSpicy);
+        Assert.Equal(new List<int> { AnimalProductsTagId, DairyTagId, SpicyTagId }, TagIdsOf(saved));
     }
 
     [Fact]
-    public async Task CreateMenuItem_WithoutDietaryTags_DefaultsToNeither()
+    public async Task CreateMenuItem_WithoutDietaryTags_HasNone()
     {
         // Arrange
-        MenuItemInput input = CreateValidInput("Plain Burger");
+        MenuItemInput input = CreateValidInput("Plain Salad");
 
         // Act
         ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
@@ -643,63 +795,170 @@ public class MenuServiceTests : IDisposable
         // Assert
         MenuItem? saved = await _service.GetMenuItemAsync(result.Value);
         Assert.NotNull(saved);
-        Assert.False(saved.IsVegetarian);
-        Assert.False(saved.IsSpicy);
+        Assert.Empty(saved.DietaryTags);
     }
 
     [Fact]
-    public async Task UpdateMenuItem_ChangesTheDietaryTags()
+    public async Task CreateMenuItem_WithAnUnknownTag_IsRejected()
     {
-        // Arrange: starts without tags.
-        ServiceResult<int> created = await _service.CreateMenuItemAsync(CreateValidInput("Burger"));
+        // Arrange
+        MenuItemInput input = CreateValidInput("Mystery Dish");
+        input.DietaryTagIds = new List<int> { DairyTagId, UnknownTagId };
+
+        // Act
+        ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
+
+        // Assert: nothing is saved.
+        Assert.False(result.Succeeded);
+        Assert.Contains(MenuService.DietaryTagNotFoundMessage, result.Errors);
+        Assert.Empty(await _service.GetMenuItemsAsync(null));
+    }
+
+    [Fact]
+    public async Task CreateMenuItem_WithTheSameTagTwice_SavesItOnce()
+    {
+        // Arrange: a browser could send the same box twice.
+        MenuItemInput input = CreateValidInput("Double Spicy");
+        input.DietaryTagIds = new List<int> { SpicyTagId, SpicyTagId };
+
+        // Act
+        ServiceResult<int> result = await _service.CreateMenuItemAsync(input);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        MenuItem? saved = await _service.GetMenuItemAsync(result.Value);
+        Assert.NotNull(saved);
+        Assert.Equal(new List<int> { SpicyTagId }, TagIdsOf(saved));
+    }
+
+    [Fact]
+    public async Task UpdateMenuItem_ReplacesTheDietaryTags()
+    {
+        // Arrange: starts with dairy and spicy.
+        int id = await AddTaggedDishAsync("Burger", DairyTagId, SpicyTagId);
         MenuItemInput edit = CreateValidInput("Burger");
-        edit.IsSpicy = true;
+        edit.DietaryTagIds = new List<int> { SpicyTagId, AnimalProductsTagId };
 
         // Act
-        ServiceResult result = await _service.UpdateMenuItemAsync(created.Value, edit);
+        ServiceResult result = await _service.UpdateMenuItemAsync(id, edit);
 
-        // Assert
+        // Assert: dairy is gone, animal products is new, spicy stays.
         Assert.True(result.Succeeded);
-        MenuItem? saved = await _service.GetMenuItemAsync(created.Value);
+        MenuItem? saved = await _service.GetMenuItemAsync(id);
         Assert.NotNull(saved);
-        Assert.True(saved.IsSpicy);
-        Assert.False(saved.IsVegetarian);
+        Assert.Equal(new List<int> { AnimalProductsTagId, SpicyTagId }, TagIdsOf(saved));
     }
 
     [Fact]
-    public async Task SearchMenu_VegetarianOnly_ListsOnlyVegetarianDishes()
+    public async Task UpdateMenuItem_WithNoTagsTicked_RemovesAllTags()
     {
         // Arrange
-        MenuItemInput veggie = CreateValidInput("Veggie Burger");
-        veggie.IsVegetarian = true;
-        await _service.CreateMenuItemAsync(veggie);
-        await _service.CreateMenuItemAsync(CreateValidInput("Beef Burger"));
+        int id = await AddTaggedDishAsync("Burger", DairyTagId, SpicyTagId);
+        MenuItemInput edit = CreateValidInput("Burger");
+
+        // Act
+        ServiceResult result = await _service.UpdateMenuItemAsync(id, edit);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        MenuItem? saved = await _service.GetMenuItemAsync(id);
+        Assert.NotNull(saved);
+        Assert.Empty(saved.DietaryTags);
+    }
+
+    [Fact]
+    public async Task UpdateMenuItem_WithAnUnknownTag_IsRejectedAndKeepsTheOldTags()
+    {
+        // Arrange
+        int id = await AddTaggedDishAsync("Burger", DairyTagId);
+        MenuItemInput edit = CreateValidInput("Burger");
+        edit.DietaryTagIds = new List<int> { UnknownTagId };
+
+        // Act
+        ServiceResult result = await _service.UpdateMenuItemAsync(id, edit);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains(MenuService.DietaryTagNotFoundMessage, result.Errors);
+        MenuItem? saved = await _service.GetMenuItemAsync(id);
+        Assert.NotNull(saved);
+        Assert.Equal(new List<int> { DairyTagId }, TagIdsOf(saved));
+    }
+
+    [Fact]
+    public async Task DeleteMenuItem_WithTags_DeletesTheDishAndKeepsTheTags()
+    {
+        // Arrange
+        int id = await AddTaggedDishAsync("Burger", DairyTagId, SpicyTagId);
+
+        // Act
+        ServiceResult result = await _service.DeleteMenuItemAsync(id);
+
+        // Assert: the dish is gone, but YY's three tag rows are untouched.
+        Assert.True(result.Succeeded);
+        Assert.Null(await _service.GetMenuItemAsync(id));
+        Assert.Equal(3, await _context.DietaryTags.CountAsync());
+    }
+
+    [Fact]
+    public async Task SearchMenu_HidingATag_HidesDishesThatContainIt()
+    {
+        // Arrange
+        await AddTaggedDishAsync("Cheese Pizza", DairyTagId);
+        await AddTaggedDishAsync("Fruit Salad");
 
         // Act
         IReadOnlyList<MenuItemCard> cards = await _service.SearchMenuAsync(
-            new MenuSearchCriteria { VegetarianOnly = true });
+            new MenuSearchCriteria { ExcludeTagIds = new List<int> { DairyTagId } });
 
         // Assert
         MenuItemCard card = Assert.Single(cards);
-        Assert.Equal("Veggie Burger", card.Name);
+        Assert.Equal("Fruit Salad", card.Name);
     }
 
     [Fact]
-    public async Task SearchMenu_Card_CarriesTheDietaryTags()
+    public async Task SearchMenu_HidingSeveralTags_HidesADishThatHasAnyOfThem()
     {
         // Arrange
-        MenuItemInput input = CreateValidInput("Hot Veggie Wrap");
-        input.IsVegetarian = true;
-        input.IsSpicy = true;
-        await _service.CreateMenuItemAsync(input);
+        await AddTaggedDishAsync("Hot Wings", AnimalProductsTagId, SpicyTagId);
+        await AddTaggedDishAsync("Cheese Pizza", DairyTagId);
+        await AddTaggedDishAsync("Fruit Salad");
+
+        // Act: hide animal products and spicy.
+        IReadOnlyList<MenuItemCard> cards = await _service.SearchMenuAsync(
+            new MenuSearchCriteria { ExcludeTagIds = new List<int> { AnimalProductsTagId, SpicyTagId } });
+
+        // Assert: the wings are hidden because they have both; the pizza stays because dairy was not hidden.
+        List<string> names = cards.Select(card => card.Name).OrderBy(name => name).ToList();
+        Assert.Equal(new List<string> { "Cheese Pizza", "Fruit Salad" }, names);
+    }
+
+    [Fact]
+    public async Task SearchMenu_WithoutAnyTagFilter_ShowsEveryDish()
+    {
+        // Arrange
+        await AddTaggedDishAsync("Cheese Pizza", DairyTagId);
+        await AddTaggedDishAsync("Fruit Salad");
 
         // Act
         IReadOnlyList<MenuItemCard> cards = await _service.SearchMenuAsync(new MenuSearchCriteria());
 
         // Assert
+        Assert.Equal(2, cards.Count);
+    }
+
+    [Fact]
+    public async Task SearchMenu_Card_CarriesTheTagNamesInDisplayOrder()
+    {
+        // Arrange: saved in a different order from the display order.
+        await AddTaggedDishAsync("Hot Cheese Wings", SpicyTagId, AnimalProductsTagId, DairyTagId);
+
+        // Act
+        IReadOnlyList<MenuItemCard> cards = await _service.SearchMenuAsync(new MenuSearchCriteria());
+
+        // Assert: animal products, dairy, spicy (YY's display order).
         MenuItemCard card = Assert.Single(cards);
-        Assert.True(card.IsVegetarian);
-        Assert.True(card.IsSpicy);
+        Assert.Equal(new List<string> { "Animal products", "Dairy", "Spicy" }, card.DietaryTags.ToList());
     }
 
     //================================================== Photos ==================================================//

@@ -1,5 +1,6 @@
 ﻿@page "{id:int?}"
 @model EditModel
+@using Rroms.Web.Models
 @{
 	ViewData["Title"] = Model.EditingId.HasValue ? "Edit dish" : "Add a dish";
 	bool isEditing = Model.EditingId.HasValue;
@@ -63,14 +64,14 @@
 
 		<fieldset class="mb-3">
 			<legend class="h5">Dietary tags</legend>
-			<div class="form-check form-check-inline">
-				<input asp-for="Input.IsVegetarian" class="form-check-input" />
-				<label asp-for="Input.IsVegetarian" class="form-check-label"></label>
-			</div>
-			<div class="form-check form-check-inline">
-				<input asp-for="Input.IsSpicy" class="form-check-input" />
-				<label asp-for="Input.IsSpicy" class="form-check-label"></label>
-			</div>
+			<p class="text-secondary small">Tick everything this dish contains. Customers can hide these dishes in the menu filter, and the recommendations never suggest a dish that has a tag the customer avoids.</p>
+			@foreach (DietaryTag tag in Model.DietaryTagChoices)
+			{
+				<div class="form-check form-check-inline">
+					<input id="dietary-tag-@tag.Id" name="Input.DietaryTagIds" type="checkbox" value="@tag.Id" class="form-check-input" checked="@Model.Input.DietaryTagIds.Contains(tag.Id)" />
+					<label for="dietary-tag-@tag.Id" class="form-check-label">@tag.Name</label>
+				</div>
+			}
 		</fieldset>
 
 		<fieldset class="mb-3">
@@ -84,12 +85,12 @@
 				</div>
 				<div class="col-md-4 mb-3">
 					<label asp-for="PromoStartLocal" class="form-label fw-semibold"></label>
-					<input asp-for="PromoStartLocal" class="form-control" />
+					<input asp-for="PromoStartLocal" class="form-control" min="@Model.MinStartText" />
 					<span asp-validation-for="PromoStartLocal" class="text-danger small"></span>
 				</div>
 				<div class="col-md-4 mb-3">
 					<label asp-for="PromoEndLocal" class="form-label fw-semibold"></label>
-					<input asp-for="PromoEndLocal" class="form-control" />
+					<input asp-for="PromoEndLocal" class="form-control" min="@Model.MinEndText" data-floor="@Model.MinEndText" />
 					<span asp-validation-for="PromoEndLocal" class="text-danger small"></span>
 				</div>
 			</div>
@@ -121,4 +122,36 @@
 
 @section Scripts {
 	<partial name="_ValidationScriptsPartial" />
+
+	<script>
+		(function () {
+			var start = document.getElementById('PromoStartLocal');
+			var end = document.getElementById('PromoEndLocal');
+
+			if (!start || !end) {
+				return;
+			}
+
+			// The offer cannot end before it starts: once a start is chosen, the end picker begins there,
+			// but never earlier than its own floor (now, unless the saved end has already passed).
+			var floor = end.getAttribute('data-floor') || '';
+
+			function limitEnd() {
+				var lowest = floor;
+
+				if (start.value && start.value > lowest) {
+					lowest = start.value;
+				}
+
+				if (lowest) {
+					end.min = lowest;
+				} else {
+					end.removeAttribute('min');
+				}
+			}
+
+			start.addEventListener('change', limitEnd);
+			limitEnd();
+		})();
+	</script>
 }

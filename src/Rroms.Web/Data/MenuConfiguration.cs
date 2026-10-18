@@ -5,7 +5,7 @@ using Rroms.Web.Models;
 namespace Rroms.Web.Data;
 
 /// <summary>
-/// Database rules (relationship and check constraints) for the YJ-1 menu item table.
+/// Database rules (relationship, unique name and check constraints) for the YJ-1 menu item table.
 /// </summary>
 /// <remarks>
 /// Same pattern as RestaurantSetupConfiguration: the rules live in their own file so
@@ -24,7 +24,7 @@ public static class MenuConfiguration
         ConfigureMenuItems(builder);
     }
 
-    /// <summary>Restricted link to the category, a positive price and a consistent offer.</summary>
+    /// <summary>Restricted link to the category, a unique dish name, a positive price and a consistent offer.</summary>
     private static void ConfigureMenuItems(ModelBuilder builder)
     {
         builder.Entity<MenuItem>(item =>
@@ -34,6 +34,21 @@ public static class MenuConfiguration
                 .WithMany()
                 .HasForeignKey(i => i.MenuCategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // A dish contains many dietary tags and a tag is on many dishes. YY owns the DietaryTags table and
+            // its three fixed rows; this join table (named like YY's CustomerAvoidedDietaryTags) links to it.
+            // Deleting a dish or a tag removes only the link rows.
+            item.HasMany(i => i.DietaryTags)
+                .WithMany()
+                .UsingEntity<Dictionary<string, object>>(
+                    "MenuItemDietaryTags",
+                    right => right.HasOne<DietaryTag>().WithMany().HasForeignKey("DietaryTagId"),
+                    left => left.HasOne<MenuItem>().WithMany().HasForeignKey("MenuItemId"));
+
+            // A dish name appears only once on the whole menu. SQL Server compares names without regard to
+            // case, so "Tiramisu" and "tiramisu" also clash. The service checks this too, because the SQLite
+            // test database is case-sensitive.
+            item.HasIndex(i => i.Name).IsUnique();
 
             item.ToTable(table =>
             {

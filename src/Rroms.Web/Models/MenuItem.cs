@@ -47,11 +47,11 @@ public class MenuItem
     /// <summary>When false, customers can see the item but cannot order it.</summary>
     public bool IsAvailable { get; set; } = true;
 
-    /// <summary>True for a dish without meat or fish. Shown as a badge; used by the "vegetarian only" filter and the recommendations.</summary>
-    public bool IsVegetarian { get; set; }
-
-    /// <summary>True for a hot, spicy dish. Shown as a badge; used by the recommendations.</summary>
-    public bool IsSpicy { get; set; }
+    /// <summary>
+    /// What the dish contains: any of YY's shared dietary tags (animal products, dairy, spicy). Shown as badges,
+    /// used by the menu filter, and used so the recommendations never suggest a dish a customer avoids.
+    /// </summary>
+    public ICollection<DietaryTag> DietaryTags { get; set; } = new List<DietaryTag>();
 
     /// <summary>Promotional price in RM, or null when there is no offer.</summary>
     public decimal? PromoPrice { get; set; }

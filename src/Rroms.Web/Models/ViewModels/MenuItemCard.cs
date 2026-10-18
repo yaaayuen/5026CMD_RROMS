@@ -36,11 +36,8 @@ public class MenuItemCard
     /// <summary>False when the restaurant has switched ordering off for this dish.</summary>
     public bool IsAvailable { get; set; }
 
-    /// <summary>True for a dish without meat or fish.</summary>
-    public bool IsVegetarian { get; set; }
-
-    /// <summary>True for a hot, spicy dish.</summary>
-    public bool IsSpicy { get; set; }
+    /// <summary>Names of the dietary tags the dish contains, in display order (for the badges).</summary>
+    public IReadOnlyList<string> DietaryTags { get; set; } = new List<string>();
 
     /// <summary>True when the customer may add the dish to an order. Unavailable dishes can be seen but not added.</summary>
     public bool CanOrder { get; set; }
