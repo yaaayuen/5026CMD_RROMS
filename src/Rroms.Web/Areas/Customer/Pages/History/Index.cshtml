@@ -1,0 +1,142 @@
+﻿@page
+@model Rroms.Web.Areas.Customer.Pages.History.IndexModel
+@using Rroms.Web.Areas.Customer.Pages.Orders
+@using Rroms.Web.Models.ViewModels
+@{
+	ViewData["Title"] = "My history";
+}
+
+<section class="hero hero-compact mb-4" aria-labelledby="history-heading">
+	<span class="hero-bubble one" aria-hidden="true"></span>
+	<div class="position-relative">
+		<span class="eyebrow">My dining</span>
+		<h1 id="history-heading" class="mb-1">My history</h1>
+		<p class="lead mb-0">Your reservations, orders and payments in one place, newest first.</p>
+	</div>
+</section>
+
+<section class="tg-card h-auto mb-4" aria-labelledby="reservations-heading">
+	<h2 id="reservations-heading" class="h4 mb-3">My reservations</h2>
+
+	@if (Model.History.Reservations.Count == 0)
+	{
+		<p class="text-secondary mb-0" role="status">No reservations yet.</p>
+	}
+	else
+	{
+		<div class="table-responsive">
+			<table class="table align-middle mb-0">
+				<thead>
+					<tr>
+						<th scope="col">Date</th>
+						<th scope="col">Table</th>
+						<th scope="col" class="text-end">Guests</th>
+						<th scope="col">Status</th>
+						<th scope="col"><span class="visually-hidden">Details</span></th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (HistoryReservationRow row in Model.History.Reservations)
+					{
+						<tr>
+							<th scope="row">@IndexModel.FormatTime(row.StartUtc)</th>
+							<td>@row.TableLabel · @row.AreaName</td>
+							<td class="text-end">@row.PartySize</td>
+							<td><span class="badge @IndexModel.ReservationBadgeClass(row.Status)">@row.Status</span></td>
+							<td class="text-end"><a asp-page="/Reservations/Details" asp-route-id="@row.Id">View booking</a></td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+
+		@if (Model.History.Reservations.Count >= Model.RowLimit)
+		{
+			<p class="small text-secondary mt-2 mb-0">Showing your latest @Model.RowLimit reservations.</p>
+		}
+	}
+</section>
+
+<section class="tg-card h-auto mb-4" aria-labelledby="orders-heading">
+	<h2 id="orders-heading" class="h4 mb-3">My orders</h2>
+
+	@if (Model.History.Orders.Count == 0)
+	{
+		<p class="text-secondary mb-0" role="status">No orders yet.</p>
+	}
+	else
+	{
+		<div class="table-responsive">
+			<table class="table align-middle mb-0">
+				<thead>
+					<tr>
+						<th scope="col">Order</th>
+						<th scope="col">Placed</th>
+						<th scope="col" class="text-end">Total (RM)</th>
+						<th scope="col">Status</th>
+						<th scope="col"><span class="visually-hidden">Details</span></th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (HistoryOrderRow row in Model.History.Orders)
+					{
+						<tr>
+							<th scope="row">#@row.Id</th>
+							<td>@IndexModel.FormatTime(row.PlacedAtUtc)</td>
+							<td class="text-end">@row.TotalAmount.ToString("N2")</td>
+							<td><span class="badge @DetailsModel.StatusBadgeClass(row.Status)">@DetailsModel.StatusText(row.Status)</span></td>
+							<td class="text-end"><a asp-page="/Orders/Details" asp-route-id="@row.Id">View order</a></td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+
+		@if (Model.History.Orders.Count >= Model.RowLimit)
+		{
+			<p class="small text-secondary mt-2 mb-0">Showing your latest @Model.RowLimit orders.</p>
+		}
+	}
+</section>
+
+<section class="tg-card h-auto mb-4" aria-labelledby="payments-heading">
+	<h2 id="payments-heading" class="h4 mb-3">My payments</h2>
+
+	@if (Model.History.Payments.Count == 0)
+	{
+		<p class="text-secondary mb-0" role="status">No payments yet.</p>
+	}
+	else
+	{
+		<div class="table-responsive">
+			<table class="table align-middle mb-0">
+				<thead>
+					<tr>
+						<th scope="col">Receipt</th>
+						<th scope="col">Paid</th>
+						<th scope="col" class="text-end">Amount (RM)</th>
+						<th scope="col">Method</th>
+						<th scope="col">For</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (HistoryPaymentRow row in Model.History.Payments)
+					{
+						<tr>
+							<th scope="row">#@row.ReceiptNumber</th>
+							<td>@IndexModel.FormatTime(row.PaidAtUtc)</td>
+							<td class="text-end">@row.Amount.ToString("N2")</td>
+							<td>@IndexModel.MethodText(row.Method)</td>
+							<td><a asp-page="/Orders/Details" asp-route-id="@row.OrderId">Order #@row.OrderId</a></td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+
+		@if (Model.History.Payments.Count >= Model.RowLimit)
+		{
+			<p class="small text-secondary mt-2 mb-0">Showing your latest @Model.RowLimit payments.</p>
+		}
+	}
+</section>
