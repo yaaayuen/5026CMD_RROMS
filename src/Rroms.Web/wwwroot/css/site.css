@@ -625,3 +625,24 @@ input[type="password"]::-ms-clear {
         color: var(--tg-link-hover);
         border-color: var(--tg-link-hover);
     }
+
+    /* Pressed = dark mode is on: the button is filled so the state is visible, not only announced. */
+    .theme-toggle[aria-pressed="true"] {
+        background-color: var(--tg-link);
+        color: var(--tg-cream);
+    }
+
+        .theme-toggle[aria-pressed="true"]:hover {
+            background-color: var(--tg-link-hover);
+            border-color: var(--tg-link-hover);
+            color: var(--tg-cream);
+        }
+
+/* Bootstrap only lightens the mobile menu icon inside .navbar[data-bs-theme=dark], not under <html>, so do it here. */
+[data-bs-theme="dark"] .site-navbar .navbar-toggler {
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+[data-bs-theme="dark"] .site-navbar .navbar-toggler-icon {
+    filter: invert(1);
+}

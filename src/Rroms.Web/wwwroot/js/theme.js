@@ -38,19 +38,13 @@
         root.setAttribute('data-bs-theme', theme);
     }
 
-    // Show the state on every toggle button: text, pressed state, and the label a screen reader hears.
+    // The button's label never changes ("Dark mode"); aria-pressed tells screen readers whether it is on.
     function updateButtons() {
         var isDark = currentTheme() === 'dark';
         var buttons = document.querySelectorAll('[data-theme-toggle]');
 
         buttons.forEach(function (button) {
             button.setAttribute('aria-pressed', isDark ? 'true' : 'false');
-            button.setAttribute('aria-label', isDark ? 'Dark theme is on. Switch to light theme' : 'Light theme is on. Switch to dark theme');
-
-            var text = button.querySelector('[data-theme-toggle-text]');
-            if (text) {
-                text.textContent = isDark ? 'Dark' : 'Light';
-            }
         });
     }
 

@@ -60,7 +60,7 @@ public class ThemeLayoutTests : IClassFixture<TestWebApplicationFactory>
 
         Assert.Contains("data-theme-toggle", html);
         Assert.Contains("aria-pressed=\"false\"", html);
-        Assert.Contains("Switch to dark theme", html);
+        Assert.Contains(">Dark mode<", html);
     }
 
     /// <summary>The first thing a keyboard user can reach is a link that skips to the main content, and it has a target.</summary>
