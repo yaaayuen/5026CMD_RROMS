@@ -171,6 +171,9 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 // Recommendations: popular dishes, often ordered together, picks for a customer (YJ-4).
 builder.Services.AddScoped<IRecommendationService, RecommendationService>();
 
+// Customer history: my reservations, orders and payments (YJ-5).
+builder.Services.AddScoped<ICustomerHistoryService, CustomerHistoryService>();
+
 // Alex (Sprint 4)
 builder.Services.AddScoped<IOrderProcessingService, OrderProcessingService>();
 builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
