@@ -26,6 +26,13 @@
     --tg-blush: #ffe8ef; /* soft raspberry tint for panels */
     --tg-peach: #fff1e6; /* soft coral tint for panels */
     --tg-white: #ffffff;
+    /* YJ-6 theme tokens. Light values here; the dark values are in the [data-bs-theme="dark"] block below. */
+    --tg-surface: #ffffff; /* cards and the navbar */
+    --tg-on-brand: #ffffff; /* text on raspberry buttons and badges */
+    --tg-on-gold: #2b2d42; /* text on gold chips and buttons */
+    --tg-link: #d81159; /* links and brand-coloured text */
+    --tg-link-hover: #a50d44;
+    --tg-focus: #a50d44; /* keyboard focus outline (needs 3:1 against the page) */
     --tg-gradient: linear-gradient(135deg, var(--tg-raspberry) 0%, var(--tg-coral) 60%, var(--tg-gold) 100%);
     --tg-font-heading: "Fraunces", Georgia, "Times New Roman", serif;
     --tg-font-body: "Nunito", "Segoe UI", Roboto, Arial, sans-serif;
@@ -50,9 +57,9 @@
     --bs-body-color: var(--tg-ink);
     --bs-body-bg: var(--tg-cream);
     --bs-body-font-family: var(--tg-font-body);
-    --bs-link-color: var(--tg-raspberry);
+    --bs-link-color: var(--tg-link);
     --bs-link-color-rgb: 216, 17, 89;
-    --bs-link-hover-color: var(--tg-raspberry-dark);
+    --bs-link-hover-color: var(--tg-link-hover);
     --bs-link-hover-color-rgb: 165, 13, 68;
     --bs-border-radius: 0.75rem;
 }
@@ -91,7 +98,7 @@ h1, h2, h3, h4, .display-heading {
 }
 
 .btn-outline-primary {
-    --bs-btn-color: var(--tg-raspberry);
+    --bs-btn-color: var(--tg-link);
     --bs-btn-border-color: var(--tg-raspberry);
     --bs-btn-hover-bg: var(--tg-raspberry);
     --bs-btn-hover-border-color: var(--tg-raspberry);
@@ -101,10 +108,10 @@ h1, h2, h3, h4, .display-heading {
 
 /* Gold call-to-action button with dark text for contrast. */
 .btn-gold {
-    --bs-btn-color: var(--tg-ink);
+    --bs-btn-color: var(--tg-on-gold);
     --bs-btn-bg: var(--tg-gold);
     --bs-btn-border-color: var(--tg-gold);
-    --bs-btn-hover-color: var(--tg-ink);
+    --bs-btn-hover-color: var(--tg-on-gold);
     --bs-btn-hover-bg: #ffaa14;
     --bs-btn-hover-border-color: #ffaa14;
     --bs-btn-active-bg: #ffaa14;
@@ -122,7 +129,7 @@ h1, h2, h3, h4, .display-heading {
 
 /* Navbar: white bar with a gradient stripe underneath. */
 .site-navbar {
-    background-color: var(--tg-white);
+    background-color: var(--tg-surface);
     border-bottom: 4px solid transparent;
     border-image: var(--tg-gradient) 1;
     box-shadow: 0 2px 12px rgba(43, 45, 66, 0.06);
@@ -138,7 +145,7 @@ h1, h2, h3, h4, .display-heading {
         .site-navbar .nav-link:hover,
         .site-navbar .nav-link:focus-visible {
             background-color: var(--tg-blush);
-            color: var(--tg-raspberry-dark);
+            color: var(--tg-link-hover);
         }
 
         .site-navbar .nav-link.active {
@@ -176,7 +183,7 @@ h1, h2, h3, h4, .display-heading {
 }
 
     .brand-name span {
-        color: var(--tg-raspberry);
+        color: var(--tg-link);
     }
 
 .role-chip {
@@ -185,7 +192,7 @@ h1, h2, h3, h4, .display-heading {
     text-transform: uppercase;
     letter-spacing: 0.06em;
     background-color: var(--tg-gold);
-    color: var(--tg-ink);
+    color: var(--tg-on-gold);
     border-radius: var(--tg-radius-pill);
     padding: 0.25rem 0.7rem;
 }
@@ -288,7 +295,7 @@ h1, h2, h3, h4, .display-heading {
 
 /* Generic white card with a lift-on-hover effect. */
 .tg-card {
-    background-color: var(--tg-white);
+    background-color: var(--tg-surface);
     border: 0;
     border-radius: var(--tg-radius);
     box-shadow: var(--tg-shadow);
@@ -372,7 +379,7 @@ h1, h2, h3, h4, .display-heading {
 }
 
     .notification-bell:hover {
-        color: var(--tg-raspberry-dark);
+        color: var(--tg-link-hover);
     }
 
 .notification-badge {
@@ -387,7 +394,7 @@ h1, h2, h3, h4, .display-heading {
     font-size: 0.72rem;
     font-weight: 800;
     text-align: center;
-    border: 2px solid var(--tg-white);
+    border: 2px solid var(--tg-surface);
 }
 
 /* Inbox items: unread ones get a raspberry edge so they stand out. */
@@ -413,7 +420,7 @@ h1, h2, h3, h4, .display-heading {
     height: 2.4rem;
     border-radius: 50%;
     background-color: var(--tg-gold);
-    color: var(--tg-ink);
+    color: var(--tg-on-gold);
     font-weight: 800;
     margin-bottom: 0.8rem;
 }
@@ -448,8 +455,8 @@ h1, h2, h3, h4, .display-heading {
     left: 1rem;
     top: -3rem;
     z-index: 2000;
-    background-color: var(--tg-ink);
-    color: var(--tg-white);
+    background-color: var(--tg-raspberry-dark);
+    color: var(--tg-on-brand);
     padding: 0.5rem 1rem;
     border-radius: var(--tg-radius-pill);
 }
@@ -461,8 +468,12 @@ h1, h2, h3, h4, .display-heading {
 /* Clear focus outline for keyboard users on every interactive element. */
 a:focus-visible,
 button:focus-visible,
-.btn:focus-visible {
-    outline: 3px solid var(--tg-gold);
+.btn:focus-visible,
+.form-control:focus-visible,
+.form-select:focus-visible,
+.form-check-input:focus-visible,
+summary:focus-visible {
+    outline: 3px solid var(--tg-focus);
     outline-offset: 2px;
 }
 
@@ -518,7 +529,7 @@ button:focus-visible,
     }
 
     .password-toggle:focus-visible {
-        outline: 3px solid var(--tg-gold);
+        outline: 3px solid var(--tg-focus);
         outline-offset: 2px;
     }
 
@@ -527,3 +538,90 @@ input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear {
     display: none;
 }
+
+/* -----------------------------------------------------------------------------
+   6. THEME SWITCH (YJ-6)
+   The page's <html> element carries data-bs-theme="light" or "dark" (set by wwwroot/js/theme.js before the page
+   paints). Dark mode only changes the colour tokens, so no page has to be edited. Bootstrap 5.3 also reads this
+   attribute and darkens its own tables, forms and alerts.
+   The first block below holds ONLY token values (a test reads it to check contrast), the rules after it fix the
+   few places that use a hard-coded colour.
+   ----------------------------------------------------------------------------- */
+[data-bs-theme="dark"] {
+    color-scheme: dark;
+    --tg-cream: #14141f; /* page background */
+    --tg-surface: #1e1f2e; /* cards and navbar */
+    --tg-ink: #f1f1f6; /* main text */
+    --tg-muted: #b4b7cc; /* secondary text */
+    --tg-blush: #3a1a28;
+    --tg-peach: #3a2a1c;
+    --tg-link: #ff6b9d;
+    --tg-link-hover: #ff9ab9;
+    --tg-focus: #ffbc42;
+    --tg-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    --tg-shadow-hover: 0 16px 40px rgba(0, 0, 0, 0.60);
+    --bs-link-color-rgb: 255, 107, 157;
+    --bs-link-hover-color-rgb: 255, 154, 185;
+    --bs-body-color: var(--tg-ink);
+    --bs-body-bg: var(--tg-cream);
+    --bs-secondary-color: var(--tg-muted);
+    --bs-border-color: #3a3c52;
+}
+
+    [data-bs-theme="dark"] .site-navbar {
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+    }
+
+    [data-bs-theme="dark"] .tg-card .table {
+        --bs-table-bg: transparent;
+    }
+
+    [data-bs-theme="dark"] .tg-icon.coral {
+        background-color: var(--tg-peach);
+        color: #ff9d5c;
+    }
+
+    [data-bs-theme="dark"] .tg-icon.gold {
+        background-color: #3a3010;
+        color: #ffcf66;
+    }
+
+    [data-bs-theme="dark"] .tg-icon.teal {
+        background-color: #12332f;
+        color: #5fd3c4;
+    }
+
+    [data-bs-theme="dark"] .module-tile .sprint-badge {
+        background-color: var(--tg-peach);
+        color: #ffb27a;
+    }
+
+    [data-bs-theme="dark"] .module-tile.is-ready .sprint-badge {
+        background-color: #12332f;
+        color: #5fd3c4;
+    }
+
+    [data-bs-theme="dark"] .notification-bell {
+        color: var(--tg-ink);
+    }
+
+/* The Light / Dark button in the navbar. */
+.theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 2px solid var(--tg-link);
+    border-radius: var(--tg-radius-pill);
+    background: transparent;
+    color: var(--tg-link);
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: 0.3rem 0.85rem;
+    cursor: pointer;
+}
+
+    .theme-toggle:hover {
+        background-color: var(--tg-blush);
+        color: var(--tg-link-hover);
+        border-color: var(--tg-link-hover);
+    }
