@@ -62,7 +62,7 @@ public static class HistoryTestData
         return reservation;
     }
 
-    /// <summary>Saves an order (on its own new reservation) with a chosen time, status and total.</summary>
+    /// <summary>Saves an order (on its own new reservation, booked by a throw-away customer) with a chosen time, status and total.</summary>
     /// <param name="context">The test database.</param>
     /// <param name="customerId">The customer who ordered.</param>
     /// <param name="placedAtUtc">When the order was placed.</param>
@@ -75,7 +75,10 @@ public static class HistoryTestData
         OrderStatus status = OrderStatus.Placed,
         decimal total = 40.00m)
     {
-        Reservation reservation = await OrderTestData.AddReservationAsync(context, customerId);
+        // An order needs a reservation to hang on. It is booked under a throw-away customer, so these helper
+        // reservations never show up in the real customer's "My reservations" list.
+        ApplicationUser host = await OrderTestData.AddCustomerAsync(context);
+        Reservation reservation = await OrderTestData.AddReservationAsync(context, host.Id);
 
         var order = new Order
         {
