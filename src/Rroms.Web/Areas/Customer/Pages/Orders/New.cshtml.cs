@@ -22,18 +22,27 @@ namespace Rroms.Web.Areas.Customer.Pages.Orders;
 /// </remarks>
 public class NewModel : PageModel
 {
+    private const int RecommendedCount = 4;
+
     private readonly IOrderService _orderService;
     private readonly IMenuService _menuService;
+    private readonly IRecommendationService _recommendationService;
     private readonly OrderRulesOptions _rules;
 
     /// <summary>Receives the services from dependency injection.</summary>
     /// <param name="orderService">Places the order.</param>
     /// <param name="menuService">Lists the dishes with their current prices.</param>
+    /// <param name="recommendationService">Suggests dishes the customer may like (YJ-4).</param>
     /// <param name="options">The ordering limits, used to limit the quantity boxes.</param>
-    public NewModel(IOrderService orderService, IMenuService menuService, IOptions<OrderRulesOptions> options)
+    public NewModel(
+        IOrderService orderService,
+        IMenuService menuService,
+        IRecommendationService recommendationService,
+        IOptions<OrderRulesOptions> options)
     {
         _orderService = orderService;
         _menuService = menuService;
+        _recommendationService = recommendationService;
         _rules = options.Value;
     }
 
@@ -53,6 +62,9 @@ public class NewModel : PageModel
 
     /// <summary>The dishes on the menu, with their current prices.</summary>
     public IReadOnlyList<MenuItemCard> Dishes { get; private set; } = new List<MenuItemCard>();
+
+    /// <summary>The "Recommended for you" strip (YJ-4). Falls back to popular dishes when there is no history.</summary>
+    public DishSuggestionSection Recommended { get; private set; } = new DishSuggestionSection();
 
     /// <summary>The largest quantity of one dish that can be ordered.</summary>
     public int MaxQuantity
@@ -192,6 +204,13 @@ public class NewModel : PageModel
 
         Reservation = result.Value;
         Dishes = await _menuService.SearchMenuAsync(new MenuSearchCriteria());
+
+        Recommended = new DishSuggestionSection
+        {
+            Heading = "Recommended for you",
+            Key = "recommended",
+            Items = await _recommendationService.GetForCustomerAsync(User.GetUserId(), RecommendedCount)
+        };
 
         return null;
     }

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Rroms.Web.Common;
 using Rroms.Web.Models;
 using Rroms.Web.Models.ViewModels;
+using Rroms.Web.Security;
 using Rroms.Web.Services;
 
 namespace Rroms.Web.Pages.Menu;
@@ -18,24 +19,34 @@ namespace Rroms.Web.Pages.Menu;
 /// /Menu shows everything, /Menu?q=burger&amp;categoryId=2&amp;maxPrice=30 filters it. The filter form uses GET,
 /// so a filtered menu has its own address that can be bookmarked or shared. All pricing and availability
 /// decisions are made in <see cref="IMenuService"/>; this page only displays what the service returns.
+/// A "Popular this month" strip (YJ-4) appears above the full menu when no filter is in use; for a signed-in
+/// customer it leaves out dishes containing a tag they avoid.
 /// </remarks>
 public class IndexModel : PageModel
 {
     private const string OfferEndFormat = "d MMM yyyy, h:mm tt";
+    private const int PopularCount = 4;
 
     private readonly IMenuService _menuService;
     private readonly IRestaurantService _restaurantService;
     private readonly IProfileService _profileService;
+    private readonly IRecommendationService _recommendationService;
 
     /// <summary>Receives the services from dependency injection.</summary>
     /// <param name="menuService">Searches the menu.</param>
     /// <param name="restaurantService">Gives the active categories for the filter drop-down.</param>
     /// <param name="profileService">Gives the shared dietary tags (YY's table) for the "hide dishes that contain" boxes.</param>
-    public IndexModel(IMenuService menuService, IRestaurantService restaurantService, IProfileService profileService)
+    /// <param name="recommendationService">Gives the popular dishes strip.</param>
+    public IndexModel(
+        IMenuService menuService,
+        IRestaurantService restaurantService,
+        IProfileService profileService,
+        IRecommendationService recommendationService)
     {
         _menuService = menuService;
         _restaurantService = restaurantService;
         _profileService = profileService;
+        _recommendationService = recommendationService;
     }
 
     /// <summary>Words to look for in dish names and descriptions (address part ?q=).</summary>
@@ -67,6 +78,9 @@ public class IndexModel : PageModel
     /// <summary>Every dietary tag, in display order, for the "hide dishes that contain" boxes.</summary>
     public IReadOnlyList<DietaryTag> TagChoices { get; private set; } = new List<DietaryTag>();
 
+    /// <summary>The "Popular this month" strip. Empty when a filter is in use or nothing was ordered lately.</summary>
+    public DishSuggestionSection Popular { get; private set; } = new DishSuggestionSection();
+
     /// <summary>True when any filter is in use, so the page can offer a "show everything" link.</summary>
     public bool HasFilters
     {
@@ -94,6 +108,24 @@ public class IndexModel : PageModel
         };
 
         Dishes = await _menuService.SearchMenuAsync(criteria);
+
+        // The strip is for browsing the whole menu; with a filter on, it would only get in the way.
+        if (!HasFilters)
+        {
+            string? customerId = null;
+
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                customerId = User.GetUserId();
+            }
+
+            Popular = new DishSuggestionSection
+            {
+                Heading = "Popular this month",
+                Key = "popular",
+                Items = await _recommendationService.GetPopularAsync(PopularCount, customerId)
+            };
+        }
     }
 
     /// <summary>Shows when an offer ends, in Malaysia time (the database keeps UTC).</summary>
