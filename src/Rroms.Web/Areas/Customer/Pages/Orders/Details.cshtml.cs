@@ -18,17 +18,25 @@ namespace Rroms.Web.Areas.Customer.Pages.Orders;
 /// </remarks>
 public class DetailsModel : PageModel
 {
-    private readonly IOrderService _orderService;
+    private const int TogetherCount = 3;
 
-    /// <summary>Receives the order service from dependency injection.</summary>
+    private readonly IOrderService _orderService;
+    private readonly IRecommendationService _recommendationService;
+
+    /// <summary>Receives the services from dependency injection.</summary>
     /// <param name="orderService">Reads the customer's orders.</param>
-    public DetailsModel(IOrderService orderService)
+    /// <param name="recommendationService">Suggests dishes often ordered with these ones (YJ-4).</param>
+    public DetailsModel(IOrderService orderService, IRecommendationService recommendationService)
     {
         _orderService = orderService;
+        _recommendationService = recommendationService;
     }
 
     /// <summary>The order being shown.</summary>
     public OrderSummary Summary { get; private set; } = new OrderSummary();
+
+    /// <summary>"People who ordered these also ordered..." (YJ-4).</summary>
+    public DishSuggestionSection Together { get; private set; } = new DishSuggestionSection();
 
     /// <summary>Handles GET /Customer/Orders/Details/{id}.</summary>
     /// <param name="id">The order to show.</param>
@@ -42,6 +50,16 @@ public class DetailsModel : PageModel
         }
 
         Summary = summary;
+
+        List<int> dishIds = summary.Lines.Select(line => line.MenuItemId).ToList();
+
+        Together = new DishSuggestionSection
+        {
+            Heading = "People who ordered these also ordered",
+            Key = "together",
+            Items = await _recommendationService.GetOftenOrderedTogetherAsync(dishIds, TogetherCount, User.GetUserId())
+        };
+
         return Page();
     }
 

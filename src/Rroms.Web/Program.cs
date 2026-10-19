@@ -107,6 +107,8 @@ builder.Services.Configure<MenuImageOptions>(
     builder.Configuration.GetSection(MenuImageOptions.SectionName));
 builder.Services.Configure<OrderRulesOptions>(
     builder.Configuration.GetSection(OrderRulesOptions.SectionName));
+builder.Services.Configure<RecommendationOptions>(
+    builder.Configuration.GetSection(RecommendationOptions.SectionName));
 builder.Services.Configure<SmtpOptions>(
     builder.Configuration.GetSection(SmtpOptions.SectionName));
 
@@ -165,6 +167,12 @@ builder.Services.AddRateLimiter(options => options.AddPolicy("AlexChat", context
 
 // Orders: placing an order for a reservation (YJ-3).
 builder.Services.AddScoped<IOrderService, OrderService>();
+
+// Recommendations: popular dishes, often ordered together, picks for a customer (YJ-4).
+builder.Services.AddScoped<IRecommendationService, RecommendationService>();
+
+// Customer history: my reservations, orders and payments (YJ-5).
+builder.Services.AddScoped<ICustomerHistoryService, CustomerHistoryService>();
 
 // Alex (Sprint 4)
 builder.Services.AddScoped<IOrderProcessingService, OrderProcessingService>();
