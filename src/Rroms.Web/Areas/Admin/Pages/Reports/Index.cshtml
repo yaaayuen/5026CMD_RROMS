@@ -20,6 +20,20 @@
 {
     var r = Model.Results;
     <h2>@r.Range.From.ToString("dd MMM yyyy") – @r.Range.To.ToString("dd MMM yyyy")</h2>
+    <form method="get" class="tg-card card card-body my-3">
+        <input type="hidden" name="handler" value="Export" />
+        <input type="hidden" name="Filter.Period" value="Custom" />
+        <input type="hidden" name="Filter.From" value="@r.Range.From.ToString("yyyy-MM-dd")" />
+        <input type="hidden" name="Filter.To" value="@r.Range.To.ToString("yyyy-MM-dd")" />
+        <label for="export-kind" class="form-label">Report to download</label>
+        <select id="export-kind" name="kind" asp-items="Html.GetEnumSelectList<ReportExportKind>()" class="form-select mb-2"></select>
+        <div>
+            <button name="format" value="Csv" class="btn btn-outline-primary">Download CSV</button>
+            <button name="format" value="Excel" class="btn btn-outline-primary">Download Excel</button>
+            <button name="format" value="Pdf" class="btn btn-outline-primary">Download PDF</button>
+        </div>
+        <small class="text-muted mt-2">Downloads use the displayed date range and current data. Apply changed filters with View report first.</small>
+    </form>
     <nav class="my-3" aria-label="Report sections"><a href="#reservations">Reservations</a> · <a href="#sales">Sales</a> · <a href="#items">Popular items</a> · <a href="#customers">Customer activity</a></nav>
     <section id="reservations" class="mb-4">
         <h2>Reservations</h2><p>Based on reservation start date. All statuses are included; guest totals are booked guests, not attendance or occupancy.</p>

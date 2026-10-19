@@ -19,7 +19,8 @@ public class ReportServiceTests
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var dish = await OrderTestData.AddDishAsync(db, "<script>dish</script>", 999m);
-        var secondDish = await OrderTestData.AddDishAsync(db, "<script>dish</script>", 999m);
+        // DA-4 integration: retain the quantity tie while respecting YJ's unique-name constraint.
+        var secondDish = await OrderTestData.AddDishAsync(db, "<script>second dish</script>", 999m);
         DateTime start = MalaysiaTime.ToUtc(new DateTime(2026, 10, 20));
         var orders = new List<Order>();
         for (int i = 0; i < 6; i++)
