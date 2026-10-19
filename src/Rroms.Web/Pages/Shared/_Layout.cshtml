@@ -44,7 +44,8 @@
 
 	<link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    @await RenderSectionAsync("Styles", required: false)
+	<script src="~/js/theme.js" asp-append-version="true"></script>
+	@await RenderSectionAsync("Styles", required: false)
 </head>
 
 <body>
@@ -105,6 +106,12 @@
 							}
 					</ul>
 					<div class="d-flex flex-column flex-lg-row align-items-lg-center gap-2">
+						<button type="button" class="theme-toggle align-self-start align-self-lg-center" data-theme-toggle aria-pressed="false">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+								<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+							</svg>
+							<span>Dark mode</span>
+						</button>
                         @if (isSignedIn)
                         {
 							@* Bell with unread badge (YY-6), rendered by a view component. *@
