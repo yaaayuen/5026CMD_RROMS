@@ -36,8 +36,46 @@ public class DashboardChartData
     /// <summary>Occupied table-hours in each hour, all weekdays added together (the heatmap's column totals).</summary>
     public IReadOnlyList<double> TableHoursByHour { get; set; } = new List<double>();
 
-    /// <summary>False until DA-3 provides sales and popular items; the dashboard then shows a note instead of those charts.</summary>
+    /// <summary>True once Darren's DA-3 report has been added with <see cref="AddSales"/>; otherwise the sales charts show a note.</summary>
     public bool SalesAvailable { get; set; }
+
+    /// <summary>Paid sales in RM, one number per day in <see cref="DayLabels"/> (DA-3 daily sales).</summary>
+    public IReadOnlyList<decimal> DailySales { get; set; } = new List<decimal>();
+
+    /// <summary>All Paid sales in the range. Equals DA-3's PaidTotal, which is what the reconciliation test checks.</summary>
+    public decimal SalesTotal { get; set; }
+
+    /// <summary>Names of the best-selling dishes, most units first.</summary>
+    public IReadOnlyList<string> PopularDishNames { get; set; } = new List<string>();
+
+    /// <summary>Units sold of each dish in <see cref="PopularDishNames"/>.</summary>
+    public IReadOnlyList<int> PopularDishQuantities { get; set; } = new List<int>();
+
+    /// <summary>How many dishes the popular-dishes chart shows.</summary>
+    public const int TopDishCount = 5;
+
+    /// <summary>
+    /// Adds Darren's DA-3 sales report for the same range. Nothing is recalculated here: the numbers are copied,
+    /// so the dashboard can never disagree with the Reports page.
+    /// </summary>
+    /// <param name="sales">The DA-3 report for the same From and To.</param>
+    public void AddSales(ReportDashboard sales)
+    {
+        Dictionary<DateOnly, decimal> byDay = sales.DailySales.ToDictionary(d => d.Date, d => d.PaidAmount);
+        List<DateOnly> days = new List<DateOnly>();
+        for (DateOnly day = From; day <= To; day = day.AddDays(1))
+        {
+            days.Add(day);
+        }
+
+        DailySales = days.Select(day => byDay.TryGetValue(day, out decimal amount) ? amount : 0m).ToList();
+        SalesTotal = sales.PaidTotal;
+
+        List<PopularItemReportRow> top = sales.PopularItems.OrderBy(i => i.Rank).Take(TopDishCount).ToList();
+        PopularDishNames = top.Select(i => i.Name).ToList();
+        PopularDishQuantities = top.Select(i => i.Quantity).ToList();
+        SalesAvailable = true;
+    }
 
     /// <summary>
     /// Turns an occupancy report into chart data. Pure and static, so tests can check it without a database.

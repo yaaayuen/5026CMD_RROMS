@@ -112,7 +112,7 @@ public class AnalyticsPagesTests : IClassFixture<TestWebApplicationFactory>
         Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
         Assert.Contains("\"dayLabels\":[\"Mon 5 Oct\"", json);
         Assert.Contains("\"Sun 11 Oct\"]", json);
-        Assert.Contains("\"salesAvailable\":false", json);
+        Assert.Contains("\"salesAvailable\":true", json);
     }
 
     /// <summary>A refused range gives 400 with the message, so the charts can show an error instead of wrong numbers.</summary>
