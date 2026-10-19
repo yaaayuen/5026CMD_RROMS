@@ -83,68 +83,6 @@
         });
     }
 
-    // Paid sales per day from Darren's DA-3 report, on the same day labels as the bookings chart.
-    function drawSales(data) {
-        const canvas = document.getElementById("sales-chart");
-        if (!canvas) {
-            return;
-        }
-
-        new Chart(canvas, {
-            type: "line",
-            data: {
-                labels: data.dayLabels,
-                datasets: [{
-                    label: "Paid sales (RM)",
-                    data: data.dailySales,
-                    borderColor: "#12867a",
-                    backgroundColor: "rgba(18, 134, 122, 0.15)",
-                    fill: true,
-                    tension: 0.25,
-                    pointRadius: 2
-                }]
-            },
-            options: {
-                maintainAspectRatio: false,
-                interaction: { mode: "index", intersect: false },
-                scales: {
-                    x: { ticks: { autoSkip: true, maxRotation: 0 } },
-                    y: { beginAtZero: true, title: { display: true, text: "RM" } }
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { callbacks: { label: function (item) { return "RM " + Number(item.raw).toFixed(2); } } }
-                }
-            }
-        });
-    }
-
-    // Best-selling dishes as horizontal bars, most units at the top.
-    function drawDishes(data) {
-        const canvas = document.getElementById("dishes-chart");
-        if (!canvas || data.popularDishNames.length === 0) {
-            return;
-        }
-
-        new Chart(canvas, {
-            type: "bar",
-            data: {
-                labels: data.popularDishNames,
-                datasets: [{
-                    label: "Units sold",
-                    data: data.popularDishQuantities,
-                    backgroundColor: "#ff8c42"
-                }]
-            },
-            options: {
-                indexAxis: "y",
-                maintainAspectRatio: false,
-                scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
-                plugins: { legend: { display: false } }
-            }
-        });
-    }
-
     fetch(container.dataset.url, { headers: { "Accept": "application/json" } })
         .then(function (response) {
             if (!response.ok) {
@@ -155,10 +93,6 @@
         .then(function (data) {
             drawBookings(data);
             drawHours(data);
-            if (data.salesAvailable) {
-                drawSales(data);
-                drawDishes(data);
-            }
         })
         .catch(showError);
 })();

@@ -21,15 +21,12 @@ public class IndexModel : PageModel
     public const int DefaultRangeDays = 28;
 
     private readonly IAnalyticsService _analyticsService;
-    private readonly IReportService _reportService;
 
-    /// <summary>Receives the services from dependency injection.</summary>
-    /// <param name="analyticsService">Calculates the occupancy report (WL-4).</param>
-    /// <param name="reportService">Darren's sales and popular-items report (DA-3), so sales figures match his Reports page.</param>
-    public IndexModel(IAnalyticsService analyticsService, IReportService reportService)
+    /// <summary>Receives the analytics service from dependency injection.</summary>
+    /// <param name="analyticsService">Calculates the occupancy report.</param>
+    public IndexModel(IAnalyticsService analyticsService)
     {
         _analyticsService = analyticsService;
-        _reportService = reportService;
     }
 
     /// <summary>First day of the range (Malaysia date). Empty means four weeks before <see cref="To"/>.</summary>
@@ -42,9 +39,6 @@ public class IndexModel : PageModel
 
     /// <summary>The report, or null when the range was refused (the error is in ModelState).</summary>
     public OccupancyReport? Report { get; private set; }
-
-    /// <summary>DA-3 sales for the same range, or null if the sales report could not be built.</summary>
-    public ReportDashboard? Sales { get; private set; }
 
     /// <summary>Handles GET /Admin/Analytics, with or without a date range.</summary>
     public async Task OnGetAsync()
@@ -63,7 +57,6 @@ public class IndexModel : PageModel
         }
 
         Report = result.Value;
-        Sales = await GetSalesAsync();
     }
 
     /// <summary>
@@ -80,30 +73,7 @@ public class IndexModel : PageModel
             return BadRequest(new { errors = result.Errors });
         }
 
-        DashboardChartData data = DashboardChartData.FromReport(result.Value!);
-        ReportDashboard? sales = await GetSalesAsync();
-        if (sales != null)
-        {
-            data.AddSales(sales);
-        }
-
-        return new JsonResult(data);
-    }
-
-    /// <summary>
-    /// Asks Darren's report service for the same From–To range. Sales are never calculated here,
-    /// so the dashboard and the Reports page always show the same totals.
-    /// </summary>
-    private async Task<ReportDashboard?> GetSalesAsync()
-    {
-        ServiceResult<ReportDashboard> sales = await _reportService.GetReportAsync(new ReportFilter
-        {
-            Period = ReportPeriod.Custom,
-            From = From!.Value,
-            To = To!.Value
-        });
-
-        return sales.Succeeded ? sales.Value : null;
+        return new JsonResult(DashboardChartData.FromReport(result.Value!));
     }
 
     /// <summary>Fills in an empty range: To defaults to today and From to four weeks before it (Malaysia dates).</summary>

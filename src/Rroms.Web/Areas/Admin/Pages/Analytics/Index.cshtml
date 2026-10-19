@@ -108,57 +108,12 @@
 			</div>
 		</div>
 
-		@if (Model.Sales == null)
-		{
-			<section class="tg-card h-auto mb-4" aria-labelledby="sales-heading">
-				<h2 id="sales-heading" class="h5 mb-1">Sales and popular dishes</h2>
-				<p class="text-secondary small mb-0">The sales report could not be built for this range.</p>
-			</section>
-		}
-		else
-		{
-			ReportDashboard sales = Model.Sales;
-			<div class="row g-4 mb-4">
-				<div class="col-lg-8">
-					<section class="tg-card h-100" aria-labelledby="sales-heading">
-						<h2 id="sales-heading" class="h5 mb-1">Sales per day</h2>
-						<p class="text-secondary small mb-2">
-							<strong>RM @sales.PaidTotal.ToString("N2", CultureInfo.InvariantCulture)</strong> from @sales.PaidCount paid order(s)
-							@if (sales.DemoPaidTotal > 0)
-							{
-								<span>(including RM @sales.DemoPaidTotal.ToString("N2", CultureInfo.InvariantCulture) simulated online, demo only)</span>
-							}
-							· same figures as <a href="/Admin/Reports?Filter.Period=Custom&Filter.From=@Iso(report.From)&Filter.To=@Iso(report.To)">Reports</a>.
-						</p>
-						<div style="position: relative; height: 280px;">
-							<canvas id="sales-chart" role="img" aria-label="Paid sales per day in RM"></canvas>
-						</div>
-					</section>
-				</div>
-				<div class="col-lg-4">
-					<section class="tg-card h-100" aria-labelledby="dishes-heading">
-						<h2 id="dishes-heading" class="h5 mb-1">Popular dishes</h2>
-						<p class="text-secondary small mb-2">Units in paid orders, top @DashboardChartData.TopDishCount.</p>
-						@if (sales.PopularItems.Count == 0)
-						{
-							<p class="mb-0">No paid orders in this range.</p>
-						}
-						else
-						{
-							<div style="position: relative; height: 200px;">
-								<canvas id="dishes-chart" role="img" aria-label="Best-selling dishes by units"></canvas>
-							</div>
-							<ol class="small mt-3 mb-0">
-								@foreach (PopularItemReportRow dish in sales.PopularItems.OrderBy(i => i.Rank).Take(DashboardChartData.TopDishCount))
-								{
-									<li>@dish.Name – @dish.Quantity sold</li>
-								}
-							</ol>
-						}
-					</section>
-				</div>
-			</div>
-		}
+		<section class="tg-card h-auto mb-4" aria-labelledby="sales-heading">
+			<h2 id="sales-heading" class="h5 mb-1">Sales and popular dishes</h2>
+			<p id="sales-note" class="text-secondary small mb-0">
+				These charts use Darren's sales report (DA-3) so the totals match it exactly. They appear here once DA-3 is merged.
+			</p>
+		</section>
 		<p id="charts-error" class="text-danger small d-none" role="alert">The charts could not be loaded. The tables below still show every number.</p>
 	</div>
 
