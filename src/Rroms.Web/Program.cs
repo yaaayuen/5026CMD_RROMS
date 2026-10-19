@@ -187,6 +187,9 @@ builder.Services.AddScoped<IMonitoringService, MonitoringService>();
 
 // ----- Sprint 5 (Darren): administrator reports (DA-3) -----
 builder.Services.AddScoped<IReportService, ReportService>();
+// DA-4 (Darren): export formatting; Community license for this student project.
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+builder.Services.AddScoped<IReportExportService, ReportExportService>();
 
 // ----- Notifications (YY-6) -----
 // One class serves both interfaces: modules publish through INotificationService,
