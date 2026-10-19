@@ -50,6 +50,46 @@ public class DashboardChartDataTests
         Assert.False(data.SalesAvailable);
     }
 
+    /// <summary>
+    /// DA-3 sales are copied, not recalculated: daily amounts line up with the day labels (missing days become 0),
+    /// the total is DA-3's PaidTotal, and only the top dishes are kept in rank order.
+    /// </summary>
+    [Fact]
+    public void AddSales_CopiesDa3FiguresOntoTheSameDays()
+    {
+        DashboardChartData data = new DashboardChartData
+        {
+            From = new DateOnly(2026, 10, 5),
+            To = new DateOnly(2026, 10, 7)
+        };
+        ReportDashboard sales = new ReportDashboard
+        {
+            DailySales = new List<DailySalesReportRow>
+            {
+                new DailySalesReportRow { Date = new DateOnly(2026, 10, 5), Count = 2, PaidAmount = 40m },
+                new DailySalesReportRow { Date = new DateOnly(2026, 10, 7), Count = 1, PaidAmount = 25.50m }
+            },
+            SalesMethods = new List<SalesMethodReportRow>
+            {
+                new SalesMethodReportRow { Count = 3, Amount = 65.50m }
+            },
+            PopularItems = Enumerable.Range(1, 7)
+                .Select(rank => new PopularItemReportRow { Rank = rank, Name = $"Dish {rank}", Quantity = 10 - rank })
+                .Reverse()
+                .ToList()
+        };
+
+        data.AddSales(sales);
+
+        Assert.True(data.SalesAvailable);
+        Assert.Equal(new[] { 40m, 0m, 25.50m }, data.DailySales);
+        Assert.Equal(65.50m, data.SalesTotal);
+        Assert.Equal(sales.PaidTotal, data.SalesTotal);
+        Assert.Equal(DashboardChartData.TopDishCount, data.PopularDishNames.Count);
+        Assert.Equal("Dish 1", data.PopularDishNames[0]);
+        Assert.Equal(9, data.PopularDishQuantities[0]);
+    }
+
     /// <summary>The values of one status series by name.</summary>
     private static IReadOnlyList<int> Series(DashboardChartData data, string name)
     {
