@@ -2,7 +2,7 @@
 @model ModuleTileViewModel
 
 @{
-	// Visual state: a finished module links somewhere; a planned one shows its sprint.
+	// Visual state: a finished module links somewhere; a planned one is shown without a link.
 	string stateClass = Model.IsReady ? "is-ready" : "is-planned";
 }
 
@@ -11,7 +11,6 @@
 		<span class="tg-icon raspberry">
 			<partial name="_Icon" model="Model.IconName" />
 		</span>
-		<span class="sprint-badge">@Model.SprintLabel</span>
 	</div>
 
 	<h3 class="h5">

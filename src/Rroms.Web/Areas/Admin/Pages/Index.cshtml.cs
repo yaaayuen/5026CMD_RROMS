@@ -47,6 +47,12 @@ public class IndexModel : PageModel
                 "Sprint 4 · Alex",
                 "/Admin/Announcements"),
             new ModuleTileViewModel(
+                "Kitchen orders",
+                "Move orders from Preparing to Ready to Serve to Served.",
+                "flame",
+                "Sprint 4 · Alex",
+                "/Staff/Orders"),
+            new ModuleTileViewModel(
                 "Analytics dashboard",
                 "Sales, reservations, table occupancy and popular dishes.",
                 "chart",
