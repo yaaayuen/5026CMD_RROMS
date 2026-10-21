@@ -75,6 +75,11 @@
                             <a class="nav-link @(homeActive ? "active" : "")" aria-current="@(homeActive ? "page" : null)"
                                asp-area="" asp-page="/Index">Home</a>
                         </li>
+                        <li class="nav-item">
+                            @{ bool newsActive = currentArea == string.Empty && currentPage == "/Announcements/Index"; }
+                            <a class="nav-link @(newsActive ? "active" : "")" aria-current="@(newsActive ? "page" : null)"
+                               asp-area="" asp-page="/Announcements/Index">News and offers</a>
+                        </li>
 						
 						@* Each role only sees the link it is allowed to use.
 						The server still checks permissions on every page Hiding links is for convenience, not security*@
@@ -142,7 +147,6 @@
 	<main id="main-content" class="site-main" tabindex="-1">
         <div class="container">
             <partial name="_StatusMessages" />
-            <partial name="_DiningLinks" />
             @RenderBody()
         </div>
     </main>

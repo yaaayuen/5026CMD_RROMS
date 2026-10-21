@@ -41,6 +41,12 @@ public class IndexModel : PageModel
                 "Sprint 4 · Alex",
                 "/Customer/Tracking"),
             new ModuleTileViewModel(
+                "Leave feedback",
+                "Rate a completed visit and tell us how it went.",
+                "star",
+                "Sprint 4 · Alex",
+                "/Customer/Feedback"),
+            new ModuleTileViewModel(
                 "My history",
                 "Past reservations, orders and payment receipts.",
                 "receipt",

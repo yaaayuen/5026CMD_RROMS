@@ -36,7 +36,7 @@ public class IndexModel : PageModel
                 "Sprint 5 · Darren",
                 "/Staff/Reservations/History"),
             new ModuleTileViewModel(
-                "Order queue",
+                "Kitchen orders",
                 "Move orders from Preparing to Ready to Serve to Served.",
                 "flame",
                 "Sprint 4 · Alex",
