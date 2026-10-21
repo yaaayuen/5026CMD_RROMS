@@ -12,7 +12,7 @@ namespace Rroms.Web.Pages.Account;
 /// <summary>
 ///  Lets any signed-in user turn email two-step sign-in on or off. Owner: YY (YY-7).
 /// Protected by AuthorizePage("/Account/TwoStep") in Program.cs
-/// Optional for everyone in YY-7. Making it compulsory for staff and administrators is YY-8.
+/// Optional for customers. Compulsory for staff and administrators since YY-9: they cannot turn it off.
 /// The user ID always comes from the cookie, never from the form.
 /// Each button posts to its own handler (OnPostSendCode, OnPostEnable, OnPostDisable),
 /// so each handler only checks the field it needs.
@@ -47,10 +47,14 @@ public class TwoStepModel : PageModel
     //True straight after a setup code was emailed, to show the code box
     public bool CodeSent { get; private set; }
 
+    //True for staff and administrators: two-step sign-in cannot be turned off (YY-9)
+    public bool IsRequired { get; private set; }
+
     //Shows the current status
     public async Task OnGetAsync()
     {
         IsEnabled = await _accountSecurity.IsTwoStepEnabledAsync(User.GetUserId());
+        IsRequired = await _accountSecurity.IsTwoStepRequiredAsync(User.GetUserId());
         CodeSent = TempData[CodeSentKey] is true;
     }
 
@@ -114,6 +118,7 @@ public class TwoStepModel : PageModel
     private async Task<IActionResult> RedisplayAsync(bool codeSent)
     {
         IsEnabled = await _accountSecurity.IsTwoStepEnabledAsync(User.GetUserId());
+        IsRequired = await _accountSecurity.IsTwoStepRequiredAsync(User.GetUserId());
         CodeSent = codeSent;
         return Page();
     }

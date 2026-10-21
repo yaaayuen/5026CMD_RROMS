@@ -105,6 +105,18 @@ public class AccountService : IAccountService
     {
         string cleanEmail = email.Trim();
 
+        // YY-9: staff and administrators must use two-step sign-in. If the account does not have it yet
+        // (new staff, or a customer just promoted), turn it on once the password is proved correct, so the
+        // normal two-step flow below emails the code. CheckPasswordAsync does not count failures, so a
+        // wrong password is still counted only once, by PasswordSignInAsync below.
+        ApplicationUser? existing = await _userManager.FindByEmailAsync(cleanEmail);
+        if (existing != null && existing.IsActive && !existing.TwoFactorEnabled
+            && await _accountSecurity.IsTwoStepRequiredAsync(existing.Id)
+            && await _userManager.CheckPasswordAsync(existing, password))
+        {
+            await _accountSecurity.TurnOnRequiredTwoStepAsync(existing);
+        }
+
         // lockoutOnFailure: true counts this attempt towards the lockout limit set in Program.cs.
         SignInResult result = await _signInManager.PasswordSignInAsync(
             cleanEmail, password, rememberMe, lockoutOnFailure: true);
