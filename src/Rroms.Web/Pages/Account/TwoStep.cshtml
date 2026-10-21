@@ -52,6 +52,13 @@
                     <button type="submit" class="btn btn-link p-0">Send a new code</button>
                 </form>
             }
+			else if (Model.IsRequired)
+			{
+				@* YY-9: compulsory for staff and administrators, so there is no "turn off" form. *@
+				<p class="text-secondary mb-0">
+					This is a staff or administrator account, so two-step sign-in is always on.
+				</p>
+			}
             else
             {
                 @* Turning it off weakens the account, so the current password is required. *@

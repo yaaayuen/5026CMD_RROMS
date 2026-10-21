@@ -103,6 +103,8 @@ builder.Services.Configure<ReservationRulesOptions>(
     builder.Configuration.GetSection(ReservationRulesOptions.SectionName));
 builder.Services.Configure<AuthRateLimitOptions>(
     builder.Configuration.GetSection(AuthRateLimitOptions.SectionName));
+builder.Services.Configure<TwoStepOptions>(
+    builder.Configuration.GetSection(TwoStepOptions.SectionName)); 
 builder.Services.Configure<MenuImageOptions>(
     builder.Configuration.GetSection(MenuImageOptions.SectionName));
 builder.Services.Configure<OrderRulesOptions>(

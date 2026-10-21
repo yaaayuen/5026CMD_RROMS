@@ -64,7 +64,10 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             {
                 ["BootstrapAdmin:Email"] = AdminEmail,
                 ["BootstrapAdmin:Password"] = AdminPassword,
-                ["RateLimiting:PermitLimit"] = "1000"
+                ["RateLimiting:PermitLimit"] = "1000",
+                // YY-9: off for the shared tests so every module can still sign in with a password only.
+                // RequiredTwoStepTests switches it back on to test the rule itself.
+                ["TwoStep:RequiredForStaff"] = "false"
             });
         });
 

@@ -1,9 +1,11 @@
 ﻿using System.Net;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 using Rroms.Web.Common;
 using Rroms.Web.Constants;
 using Rroms.Web.Contracts;
 using Rroms.Web.Models;
+using Rroms.Web.Options;
 using Rroms.Web.Services.Email;
 
 namespace Rroms.Web.Services;
@@ -20,6 +22,9 @@ public class AccountSecurityService : IAccountSecurityService
     //Shown for any wrong, expired or already-used code, and for unknown accounts
     public const string InvalidCodeMessage = "That code is invalid or has expired. Request a new code and try again.";
 
+    //Shown when staff or an administrator tries to turn two-step sign-in off (YY-9)
+    public const string TwoStepRequiredMessage = "Two-step sign-in is required for staff and administrator accounts, so it cannot be turned off.";
+
     //Purpose for password codes. Purposes keep codes for different actions separate
     private const string SetPasswordPurpose = "SetPassword";
 
@@ -30,6 +35,8 @@ public class AccountSecurityService : IAccountSecurityService
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly IEmailQueue _emailQueue;
     private readonly INotificationService _notificationService;
+
+    private readonly TwoStepOptions _twoStepOptions;
     private readonly ILogger<AccountSecurityService> _logger;
 
     //All dependencies are supplied by dependency injection.
@@ -38,12 +45,14 @@ public class AccountSecurityService : IAccountSecurityService
         SignInManager<ApplicationUser> signInManager,
         IEmailQueue emailQueue,
         INotificationService notificationService,
+        IOptions<TwoStepOptions> twoStepOptions,
         ILogger<AccountSecurityService> logger)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _emailQueue = emailQueue;
         _notificationService = notificationService;
+        _twoStepOptions = twoStepOptions.Value;
         _logger = logger;
     }
 
@@ -171,6 +180,12 @@ public class AccountSecurityService : IAccountSecurityService
             return ServiceResult.Failure("Your account could not be found. Please sign in again.");
         }
 
+        // YY-9: staff and administrators cannot remove the second step from their accounts.
+        if (await IsRequiredForAsync(user))
+        {
+            return ServiceResult.Failure(TwoStepRequiredMessage);
+        }
+
         // Asking for the password stops someone at an unlocked computer from weakening the account.
         bool passwordIsCorrect = await _userManager.CheckPasswordAsync(user, currentPassword);
         if (!passwordIsCorrect)
@@ -189,6 +204,34 @@ public class AccountSecurityService : IAccountSecurityService
 
         _logger.LogInformation("User {UserId} turned off two-step sign-in.", user.Id);
         return ServiceResult.Success();
+    }
+
+    public async Task<bool> IsTwoStepRequiredAsync(string userId)
+    {
+        ApplicationUser? user = await _userManager.FindByIdAsync(userId);
+        return user != null && await IsRequiredForAsync(user);
+    }
+
+    public async Task TurnOnRequiredTwoStepAsync(ApplicationUser user)
+    {
+        // Identity only emails sign-in codes to confirmed addresses. The user cannot finish signing in
+        // without the code sent to this address, so the address is proved before they get in.
+        user.EmailConfirmed = true;
+        await _userManager.UpdateAsync(user);
+        await _userManager.SetTwoFactorEnabledAsync(user, true);
+        _logger.LogInformation("Two-step sign-in turned on for staff/administrator {UserId}.", user.Id);
+    }
+
+    //Staff and administrators must use two-step sign-in, unless the setting is off (tests only)
+    private async Task<bool> IsRequiredForAsync(ApplicationUser user)
+    {
+        if (!_twoStepOptions.RequiredForStaff)
+        {
+            return false;
+        }
+
+        return await _userManager.IsInRoleAsync(user, RoleNames.Administrator)
+            || await _userManager.IsInRoleAsync(user, RoleNames.Staff);
     }
 
     //Checks a code and counts wrong guesses towards the account lockout

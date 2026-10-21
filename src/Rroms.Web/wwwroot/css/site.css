@@ -281,6 +281,23 @@ h1, h2, h3, h4, .display-heading {
         font-size: clamp(1.8rem, 4vw, 2.6rem);
     }
 
+.hero-photo {
+    background-image: linear-gradient(90deg, rgba(25, 8, 12, 0.90) 0%, rgba(60, 10, 25, 0.65) 45%, rgba(0, 0, 0, 0) 80%), url("../images/hero-grill.webp");
+    background-size: cover;
+    background-position: center 60%;
+}
+
+    .hero-photo .hero-bubble {
+        display: none;
+    }
+
+/* On phones the text covers the whole width, so the overlay must be dark everywhere. */
+@media (max-width: 575.98px) {
+    .hero-photo {
+        background-image: linear-gradient(rgba(25, 8, 12, 0.85), rgba(25, 8, 12, 0.75)), url("../images/hero-grill.webp");
+    }
+}
+
 .eyebrow {
     display: inline-block;
     font-weight: 800;

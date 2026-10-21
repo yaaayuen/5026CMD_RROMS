@@ -35,4 +35,11 @@ public interface IAccountSecurityService
 
     //Turns two-step sign-in off. Requires the current password
     Task<ServiceResult> DisableTwoStepAsync(string userId, string currentPassword);
+
+    //True if two-step sign-in is compulsory for this user (staff and administrators, YY-9)
+    Task<bool> IsTwoStepRequiredAsync(string userId);
+
+    //Turns two-step sign-in on for a staff member or administrator who does not have it yet (YY-9)
+    Task TurnOnRequiredTwoStepAsync(ApplicationUser user);
+
 }
