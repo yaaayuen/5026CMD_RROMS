@@ -44,7 +44,8 @@ public class IndexModel : PageModel
                 "Announcements",
                 "Promotional campaigns and restaurant notices.",
                 "megaphone",
-                "Sprint 4 · Alex"),
+                "Sprint 4 · Alex",
+                "/Admin/Announcements"),
             new ModuleTileViewModel(
                 "Analytics dashboard",
                 "Sales, reservations, table occupancy and popular dishes.",
@@ -67,7 +68,8 @@ public class IndexModel : PageModel
                 "Customer feedback",
                 "Ratings and comments from completed visits.",
                 "star",
-                "Sprint 4 · Alex")
+                "Sprint 4 · Alex",
+                "/Admin/Feedback")
         };
     }
 }
