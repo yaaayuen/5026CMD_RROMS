@@ -77,6 +77,14 @@
 								<div class="d-flex flex-wrap gap-1">
 									@foreach (ReservationStatus next in ReservationStatusRules.NextStatuses(booking.Status))
 									{
+										if (next == ReservationStatus.Completed && booking.HasUnpaidOrders)
+										{
+											// The visit completes by itself when the bill is paid (Billing page).
+											<button type="button" class="btn btn-sm btn-outline-secondary" disabled
+													title="Completes automatically when the bill is paid">Waiting for payment</button>
+											continue;
+										}
+
 										bool risky = next == ReservationStatus.Cancelled || next == ReservationStatus.NoShow;
 										<form method="post" asp-page-handler="Move" asp-route-Date="@day.ToString("yyyy-MM-dd")"
 											  onsubmit="@(risky ? $"return confirm('{ReservationStatusDisplay.ActionLabel(next)} booking #{booking.Id}?');" : null)">

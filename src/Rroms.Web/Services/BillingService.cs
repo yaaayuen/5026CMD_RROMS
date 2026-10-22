@@ -22,13 +22,19 @@ public class BillingService : IBillingService
     private readonly ApplicationDbContext _context;
     private readonly INotificationService _notifications;
     private readonly ILogger<BillingService> _logger;
+    private readonly IReservationService? _reservations;
 
     /// <summary>Receives the shared database, notification publisher and logger.</summary>
-    public BillingService(ApplicationDbContext context, INotificationService notifications, ILogger<BillingService> logger)
+    /// <param name="reservations">
+    /// WL-3: completes the visit once its last order is paid. Optional so existing tests can build the service without it.
+    /// </param>
+    public BillingService(ApplicationDbContext context, INotificationService notifications, ILogger<BillingService> logger,
+        IReservationService? reservations = null)
     {
         _context = context;
         _notifications = notifications;
         _logger = logger;
+        _reservations = reservations;
     }
 
     /// <inheritdoc />
@@ -142,6 +148,21 @@ public class BillingService : IBillingService
             _logger.LogError(exception, "Payment {PaymentId} was saved but its confirmation failed.", payment.Id);
             notificationSent = false;
         }
+
+        if (_reservations != null)
+        {
+            try
+            {
+                // WL-3: the last paid bill ends the visit, so staff do not have to press Complete.
+                await _reservations.CompleteAfterPaymentAsync(order.ReservationId);
+            }
+            catch (Exception exception)
+            {
+                // The payment is already saved; staff can still complete the visit by hand.
+                _logger.LogError(exception, "Payment {PaymentId} was saved but its visit could not be completed.", payment.Id);
+            }
+        }
+
         return ServiceResult<PaymentRecordingResult>.Success(new PaymentRecordingResult
         {
             PaymentId = payment.Id,

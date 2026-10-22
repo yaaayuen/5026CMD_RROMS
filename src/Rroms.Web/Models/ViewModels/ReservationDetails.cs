@@ -47,4 +47,10 @@ public class ReservationDetails
 
     /// <summary>When the booking was made (UTC).</summary>
     public DateTime CreatedAtUtc { get; set; }
+
+    /// <summary>
+    /// True while the visit has an order that is not cancelled and not paid yet.
+    /// Filled in only by the staff daily list; the Complete button waits for payment.
+    /// </summary>
+    public bool HasUnpaidOrders { get; set; }
 }
