@@ -105,7 +105,9 @@ public class ReservationStatusChangeTests : IDisposable
     [Fact]
     public async Task FullFlow_ConfirmSeatComplete_EndsCompleted()
     {
-        int id = await BookAsync(CustomerA, SevenPm, TableT01Id);
+        // Starts in 10 minutes, so the guests may already be seated (early seating rule).
+        DateTime startUtc = WholeSecond(DateTime.UtcNow.AddMinutes(10));
+        int id = await InsertReservationAsync(CustomerA, TableT01Id, startUtc, ReservationStatus.Pending);
 
         Assert.True((await _service.ConfirmAsync(id)).Succeeded);
         Assert.True((await _service.SeatAsync(id)).Succeeded);
@@ -128,6 +130,72 @@ public class ReservationStatusChangeTests : IDisposable
     }
 
     [Fact]
+    public async Task Complete_OrderNotPaidYet_IsRejectedAndStaysSeated()
+    {
+        int id = await InsertSeatedVisitAsync();
+        await AddOrderAsync(id, OrderStatus.Completed, paid: false);
+
+        ServiceResult result = await _service.CompleteAsync(id);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(ReservationService.UnpaidOrdersMessage, result.Errors[0]);
+        Assert.Equal(ReservationStatus.Seated, await StatusOfAsync(id));
+    }
+
+    [Fact]
+    public async Task Complete_PaidAndCancelledOrdersOnly_Succeeds()
+    {
+        int id = await InsertSeatedVisitAsync();
+        await AddOrderAsync(id, OrderStatus.Completed, paid: true);
+        await AddOrderAsync(id, OrderStatus.Cancelled, paid: false);
+
+        ServiceResult result = await _service.CompleteAsync(id);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(ReservationStatus.Completed, await StatusOfAsync(id));
+    }
+
+    [Fact]
+    public async Task CompleteAfterPayment_LastOrderPaid_CompletesTheVisit()
+    {
+        int id = await InsertSeatedVisitAsync();
+        await AddOrderAsync(id, OrderStatus.Completed, paid: true);
+
+        ServiceResult result = await _service.CompleteAfterPaymentAsync(id);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(ReservationStatus.Completed, await StatusOfAsync(id));
+        Assert.Contains(CustomerA, _notifications.NotifiedUsers);
+    }
+
+    [Fact]
+    public async Task CompleteAfterPayment_AnotherOrderStillUnpaid_StaysSeated()
+    {
+        int id = await InsertSeatedVisitAsync();
+        await AddOrderAsync(id, OrderStatus.Completed, paid: true);
+        await AddOrderAsync(id, OrderStatus.Served, paid: false);
+
+        ServiceResult result = await _service.CompleteAfterPaymentAsync(id);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(ReservationStatus.Seated, await StatusOfAsync(id));
+    }
+
+    [Fact]
+    public async Task CompleteAfterPayment_BookingNotSeatedYet_ChangesNothing()
+    {
+        // A pre-order paid before the guests arrive must not close the booking.
+        DateTime startUtc = WholeSecond(DateTime.UtcNow.AddHours(2));
+        int id = await InsertReservationAsync(CustomerA, TableT01Id, startUtc, ReservationStatus.Confirmed);
+        await AddOrderAsync(id, OrderStatus.Completed, paid: true);
+
+        ServiceResult result = await _service.CompleteAfterPaymentAsync(id);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(ReservationStatus.Confirmed, await StatusOfAsync(id));
+    }
+
+    [Fact]
     public async Task CancelByStaff_ConfirmedBooking_ReleasesTheTable()
     {
         int id = await BookAsync(CustomerA, SevenPm, TableT01Id);
@@ -144,14 +212,67 @@ public class ReservationStatusChangeTests : IDisposable
     [Fact]
     public async Task Cancel_SeatedBooking_IsRejected()
     {
-        int id = await BookAsync(CustomerA, SevenPm, TableT01Id);
-        await _service.ConfirmAsync(id);
-        await _service.SeatAsync(id);
+        DateTime startUtc = WholeSecond(DateTime.UtcNow.AddMinutes(-10));
+        int id = await InsertReservationAsync(CustomerA, TableT01Id, startUtc, ReservationStatus.Seated);
 
         ServiceResult result = await _service.CancelByStaffAsync(id);
 
         Assert.False(result.Succeeded);
         Assert.Equal(ReservationStatus.Seated, await StatusOfAsync(id));
+    }
+
+    [Fact]
+    public async Task Seat_DaysBeforeTheBooking_IsRejectedAndTableStaysBooked()
+    {
+        // Booked a week ahead: staff must not be able to seat (and then complete) it today.
+        int id = await BookAsync(CustomerA, SevenPm, TableT01Id);
+        await _service.ConfirmAsync(id);
+
+        ServiceResult result = await _service.SeatAsync(id);
+
+        Assert.False(result.Succeeded);
+        Assert.StartsWith("Guests can be seated from", result.Errors[0]);
+        Assert.Equal(ReservationStatus.Confirmed, await StatusOfAsync(id));
+        Assert.Equal(4, await SlotCountAsync(id));
+    }
+
+    [Fact]
+    public async Task Seat_GuestsArriveTwentyMinutesEarly_IsAllowed()
+    {
+        DateTime startUtc = WholeSecond(DateTime.UtcNow.AddMinutes(20));
+        int id = await InsertReservationAsync(CustomerA, TableT01Id, startUtc, ReservationStatus.Confirmed);
+
+        ServiceResult result = await _service.SeatAsync(id);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(ReservationStatus.Seated, await StatusOfAsync(id));
+    }
+
+    [Fact]
+    public async Task Seat_AfterTheVisitHasEnded_IsRejected()
+    {
+        // Started 3 hours ago, so the 2-hour visit is already over.
+        DateTime startUtc = WholeSecond(DateTime.UtcNow.AddHours(-3));
+        int id = await InsertReservationAsync(CustomerA, TableT01Id, startUtc, ReservationStatus.Confirmed);
+
+        ServiceResult result = await _service.SeatAsync(id);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(ReservationStatus.Confirmed, await StatusOfAsync(id));
+    }
+
+    [Theory]
+    [InlineData(-31, false)]
+    [InlineData(-30, true)]
+    [InlineData(0, true)]
+    [InlineData(119, true)]
+    [InlineData(120, false)]
+    public void IsWithinSeatingTime_FromThirtyMinutesBeforeStartUntilTheEnd(int minutesFromStart, bool expected)
+    {
+        DateTime startUtc = new DateTime(2026, 10, 24, 11, 0, 0, DateTimeKind.Utc);
+        DateTime endUtc = startUtc.AddMinutes(120);
+
+        Assert.Equal(expected, ReservationService.IsWithinSeatingTime(startUtc, endUtc, startUtc.AddMinutes(minutesFromStart)));
     }
 
     [Fact]
@@ -418,6 +539,45 @@ public class ReservationStatusChangeTests : IDisposable
         await _context.SaveChangesAsync();
         _context.ChangeTracker.Clear();
         return reservation.Id;
+    }
+
+    /// <summary>A Seated visit that started 30 minutes ago at T01 for customer A.</summary>
+    private Task<int> InsertSeatedVisitAsync()
+    {
+        return InsertReservationAsync(CustomerA, TableT01Id, WholeSecond(DateTime.UtcNow.AddMinutes(-30)), ReservationStatus.Seated);
+    }
+
+    /// <summary>Adds an order (RM 20) to a booking, optionally with a Paid payment recorded by staff.</summary>
+    private async Task AddOrderAsync(int reservationId, OrderStatus status, bool paid)
+    {
+        DateTime nowUtc = DateTime.UtcNow;
+        Order order = new Order
+        {
+            ReservationId = reservationId,
+            CustomerId = CustomerA,
+            Status = status,
+            TotalAmount = 20m,
+            PlacedAtUtc = nowUtc,
+            UpdatedAtUtc = nowUtc
+        };
+        _context.Orders.Add(order);
+        await _context.SaveChangesAsync();
+
+        if (paid)
+        {
+            _context.Payments.Add(new Payment
+            {
+                OrderId = order.Id,
+                Amount = order.TotalAmount,
+                Method = PaymentMethod.Cash,
+                Status = PaymentStatus.Paid,
+                StaffId = CustomerB,
+                PaidAtUtc = nowUtc
+            });
+            await _context.SaveChangesAsync();
+        }
+
+        _context.ChangeTracker.Clear();
     }
 
     /// <summary>The booking's status as stored in the database now.</summary>
