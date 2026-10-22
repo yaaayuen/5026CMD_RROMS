@@ -1,114 +1,136 @@
 ﻿@page
-@model IndexModel
+@model Rroms.Web.Pages.Menu.IndexModel
 @using Rroms.Web.Models
+@using Rroms.Web.Models.ViewModels
 @{
-	ViewData["Title"] = "Menu items";
+	ViewData["Title"] = "Our menu";
 }
 
 <section class="hero hero-compact mb-4" aria-labelledby="menu-heading">
 	<span class="hero-bubble one" aria-hidden="true"></span>
 	<div class="position-relative">
-		<span class="eyebrow">Menu</span>
-		<h1 id="menu-heading" class="mb-1">Menu items</h1>
-		<p class="lead mb-0">Dishes, prices, availability, offers and photos.</p>
+		<span class="eyebrow">Three Grills</span>
+		<h1 id="menu-heading" class="mb-1">Our menu</h1>
+		<p class="lead mb-0">Fresh from the grill. Search by name, pick a category or set a price range.</p>
 	</div>
 </section>
 
-<section class="tg-card h-auto" aria-labelledby="list-heading">
-	<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
-		<h2 id="list-heading" class="h4 mb-0">All dishes</h2>
+<section class="tg-card h-auto mb-4" aria-labelledby="filter-heading">
+	<h2 id="filter-heading" class="h5 mb-3">Find a dish</h2>
 
-		<div class="d-flex flex-wrap align-items-end gap-3">
-			<form method="get" class="d-flex align-items-end gap-2">
-				<div>
-					<label for="categoryFilter" class="form-label fw-semibold mb-1">Category</label>
-					<select id="categoryFilter" name="categoryId" class="form-select">
-						<option value="">All categories</option>
-						@foreach (MenuCategory category in Model.Categories)
-						{
-							<option value="@category.Id" selected="@(category.Id == Model.CategoryId)">@category.Name@(category.IsActive ? "" : " (hidden)")</option>
-						}
-					</select>
-				</div>
-				<button type="submit" class="btn btn-outline-primary">Filter</button>
-			</form>
-
-			<a class="btn btn-primary" asp-page="/Menu/Edit">Add a dish</a>
+	<form method="get" class="row g-3 align-items-end">
+		<div class="col-md-4">
+			<label for="menuSearch" class="form-label fw-semibold">Search</label>
+			<input id="menuSearch" name="q" type="search" class="form-control" value="@Model.SearchText" placeholder="e.g. burger or P01" />
 		</div>
-	</div>
+		<div class="col-md-3">
+			<label for="menuCategory" class="form-label fw-semibold">Category</label>
+			<select id="menuCategory" name="categoryId" class="form-select">
+				<option value="">All categories</option>
+				@foreach (MenuCategory category in Model.Categories)
+				{
+					<option value="@category.Id" selected="@(category.Id == Model.CategoryId)">@category.Name</option>
+				}
+			</select>
+		</div>
+		<div class="col-6 col-md-2">
+			<label for="menuMinPrice" class="form-label fw-semibold">Min price (RM)</label>
+			<input id="menuMinPrice" name="minPrice" type="number" min="0" step="0.01" class="form-control" value="@Model.MinPrice" />
+		</div>
+		<div class="col-6 col-md-2">
+			<label for="menuMaxPrice" class="form-label fw-semibold">Max price (RM)</label>
+			<input id="menuMaxPrice" name="maxPrice" type="number" min="0" step="0.01" class="form-control" value="@Model.MaxPrice" />
+		</div>
+		<div class="col-12">
+			<fieldset>
+				<legend class="form-label fw-semibold fs-6 mb-1">Hide dishes that contain</legend>
+				@foreach (DietaryTag tag in Model.TagChoices)
+				{
+					<div class="form-check form-check-inline">
+						<input id="menuHide@(tag.Id)" name="hide" type="checkbox" value="@tag.Id" class="form-check-input" checked="@Model.HideTagIds.Contains(tag.Id)" />
+						<label for="menuHide@(tag.Id)" class="form-check-label">@tag.Name</label>
+					</div>
+				}
+			</fieldset>
+		</div>
+		<div class="col-12 col-md-2 d-grid">
+			<button type="submit" class="btn btn-primary">Filter</button>
+		</div>
+	</form>
 
-	@if (Model.Items.Count == 0)
+	@if (Model.HasFilters)
 	{
-		<p class="text-secondary mb-0">No dishes yet. Use "Add a dish" to create the first one.</p>
+		<a class="d-inline-block mt-3" asp-page="/Menu/Index">Show the whole menu</a>
 	}
-	else
-	{
-		<div class="table-responsive">
-			<table class="table align-middle">
-				<thead>
-					<tr>
-						<th scope="col"><span class="visually-hidden">Photo</span></th>
-						<th scope="col">Dish</th>
-						<th scope="col">Category</th>
-						<th scope="col">Price (RM)</th>
-						<th scope="col">Status</th>
-						<th scope="col"><span class="visually-hidden">Actions</span></th>
-					</tr>
-				</thead>
-				<tbody>
-					@foreach (MenuItem item in Model.Items)
-					{
-						string? photoUrl = Model.GetPhotoUrl(item);
-						bool offerActive = Model.IsOfferActive(item);
+</section>
 
-						<tr>
-							<td>
-								@if (photoUrl != null)
+<partial name="_DishSuggestions" model="Model.Popular" />
+
+@if (Model.Dishes.Count == 0)
+{
+	<p class="text-secondary" role="status">No dishes match. Try a different search or filter.</p>
+}
+else
+{
+	@foreach (IGrouping<string, MenuItemCard> group in Model.Dishes.GroupBy(dish => dish.CategoryName))
+	{
+		<section class="mb-5" aria-label="@group.Key">
+			<h2 class="section-title h3 mb-3">@group.Key</h2>
+
+			<div class="row g-4">
+				@foreach (MenuItemCard dish in group)
+				{
+					<div class="col-sm-6 col-lg-4">
+						<article class="tg-card h-100 @(dish.IsAvailable ? "" : "opacity-75")">
+							@if (dish.PhotoUrl != null)
+							{
+								<img src="@dish.PhotoUrl" alt="Photo of @dish.Name" class="rounded mb-3 w-100" style="object-fit: cover; height: 12rem;" />
+							}
+
+							<h3 class="h5">
+								@if (!string.IsNullOrEmpty(dish.Code))
 								{
-									<img src="@photoUrl" alt="Photo of @item.Name" width="64" height="64" class="rounded" style="object-fit: cover;" />
+									<span class="small fw-semibold text-secondary me-2">@dish.Code</span>
 								}
-							</td>
-							<th scope="row">@item.Name</th>
-							<td>@item.MenuCategory?.Name</td>
-							<td>
-								@if (offerActive)
+								@dish.Name
+							</h3>
+							<p class="text-secondary">@dish.Description</p>
+
+							<p class="mb-1">
+								@if (dish.IsOfferActive)
 								{
-									<span class="text-decoration-line-through text-secondary">@item.Price.ToString("N2")</span>
-									<strong>@Model.GetCurrentPrice(item).ToString("N2")</strong>
+									<span class="text-decoration-line-through text-secondary">RM @dish.NormalPrice.ToString("N2")</span>
+									<strong class="fs-5">RM @dish.CurrentPrice.ToString("N2")</strong>
 									<span class="badge text-bg-warning">Offer</span>
 								}
 								else
 								{
-									@item.Price.ToString("N2")
+									<strong class="fs-5">RM @dish.CurrentPrice.ToString("N2")</strong>
 								}
-							</td>
-							<td>
-								@if (item.IsAvailable)
-								{
-									<span class="badge text-bg-success">Available</span>
-								}
-								else
-								{
-									<span class="badge text-bg-secondary">Unavailable</span>
-								}
-							</td>
-							<td class="text-end text-nowrap">
-								<a class="btn btn-sm btn-outline-primary" asp-page="/Menu/Edit" asp-route-id="@item.Id">Edit</a>
+							</p>
 
-								<form method="post" asp-page-handler="Toggle" asp-route-id="@item.Id" asp-route-categoryId="@Model.CategoryId" class="d-inline">
-									<input type="hidden" name="makeAvailable" value="@(item.IsAvailable ? "false" : "true")" />
-									<button type="submit" class="btn btn-sm btn-outline-secondary">@(item.IsAvailable ? "Mark unavailable" : "Mark available")</button>
-								</form>
+							@if (dish.IsOfferActive && dish.OfferEndsAtUtc.HasValue)
+							{
+								<p class="small text-secondary mb-2">Offer until @Model.FormatOfferEnd(dish.OfferEndsAtUtc.Value)</p>
+							}
 
-								<form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" asp-route-categoryId="@Model.CategoryId" class="d-inline"
-									  onsubmit="return confirm('Delete this dish? This cannot be undone.');">
-									<button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-								</form>
-							</td>
-						</tr>
-					}
-				</tbody>
-			</table>
-		</div>
+							@if (dish.IsAvailable)
+							{
+								<span class="badge text-bg-success">Available</span>
+							}
+							else
+							{
+								<span class="badge text-bg-secondary">Unavailable</span>
+							}
+
+							@foreach (string tagName in dish.DietaryTags)
+							{
+								<span class="badge text-bg-light border">@tagName</span>
+							}
+						</article>
+					</div>
+				}
+			</div>
+		</section>
 	}
-</section>
+}

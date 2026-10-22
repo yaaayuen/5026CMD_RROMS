@@ -21,7 +21,7 @@
 	<form method="get" class="row g-3 align-items-end">
 		<div class="col-md-4">
 			<label for="menuSearch" class="form-label fw-semibold">Search</label>
-			<input id="menuSearch" name="q" type="search" class="form-control" value="@Model.SearchText" placeholder="e.g. burger" />
+			<input id="menuSearch" name="q" type="search" class="form-control" value="@Model.SearchText" placeholder="e.g. burger or PO1" />
 		</div>
 		<div class="col-md-3">
 			<label for="menuCategory" class="form-label fw-semibold">Category</label>
@@ -87,7 +87,13 @@ else
 								<img src="@dish.PhotoUrl" alt="Photo of @dish.Name" class="rounded mb-3 w-100" style="object-fit: cover; height: 12rem;" />
 							}
 
-							<h3 class="h5">@dish.Name</h3>
+							<h3 class="h5">
+								@if (!string.IsNullOrEmpty(dish.Code))
+								{
+									<span class="small fw-semibold text-secondary me-2">@dish.Code</span>
+								}
+								@dish.Name
+							</h3>
 							<p class="text-secondary">@dish.Description</p>
 
 							<p class="mb-1">
