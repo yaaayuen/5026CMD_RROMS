@@ -57,7 +57,12 @@ public class DiningExperienceServiceTests : IDisposable
     {
         var order = await AddOrder(ReservationStatus.Confirmed);
         Assert.Empty(await _orders.GetKitchenOrdersAsync());
-        await ReservationService().SeatAsync(order.ReservationId);
+        // WL-3 rule: guests can only be seated during their visit, so the booking must start now.
+        DateTime nowUtc = DateTime.UtcNow;
+        await _db.Reservations.Where(r => r.Id == order.ReservationId).ExecuteUpdateAsync(s => s
+            .SetProperty(r => r.StartUtc, nowUtc)
+            .SetProperty(r => r.EndUtc, nowUtc.AddHours(2)));
+        Assert.True((await ReservationService().SeatAsync(order.ReservationId)).Succeeded);
         Assert.Equal(order.Id, Assert.Single(await _orders.GetKitchenOrdersAsync()).Id);
     }
 

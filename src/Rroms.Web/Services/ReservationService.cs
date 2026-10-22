@@ -61,6 +61,17 @@ public class ReservationService : IReservationService
     /// <summary>How long staff wait for late guests before a booking may be marked as no-show.</summary>
     public const int NoShowGraceMinutes = 15;
 
+    /// <summary>Shown when staff try to complete a visit whose bill is not paid yet.</summary>
+    public const string UnpaidOrdersMessage =
+        "This visit still has an unpaid order. It is completed automatically when the bill is paid.";
+
+    /// <summary>How early guests who arrive before their booking may be seated.</summary>
+    public const int EarlySeatingMinutes = 30;
+
+    /// <summary>Shown when staff try to seat a booking outside its visit. {0} = early seating minutes.</summary>
+    public const string OutsideSeatingTimeMessageFormat =
+        "Guests can be seated from {0} minutes before the booking starts until the booking ends.";
+
 
     /// <summary>Shown when a booking has started or is no longer Pending or Confirmed.</summary>
     public const string BookingLockedMessage = "This booking can no longer be changed online. Please contact the restaurant.";
@@ -292,13 +303,27 @@ public class ReservationService : IReservationService
         DateTime dayStartUtc = ToUtc(date, TimeOnly.MinValue);
         DateTime nextDayStartUtc = ToUtc(date.AddDays(1), TimeOnly.MinValue);
 
-        return await _context.Reservations
+        List<ReservationDetails> bookings = await _context.Reservations
             .AsNoTracking()
             .Where(r => r.StartUtc >= dayStartUtc && r.StartUtc < nextDayStartUtc)
             .OrderBy(r => r.StartUtc)
             .ThenBy(r => r.DiningTable!.Label)
             .Select(ToDetails)
             .ToListAsync();
+
+        // One extra query for the whole day: which of these visits still wait for payment?
+        List<int> ids = bookings.Select(b => b.Id).ToList();
+        HashSet<int> unpaid = (await UnpaidOrders()
+            .Where(o => ids.Contains(o.ReservationId))
+            .Select(o => o.ReservationId)
+            .Distinct()
+            .ToListAsync()).ToHashSet();
+        foreach (ReservationDetails booking in bookings)
+        {
+            booking.HasUnpaidOrders = unpaid.Contains(booking.Id);
+        }
+
+        return bookings;
     }
 
     /// <inheritdoc />
@@ -332,6 +357,21 @@ public class ReservationService : IReservationService
     /// <inheritdoc />
     public async Task<ServiceResult> SeatAsync(int reservationId)
     {
+        Reservation? existing = await FindReservationAsync(reservationId);
+        if (existing == null)
+        {
+            return ServiceResult.Failure(ReservationNotFoundMessage);
+        }
+
+        // Guests can only sit at the table during their own visit. Without this check a booking for
+        // Saturday could be seated (and then completed) on Wednesday, which would free Saturday's table.
+        // An illegal move (e.g. Pending -> Seated) is left to MoveStatusAsync so it keeps its own message.
+        if (ReservationStatusRules.CanMove(existing.Status, ReservationStatus.Seated)
+            && !IsWithinSeatingTime(existing.StartUtc, existing.EndUtc, DateTime.UtcNow))
+        {
+            return ServiceResult.Failure(string.Format(OutsideSeatingTimeMessageFormat, EarlySeatingMinutes));
+        }
+
         ServiceResult<Reservation> moved = await MoveStatusAsync(reservationId, ReservationStatus.Seated);
         if (!moved.Succeeded)
         {
@@ -351,6 +391,20 @@ public class ReservationService : IReservationService
     /// <inheritdoc />
     public async Task<ServiceResult> CompleteAsync(int reservationId)
     {
+        Reservation? existing = await FindReservationAsync(reservationId);
+        if (existing == null)
+        {
+            return ServiceResult.Failure(ReservationNotFoundMessage);
+        }
+
+        // A visit ends when its bill is paid, not when someone presses a button: otherwise a table
+        // could be closed while food is still unpaid. An illegal move keeps MoveStatusAsync's message.
+        if (ReservationStatusRules.CanMove(existing.Status, ReservationStatus.Completed)
+            && await HasUnpaidOrdersAsync(reservationId))
+        {
+            return ServiceResult.Failure(UnpaidOrdersMessage);
+        }
+
         ServiceResult<Reservation> moved = await MoveStatusAsync(reservationId, ReservationStatus.Completed);
         if (!moved.Succeeded)
         {
@@ -730,6 +784,50 @@ public class ReservationService : IReservationService
         reservation.Status = newStatus;
         reservation.UpdatedAtUtc = DateTime.UtcNow;
         return ServiceResult<Reservation>.Success(reservation);
+    }
+
+    /// <inheritdoc />
+    public async Task<ServiceResult> CompleteAfterPaymentAsync(int reservationId)
+    {
+        ReservationStatus? status = await _context.Reservations
+            .Where(r => r.Id == reservationId)
+            .Select(r => (ReservationStatus?)r.Status)
+            .SingleOrDefaultAsync();
+
+        // Only a visit that is still running is closed, and only when nothing is left to pay.
+        // Paying for a pre-order before the guests are seated, for example, changes nothing.
+        if (status != ReservationStatus.Seated || await HasUnpaidOrdersAsync(reservationId))
+        {
+            return ServiceResult.Success();
+        }
+
+        return await CompleteAsync(reservationId);
+    }
+
+    /// <summary>Orders that still need paying: not cancelled and without a Paid payment (DA-1).</summary>
+    private IQueryable<Order> UnpaidOrders()
+    {
+        return _context.Orders.Where(o => o.Status != OrderStatus.Cancelled
+            && !_context.Payments.Any(p => p.OrderId == o.Id && p.Status == PaymentStatus.Paid));
+    }
+
+    /// <summary>True while the booking has at least one order that is not paid yet.</summary>
+    /// <param name="reservationId">The booking to check.</param>
+    private Task<bool> HasUnpaidOrdersAsync(int reservationId)
+    {
+        return UnpaidOrders().AnyAsync(o => o.ReservationId == reservationId);
+    }
+
+    /// <summary>
+    /// True when guests may be seated now: from <see cref="EarlySeatingMinutes"/> before the start
+    /// until the end of the visit.
+    /// </summary>
+    /// <param name="startUtc">When the booking starts (UTC).</param>
+    /// <param name="endUtc">When the booking ends (UTC).</param>
+    /// <param name="nowUtc">The current time (UTC); passed in so tests can choose it.</param>
+    public static bool IsWithinSeatingTime(DateTime startUtc, DateTime endUtc, DateTime nowUtc)
+    {
+        return nowUtc >= startUtc.AddMinutes(-EarlySeatingMinutes) && nowUtc < endUtc;
     }
 
     /// <summary>Gives a booking's table time back: removes its slots that start at or after a moment.</summary>

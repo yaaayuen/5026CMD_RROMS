@@ -88,9 +88,19 @@ public interface IReservationService
     /// <param name="reservationId">The booking whose guests arrived.</param>
     Task<ServiceResult> SeatAsync(int reservationId);
 
-    /// <summary>Seated → Completed, when the guests leave. Slots after now are released for other bookings.</summary>
+    /// <summary>
+    /// Seated → Completed, when the guests leave. Slots after now are released for other bookings.
+    /// Refused while the visit still has an unpaid order (it then completes automatically on payment).
+    /// </summary>
     /// <param name="reservationId">The finished booking.</param>
     Task<ServiceResult> CompleteAsync(int reservationId);
+
+    /// <summary>
+    /// Called by billing (DA-1) after a payment is saved: completes a Seated visit once every
+    /// order of it is paid or cancelled. Does nothing (and succeeds) in any other case.
+    /// </summary>
+    /// <param name="reservationId">The booking the paid order belongs to.</param>
+    Task<ServiceResult> CompleteAfterPaymentAsync(int reservationId);
 
     /// <summary>Staff cancel a Pending or Confirmed booking. The table is released and unstarted orders are cancelled.</summary>
     /// <param name="reservationId">The booking to cancel.</param>
