@@ -85,21 +85,29 @@ public class DashboardChartData
     {
         IReadOnlyList<DailyReservationCount> days = report.DailyTrend;
 
+        List<ChartSeries> byStatus = new List<ChartSeries>
+        {
+            new ChartSeries("Completed", days.Select(d => d.Completed).ToList()),
+            new ChartSeries("Seated", days.Select(d => d.Seated).ToList()),
+            new ChartSeries("Confirmed", days.Select(d => d.Confirmed).ToList()),
+            new ChartSeries("Cancelled", days.Select(d => d.Cancelled).ToList()),
+            new ChartSeries("Absent", days.Select(d => d.NoShow).ToList())
+        };
+
+        // New bookings are confirmed at once, so Pending only exists for old bookings.
+        // Show it only when the range really has some, so no number is ever hidden.
+        if (days.Any(d => d.Pending > 0))
+        {
+            byStatus.Insert(3, new ChartSeries("Pending", days.Select(d => d.Pending).ToList()));
+        }
+
         return new DashboardChartData
         {
             From = report.From,
             To = report.To,
             UtilisationPercent = report.UtilisationPercent,
             DayLabels = days.Select(d => d.Date.ToString("ddd d MMM", CultureInfo.InvariantCulture)).ToList(),
-            BookingsByStatus = new List<ChartSeries>
-            {
-                new ChartSeries("Completed", days.Select(d => d.Completed).ToList()),
-                new ChartSeries("Seated", days.Select(d => d.Seated).ToList()),
-                new ChartSeries("Confirmed", days.Select(d => d.Confirmed).ToList()),
-                new ChartSeries("Pending", days.Select(d => d.Pending).ToList()),
-                new ChartSeries("Cancelled", days.Select(d => d.Cancelled).ToList()),
-                new ChartSeries("No-show", days.Select(d => d.NoShow).ToList())
-            },
+            BookingsByStatus = byStatus,
             GuestsServed = days.Select(d => d.GuestsServed).ToList(),
             HourLabels = report.Heatmap.Hours.Select(h => $"{h:00}:00").ToList(),
             TableHoursByHour = report.Heatmap.Hours

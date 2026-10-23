@@ -33,7 +33,7 @@ public interface IReservationService
         AvailabilitySearchInput input, int? ignoreReservationId = null);
 
     /// <summary>
-    /// Books a table as Pending and notifies staff. Every rule is checked again, because the table
+    /// Books a table as Confirmed and notifies staff and the customer. Every rule is checked again, because the table
     /// may have been taken since the search; if two requests race, the database lets only one through.
     /// </summary>
     /// <param name="customerId">The signed-in customer's ID.</param>
@@ -55,7 +55,7 @@ public interface IReservationService
 
     /// <summary>
     /// The customer changes the date, time, party size or table of their own Pending or Confirmed booking,
-    /// before it starts. Availability is checked again; a Confirmed booking goes back to Pending for staff to re-confirm.
+    /// before it starts. Availability is checked again, so the changed booking is Confirmed straight away.
     /// </summary>
     /// <param name="customerId">The signed-in customer's ID.</param>
     /// <param name="reservationId">The booking to change.</param>
