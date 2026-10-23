@@ -278,6 +278,76 @@ public class BillingServiceTests : IDisposable
         Assert.Null(await _service.GetReceiptForCustomerAsync(id, order.CustomerId));
     }
 
+    // ============================== Whole-visit bill (pay once, one receipt) ==============================//
+
+    /// <summary>A pre-order and a second order of the same visit are paid in one step and shown on one receipt.</summary>
+    [Fact]
+    public async Task VisitPayment_PaysEveryUnpaidOrderOnceWithOneReceipt()
+    {
+        var (order, staff) = await SeedAsync();
+        Order second = await AddSecondOrderAsync(order, OrderStatus.Completed, 30m);
+
+        var result = await _service.RecordVisitPaymentAsync(order.ReservationId, PaymentMethod.Cash, staff.Id);
+
+        Assert.True(result.Succeeded, string.Join(" ", result.Errors));
+        Assert.Equal(2, await _context.Payments.CountAsync(p => p.Status == PaymentStatus.Paid));
+        Assert.Equal(1, _notifications.Count);
+        var receipt = await _service.GetReceiptForCustomerAsync(result.Value!.PaymentId, order.CustomerId);
+        Assert.NotNull(receipt);
+        Assert.Equal(new[] { order.Id, second.Id }, receipt!.Bills.Select(b => b.OrderId));
+        Assert.Equal(70m, receipt.TotalPaid);
+        var visit = await _service.GetVisitBillAsync(order.ReservationId);
+        Assert.Empty(visit!.UnpaidOrders);
+    }
+
+    /// <summary>The visit cannot be paid while one of its orders is still with the kitchen; nothing is saved.</summary>
+    [Fact]
+    public async Task VisitPayment_OrderStillInKitchen_IsRejected()
+    {
+        var (order, staff) = await SeedAsync();
+        await AddSecondOrderAsync(order, OrderStatus.Served, 30m);
+
+        var result = await _service.RecordVisitPaymentAsync(order.ReservationId, PaymentMethod.Cash, staff.Id);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(BillingService.VisitNotReadyMessage, result.Errors);
+        Assert.Equal(0, await _context.Payments.CountAsync());
+    }
+
+    /// <summary>Cancelled orders are not billed, and paying twice is refused.</summary>
+    [Fact]
+    public async Task VisitPayment_IgnoresCancelledOrdersAndCannotBeRepeated()
+    {
+        var (order, staff) = await SeedAsync();
+        await AddSecondOrderAsync(order, OrderStatus.Cancelled, 30m);
+
+        var first = await _service.RecordVisitPaymentAsync(order.ReservationId, PaymentMethod.EWallet, staff.Id);
+        var again = await _service.RecordVisitPaymentAsync(order.ReservationId, PaymentMethod.EWallet, staff.Id);
+
+        Assert.True(first.Succeeded);
+        Assert.Equal(40m, (await _context.Payments.SingleAsync()).Amount);
+        Assert.False(again.Succeeded);
+        Assert.Contains(BillingService.NothingToPayMessage, again.Errors);
+    }
+
+    /// <summary>Adds another order (one line of the same dish) to the first order's visit.</summary>
+    private async Task<Order> AddSecondOrderAsync(Order first, OrderStatus status, decimal total)
+    {
+        var second = new Order
+        {
+            ReservationId = first.ReservationId,
+            CustomerId = first.CustomerId,
+            Status = status,
+            TotalAmount = total,
+            PlacedAtUtc = first.PlacedAtUtc.AddMinutes(30),
+            UpdatedAtUtc = first.PlacedAtUtc.AddMinutes(30)
+        };
+        second.Items.Add(new OrderItem { MenuItemId = first.Items.Single().MenuItemId, Quantity = 1, UnitPrice = total });
+        _context.Orders.Add(second);
+        await _context.SaveChangesAsync();
+        return second;
+    }
+
     private async Task<(Order Order, ApplicationUser Staff)> SeedAsync(string roleName = RoleNames.Staff)
     {
         MenuItem dish = await OrderTestData.AddDishAsync(_context, "Billing test dish");

@@ -56,7 +56,7 @@ public class ReservationService : IReservationService
     public const string StatusChangeNotAllowedMessageFormat = "A {0} booking cannot be changed to {1}.";
 
     /// <summary>Shown when staff mark a no-show too early. {0} = grace minutes.</summary>
-    public const string TooEarlyForNoShowMessageFormat = "A booking can be marked as no-show {0} minutes after its start time.";
+    public const string TooEarlyForNoShowMessageFormat = "A booking can be marked as absent {0} minutes after its start time.";
 
     /// <summary>How long staff wait for late guests before a booking may be marked as no-show.</summary>
     public const int NoShowGraceMinutes = 15;
@@ -232,7 +232,9 @@ public class ReservationService : IReservationService
             PartySize = input.PartySize,
             StartUtc = startUtc,
             EndUtc = _timeRules.GetEndUtc(startUtc),
-            Status = ReservationStatus.Pending,
+            // Confirmed straight away: availability was just checked again above, and the unique index
+            // below guarantees the table, so there is nothing left for staff to check by hand.
+            Status = ReservationStatus.Confirmed,
             SpecialRequests = CleanOptional(input.SpecialRequests),
             CreatedAtUtc = nowUtc,
             UpdatedAtUtc = nowUtc
@@ -266,8 +268,11 @@ public class ReservationService : IReservationService
         await _notificationService.NotifyRoleAsync(
             RoleNames.Staff,
             NotificationType.General,
-            "New reservation to confirm",
+            "New reservation",
             $"Table {table.Label}, {input.PartySize} guests, {input.Date:d MMM yyyy} at {input.Time:HH\\:mm}.");
+        await NotifyCustomerAsync(reservation, NotificationType.ReservationConfirmed,
+            "Reservation confirmed",
+            $"Your table {table.Label} for {reservation.PartySize} on {DescribeVisit(reservation)} is confirmed. You can pre-order food now.");
 
         return ServiceResult<int>.Success(reservation.Id);
     }
@@ -471,7 +476,7 @@ public class ReservationService : IReservationService
 
         await NotifyCustomerAsync(reservation, NotificationType.ReservationCancelled,
             "We missed you",
-            $"Your booking on {DescribeVisit(reservation)} was marked as a no-show and the table has been released.");
+            $"Your booking on {DescribeVisit(reservation)} was marked as absent (you did not arrive) and the table has been released.");
         return ServiceResult.Success();
     }
 
@@ -529,10 +534,8 @@ public class ReservationService : IReservationService
             return ServiceResult.Failure(BookingLockedMessage);
         }
 
-        ReservationStatus statusBefore = reservation.Status;
-
-        // A confirmed booking that changes needs the restaurant to agree again.
-        reservation.Status = ReservationStatus.Pending;
+        // The change is checked against availability just like a new booking, so it is confirmed at once.
+        reservation.Status = ReservationStatus.Confirmed;
 
         ServiceResult changed = await ApplyBookingChangesAsync(reservation, input);
         if (!changed.Succeeded)
@@ -540,12 +543,14 @@ public class ReservationService : IReservationService
             return changed;
         }
 
-        string again = statusBefore == ReservationStatus.Confirmed ? " Please confirm it again." : string.Empty;
         await _notificationService.NotifyRoleAsync(
             RoleNames.Staff,
             NotificationType.ReservationUpdated,
             "Reservation changed by customer",
-            $"Table {reservation.DiningTable!.Label}, {reservation.PartySize} guests, {DescribeVisit(reservation)}.{again}");
+            $"Table {reservation.DiningTable!.Label}, {reservation.PartySize} guests, {DescribeVisit(reservation)}.");
+        await NotifyCustomerAsync(reservation, NotificationType.ReservationUpdated,
+            "Reservation updated",
+            $"Your booking is now table {reservation.DiningTable!.Label} for {reservation.PartySize} on {DescribeVisit(reservation)}. It is confirmed.");
         return ServiceResult.Success();
     }
 

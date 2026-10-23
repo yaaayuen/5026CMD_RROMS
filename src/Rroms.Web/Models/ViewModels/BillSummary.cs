@@ -6,6 +6,8 @@ namespace Rroms.Web.Models.ViewModels;
 public class BillSummary
 {
     public int OrderId { get; set; }
+    /// <summary>The visit the order belongs to; used to bill all of a visit's orders together.</summary>
+    public int ReservationId { get; set; }
     public string CustomerName { get; set; } = string.Empty;
     public string TableLabel { get; set; } = string.Empty;
     public OrderStatus Status { get; set; }

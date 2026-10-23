@@ -16,7 +16,7 @@
         "Confirmed": "#ffbc42",
         "Pending": "#ff8c42",
         "Cancelled": "#9a9cb0",
-        "No-show": "#5c5f77"
+        "Absent": "#5c5f77"
     };
 
     function showError() {
@@ -34,7 +34,8 @@
                 data: series.values,
                 backgroundColor: statusColours[series.name] || "#5c5f77",
                 stack: "bookings",
-                yAxisID: "y"
+                yAxisID: "y",
+                order: 2
             };
         });
 
@@ -46,7 +47,9 @@
             backgroundColor: "#2b2d42",
             tension: 0.25,
             pointRadius: 2,
-            yAxisID: "guests"
+            yAxisID: "guests",
+            // Chart.js draws a lower "order" last, so the guests line sits in front of the bars.
+            order: 1
         });
 
         new Chart(document.getElementById("bookings-chart"), {

@@ -50,6 +50,24 @@ public class DashboardChartDataTests
         Assert.False(data.SalesAvailable);
     }
 
+    /// <summary>With no Pending bookings in the range (new bookings are confirmed at once), the Pending series is left out.</summary>
+    [Fact]
+    public void FromReport_NoPendingBookings_LeavesPendingOut()
+    {
+        OccupancyReport report = new OccupancyReport
+        {
+            DailyTrend = new List<DailyReservationCount>
+            {
+                new DailyReservationCount { Date = new DateOnly(2026, 10, 5), Completed = 2, Confirmed = 1, GuestsServed = 5 }
+            }
+        };
+
+        DashboardChartData data = DashboardChartData.FromReport(report);
+
+        Assert.DoesNotContain(data.BookingsByStatus, s => s.Name == "Pending");
+        Assert.Contains(data.BookingsByStatus, s => s.Name == "Absent");
+    }
+
     /// <summary>
     /// DA-3 sales are copied, not recalculated: daily amounts line up with the day labels (missing days become 0),
     /// the total is DA-3's PaidTotal, and only the top dishes are kept in rank order.

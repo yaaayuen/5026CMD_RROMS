@@ -1,0 +1,80 @@
+﻿@page
+@model Rroms.Web.Pages.Visit.IndexModel
+@{
+    ViewData["Title"] = "Opening hours and contact";
+}
+
+<section class="hero hero-compact mb-4" aria-labelledby="visit-heading">
+    <span class="hero-bubble one" aria-hidden="true"></span>
+    <div class="position-relative">
+        <span class="eyebrow">Visit us</span>
+        <h1 id="visit-heading" class="mb-1">Opening hours and contact</h1>
+        <p class="lead mb-0">When @Model.Profile.Name is open, and how to reach us.</p>
+    </div>
+</section>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <section class="tg-card h-auto" aria-labelledby="hours-heading">
+            <h2 id="hours-heading" class="h4 mb-3">Opening hours</h2>
+            @if (Model.ClosedToday)
+            {
+                <div class="alert alert-warning">We are closed today (special closure).</div>
+            }
+            <table class="table align-middle mb-0">
+                <tbody>
+                    @foreach (var day in Model.Hours)
+                    {
+                        bool isToday = day.DayOfWeek == Model.Today.DayOfWeek;
+                        <tr class="@(isToday ? "table-active fw-semibold" : "")">
+                            <th scope="row">@day.DayOfWeek @(isToday ? "(today)" : "")</th>
+                            <td class="text-end">
+                                @if (day.IsClosed)
+                                {
+                                    <span class="text-secondary">Closed</span>
+                                }
+                                else
+                                {
+                                    <span>@day.OpensAt.ToString("h:mm tt") – @day.ClosesAt.ToString("h:mm tt")</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <p class="text-secondary small mt-3 mb-0">Times are Malaysia time. A table booking must finish by closing time.</p>
+        </section>
+
+        @if (Model.UpcomingClosures.Count > 0)
+        {
+            <section class="tg-card h-auto mt-4" aria-labelledby="closures-heading">
+                <h2 id="closures-heading" class="h4 mb-3">Special closures</h2>
+                <ul class="list-unstyled mb-0">
+                    @foreach (var closure in Model.UpcomingClosures)
+                    {
+                        <li class="mb-2">
+                            <strong>@closure.StartDate.ToString("ddd d MMM yyyy")@(closure.EndDate != closure.StartDate ? " – " + closure.EndDate.ToString("ddd d MMM yyyy") : "")</strong>
+                            <span class="text-secondary">· @closure.Reason</span>
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
+    </div>
+
+    <div class="col-lg-5">
+        <section class="tg-card h-auto" aria-labelledby="contact-heading">
+            <h2 id="contact-heading" class="h4 mb-3">Contact</h2>
+            <dl class="mb-3">
+                <dt>Address</dt>
+                <dd>@Model.Profile.Address</dd>
+                <dt>Phone</dt>
+                <dd><a href="tel:@Model.Profile.Phone">@Model.Profile.Phone</a></dd>
+                <dt>E-mail</dt>
+                <dd><a href="mailto:@Model.Profile.Email">@Model.Profile.Email</a></dd>
+            </dl>
+            <p class="small text-secondary">Groups larger than our biggest table: please call us.</p>
+            <a class="btn btn-primary" asp-area="Customer" asp-page="/Reservations/Book">Book a table</a>
+        </section>
+    </div>
+</div>

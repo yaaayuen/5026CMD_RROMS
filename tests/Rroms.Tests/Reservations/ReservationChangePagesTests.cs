@@ -81,19 +81,19 @@ public class ReservationChangePagesTests : IClassFixture<TestWebApplicationFacto
     {
         (HttpClient client, string customerId) = await SignInAsNewCustomerAsync();
         int id = await BookAsync(customerId, TableT01Id, new TimeOnly(18, 0));
-        await ConfirmAsync(id);
 
         string html = await client.GetStringAsync($"{DetailsUrl}/{id}");
 
         Assert.Contains($"href=\"/Customer/Orders/New/{id}\"", html);
     }
 
-    /// <summary>A Pending booking has no "Order food" link, because staff have not confirmed it yet.</summary>
+    /// <summary>A Pending booking (made before auto-confirm) has no "Order food" link.</summary>
     [Fact]
     public async Task Details_PendingBooking_HidesOrderFoodLink()
     {
         (HttpClient client, string customerId) = await SignInAsNewCustomerAsync();
         int id = await BookAsync(customerId, TableT03Id, new TimeOnly(18, 0));
+        await MakePendingAsync(id);
 
         string html = await client.GetStringAsync($"{DetailsUrl}/{id}");
 
@@ -209,14 +209,13 @@ public class ReservationChangePagesTests : IClassFixture<TestWebApplicationFacto
         return result.Value;
     }
 
-    /// <summary>Confirms a booking as staff would, through the service.</summary>
-    private async Task ConfirmAsync(int id)
+    /// <summary>Turns a booking back into Pending, like one made before bookings were confirmed automatically.</summary>
+    private async Task MakePendingAsync(int id)
     {
         using IServiceScope scope = _factory.Services.CreateScope();
-        IReservationService service = scope.ServiceProvider.GetRequiredService<IReservationService>();
-
-        ServiceResult result = await service.ConfirmAsync(id);
-        Assert.True(result.Succeeded, string.Join(" ", result.Errors));
+        ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await context.Reservations.Where(r => r.Id == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, ReservationStatus.Pending));
     }
 
     /// <summary>The booking's status as stored now.</summary>

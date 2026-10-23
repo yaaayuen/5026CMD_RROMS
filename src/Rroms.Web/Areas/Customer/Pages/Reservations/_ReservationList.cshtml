@@ -32,7 +32,7 @@
                     <td>@start.ToString("h:mm tt") – @end.ToString("h:mm tt")</td>
                     <td>@reservation.PartySize</td>
                     <td>@reservation.TableLabel <span class="text-secondary">· @reservation.AreaName</span></td>
-                    <td><span class="badge @IndexModel.StatusBadgeClass(reservation.Status)">@reservation.Status</span></td>
+                    <td><span class="badge @IndexModel.StatusBadgeClass(reservation.Status)">@Rroms.Web.Common.ReservationStatusDisplay.Label(reservation.Status)</span></td>
                 </tr>
             }
         </tbody>

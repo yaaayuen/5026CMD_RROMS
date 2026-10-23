@@ -42,7 +42,15 @@
                         else
                         {
                             <td><span class="badge text-bg-warning">Unpaid</span></td>
-                            <td><a asp-page="Details" asp-route-id="@bill.OrderId" class="btn btn-primary btn-sm">Generate bill</a></td>
+                            int unpaidInVisit = Model.Bills.Count(other => other.ReservationId == bill.ReservationId && !other.PaidPaymentId.HasValue);
+                            <td class="d-flex flex-wrap gap-1">
+                                <a asp-page="Details" asp-route-id="@bill.OrderId" class="btn btn-primary btn-sm">Generate bill</a>
+                                @if (unpaidInVisit > 1)
+                                {
+                                    @* Several orders for one visit: pay them together, one receipt. *@
+                                    <a asp-page="Visit" asp-route-id="@bill.ReservationId" class="btn btn-outline-primary btn-sm">Bill whole visit (@unpaidInVisit orders)</a>
+                                }
+                            </td>
                         }
                     </tr>
                 }

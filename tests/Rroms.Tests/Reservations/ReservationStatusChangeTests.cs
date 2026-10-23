@@ -81,7 +81,8 @@ public class ReservationStatusChangeTests : IDisposable
     [Fact]
     public async Task Confirm_PendingBooking_BecomesConfirmedAndNotifiesCustomer()
     {
-        int id = await BookAsync(CustomerA, SevenPm, TableT01Id);
+        // New bookings are confirmed automatically; a Pending one only exists from before that rule.
+        int id = await InsertReservationAsync(CustomerA, TableT01Id, ToUtc(SevenPm), ReservationStatus.Pending);
 
         ServiceResult result = await _service.ConfirmAsync(id);
 
@@ -93,7 +94,7 @@ public class ReservationStatusChangeTests : IDisposable
     [Fact]
     public async Task Seat_PendingBooking_IsRejectedBecauseItMustBeConfirmedFirst()
     {
-        int id = await BookAsync(CustomerA, SevenPm, TableT01Id);
+        int id = await InsertReservationAsync(CustomerA, TableT01Id, ToUtc(SevenPm), ReservationStatus.Pending);
 
         ServiceResult result = await _service.SeatAsync(id);
 
@@ -199,7 +200,6 @@ public class ReservationStatusChangeTests : IDisposable
     public async Task CancelByStaff_ConfirmedBooking_ReleasesTheTable()
     {
         int id = await BookAsync(CustomerA, SevenPm, TableT01Id);
-        await _service.ConfirmAsync(id);
 
         ServiceResult result = await _service.CancelByStaffAsync(id);
 
@@ -226,7 +226,6 @@ public class ReservationStatusChangeTests : IDisposable
     {
         // Booked a week ahead: staff must not be able to seat (and then complete) it today.
         int id = await BookAsync(CustomerA, SevenPm, TableT01Id);
-        await _service.ConfirmAsync(id);
 
         ServiceResult result = await _service.SeatAsync(id);
 
@@ -279,12 +278,11 @@ public class ReservationStatusChangeTests : IDisposable
     public async Task MarkNoShow_BeforeGracePeriodEnds_IsRejected()
     {
         int id = await BookAsync(CustomerA, SevenPm, TableT01Id);
-        await _service.ConfirmAsync(id);
 
         ServiceResult result = await _service.MarkNoShowAsync(id);
 
         Assert.False(result.Succeeded);
-        Assert.StartsWith("A booking can be marked as no-show", result.Errors[0]);
+        Assert.StartsWith("A booking can be marked as absent", result.Errors[0]);
     }
 
     [Fact]
@@ -333,7 +331,7 @@ public class ReservationStatusChangeTests : IDisposable
 
         Assert.False(result.Succeeded);
         Assert.Contains(ReservationService.ReservationNotFoundMessage, result.Errors);
-        Assert.Equal(ReservationStatus.Pending, await StatusOfAsync(id));
+        Assert.Equal(ReservationStatus.Confirmed, await StatusOfAsync(id));
     }
 
     [Fact]
@@ -380,22 +378,25 @@ public class ReservationStatusChangeTests : IDisposable
     }
 
     [Fact]
-    public async Task ModifyByCustomer_ConfirmedBooking_GoesBackToPending()
+    public async Task ModifyByCustomer_ConfirmedBooking_StaysConfirmedAndNotifiesBothSides()
     {
         int id = await BookAsync(CustomerA, SevenPm, TableT01Id);
-        await _service.ConfirmAsync(id);
+
+        _notifications.NotifiedRoles.Clear();
+        _notifications.NotifiedUsers.Clear();
 
         ServiceResult result = await _service.ModifyByCustomerAsync(CustomerA, id, Book(HalfPastSeven, TableT01Id));
 
         Assert.True(result.Succeeded);
-        Assert.Equal(ReservationStatus.Pending, await StatusOfAsync(id));
+        Assert.Equal(ReservationStatus.Confirmed, await StatusOfAsync(id));
+        Assert.Equal(RoleNames.Staff, Assert.Single(_notifications.NotifiedRoles));
+        Assert.Equal(CustomerA, Assert.Single(_notifications.NotifiedUsers));
     }
 
     [Fact]
     public async Task ModifyByStaff_ConfirmedBooking_StaysConfirmed()
     {
         int id = await BookAsync(CustomerA, SevenPm, TableT01Id);
-        await _service.ConfirmAsync(id);
 
         ServiceResult result = await _service.ModifyByStaffAsync(id, Book(HalfPastSeven, TableT01Id));
 

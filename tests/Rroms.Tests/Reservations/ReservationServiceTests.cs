@@ -254,7 +254,7 @@ public class ReservationServiceTests : IDisposable
     // ============================== 3. Booking ==============================//
 
     [Fact]
-    public async Task Create_ValidBooking_IsPendingHoldsFourSlotsAndNotifiesStaff()
+    public async Task Create_ValidBooking_IsConfirmedHoldsFourSlotsAndNotifiesStaffAndCustomer()
     {
         ServiceResult<int> result = await _service.CreateReservationAsync(CustomerA, Book(VisitDate, SevenPm, 2, TableT01Id));
 
@@ -263,10 +263,11 @@ public class ReservationServiceTests : IDisposable
             .Include(r => r.Slots)
             .AsNoTracking()
             .SingleAsync(r => r.Id == result.Value);
-        Assert.Equal(ReservationStatus.Pending, saved.Status);
+        Assert.Equal(ReservationStatus.Confirmed, saved.Status);
         Assert.Equal(4, saved.Slots.Count);
         Assert.Equal(saved.StartUtc.AddMinutes(120), saved.EndUtc);
         Assert.Equal(RoleNames.Staff, Assert.Single(_notifications.NotifiedRoles));
+        Assert.Equal(CustomerA, Assert.Single(_notifications.NotifiedUsers));
     }
 
     [Fact]

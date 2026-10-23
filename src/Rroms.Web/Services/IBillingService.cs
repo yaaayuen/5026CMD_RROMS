@@ -13,6 +13,13 @@ public interface IBillingService
     Task<BillSummary?> GetBillAsync(int orderId);
     /// <summary>Records the saved order total, using the staff ID obtained from the authenticated user.</summary>
     Task<ServiceResult<PaymentRecordingResult>> RecordPaymentAsync(int orderId, PaymentMethod method, string staffId);
+    /// <summary>The whole-visit bill: every unpaid, not-cancelled order of a reservation; null for an unknown reservation.</summary>
+    Task<VisitBill?> GetVisitBillAsync(int reservationId);
+    /// <summary>
+    /// Pays every unpaid order of a visit in one step (one transaction) so the customer pays once and gets one receipt.
+    /// Returns the first payment's ID, which opens the combined receipt.
+    /// </summary>
+    Task<ServiceResult<PaymentRecordingResult>> RecordVisitPaymentAsync(int reservationId, PaymentMethod method, string staffId);
     /// <summary>Reads a Paid receipt for staff or administrators through their protected pages.</summary>
     Task<ReceiptSummary?> GetReceiptForStaffAsync(int paymentId);
     /// <summary>Reads a Paid receipt only when it belongs to the signed-in customer.</summary>

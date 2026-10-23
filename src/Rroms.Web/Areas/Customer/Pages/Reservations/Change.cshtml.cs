@@ -128,7 +128,7 @@ public class ChangeModel : PageModel
             return Page();
         }
 
-        TempData["StatusMessage"] = "Your booking has been changed. Our staff will confirm it again soon.";
+        TempData["StatusMessage"] = "Your booking has been changed and is confirmed.";
         return RedirectToPage("Details", new { id });
     }
 

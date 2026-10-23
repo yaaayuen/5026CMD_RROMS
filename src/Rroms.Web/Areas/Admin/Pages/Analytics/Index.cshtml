@@ -66,7 +66,7 @@
 				<p class="small text-secondary mb-0">
 					@report.DailyTrend.Sum(d => d.Total) bookings ·
 					@report.DailyTrend.Sum(d => d.Cancelled) cancelled ·
-					@report.DailyTrend.Sum(d => d.NoShow) no-show
+					@report.DailyTrend.Sum(d => d.NoShow) absent
 				</p>
 			</section>
 		</div>
@@ -82,7 +82,7 @@
 	<p class="small text-secondary mb-4">
 		<strong>How utilisation is worked out:</strong> table-hours really used (Seated or Completed bookings, counted in 30-minute slots)
 		÷ table-hours available (opening hours × active tables, for every open day in the range) × 100.
-		Cancelled and no-show bookings free their table, and guests who leave early free the rest of their slot.
+		Cancelled and absent bookings free their table, and guests who leave early free the rest of their slot.
 	</p>
 
 	@* WL-5: the charts load their numbers from ?handler=Data for the same range, so they always match the tables below. *@
@@ -204,6 +204,8 @@
 	</section>
 
 	var busyDays = report.DailyTrend.Where(d => d.Total > 0).ToList();
+	// New bookings are confirmed at once, so Pending only appears for old bookings: show the column only then.
+	bool showPending = busyDays.Any(d => d.Pending > 0);
 	<section class="tg-card h-auto" aria-labelledby="trend-heading">
 		<details>
 			<summary class="h5 mb-0" id="trend-heading">Daily numbers (@busyDays.Count day(s) with bookings)</summary>
@@ -220,12 +222,15 @@
 						<thead>
 							<tr>
 								<th scope="col">Date</th>
-								<th scope="col" class="text-end">Pending</th>
+								@if (showPending)
+								{
+									<th scope="col" class="text-end">Pending</th>
+								}
 								<th scope="col" class="text-end">Confirmed</th>
 								<th scope="col" class="text-end">Seated</th>
 								<th scope="col" class="text-end">Completed</th>
 								<th scope="col" class="text-end">Cancelled</th>
-								<th scope="col" class="text-end">No-show</th>
+								<th scope="col" class="text-end">Absent</th>
 								<th scope="col" class="text-end">Total</th>
 								<th scope="col" class="text-end">Guests served</th>
 							</tr>
@@ -235,7 +240,10 @@
 							{
 								<tr>
 									<th scope="row">@day.Date.ToString("ddd d MMM", CultureInfo.InvariantCulture)</th>
-									<td class="text-end">@day.Pending</td>
+									@if (showPending)
+									{
+										<td class="text-end">@day.Pending</td>
+									}
 									<td class="text-end">@day.Confirmed</td>
 									<td class="text-end">@day.Seated</td>
 									<td class="text-end">@day.Completed</td>
@@ -249,7 +257,10 @@
 						<tfoot>
 							<tr class="fw-semibold">
 								<th scope="row">Total</th>
-								<td class="text-end">@busyDays.Sum(d => d.Pending)</td>
+								@if (showPending)
+								{
+									<td class="text-end">@busyDays.Sum(d => d.Pending)</td>
+								}
 								<td class="text-end">@busyDays.Sum(d => d.Confirmed)</td>
 								<td class="text-end">@busyDays.Sum(d => d.Seated)</td>
 								<td class="text-end">@busyDays.Sum(d => d.Completed)</td>

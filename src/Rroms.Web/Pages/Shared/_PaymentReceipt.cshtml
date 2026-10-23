@@ -9,7 +9,8 @@
         <div class="alert alert-warning fw-bold">DEMO ONLY - no real payment processed.</div>
     }
     <dl class="row">
-        <dt class="col-sm-3">Order / table</dt><dd class="col-sm-9">#@Model.Bill.OrderId · @Model.Bill.TableLabel</dd>
+        <dt class="col-sm-3">@(Model.Bills.Count > 1 ? "Orders / table" : "Order / table")</dt>
+        <dd class="col-sm-9">@string.Join(", ", (Model.Bills.Count > 0 ? Model.Bills : new List<Rroms.Web.Models.ViewModels.BillSummary> { Model.Bill }).Select(b => "#" + b.OrderId)) · @Model.Bill.TableLabel</dd>
         <dt class="col-sm-3">Customer</dt><dd class="col-sm-9">@Model.Bill.CustomerName</dd>
         <dt class="col-sm-3">Recorded (Malaysia)</dt><dd class="col-sm-9">@MalaysiaTime.FromUtc(Model.PaidAtUtc).ToString("dd MMM yyyy, h:mm tt")</dd>
         <dt class="col-sm-3">Recorded by</dt><dd class="col-sm-9">@Model.StaffName</dd>
@@ -25,7 +26,11 @@
         </dd>
         <dt class="col-sm-3">Status</dt><dd class="col-sm-9"><span class="badge text-bg-success">Paid</span></dd>
     </dl>
-    <partial name="~/Pages/Shared/_BillingLines.cshtml" model="Model.Bill" />
-    <p class="h3 text-end">Total paid: RM @Model.Amount.ToString("N2")</p>
+    @* A whole-visit receipt lists every order paid together; a single-order receipt lists just one. *@
+    @foreach (var paidBill in (Model.Bills.Count > 0 ? Model.Bills : new List<Rroms.Web.Models.ViewModels.BillSummary> { Model.Bill }))
+    {
+        <partial name="~/Pages/Shared/_BillingLines.cshtml" model="paidBill" />
+    }
+    <p class="h3 text-end">Total paid: RM @((Model.TotalPaid > 0 ? Model.TotalPaid : Model.Amount).ToString("N2"))</p>
     <p class="text-secondary mb-0">Thank you for dining at Three Grills.</p>
 </section>

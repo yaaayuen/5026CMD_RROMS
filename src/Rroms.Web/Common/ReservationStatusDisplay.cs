@@ -31,8 +31,18 @@ public static class ReservationStatusDisplay
             ReservationStatus.Seated => "Seat",
             ReservationStatus.Completed => "Complete",
             ReservationStatus.Cancelled => "Cancel",
-            ReservationStatus.NoShow => "No-show",
+            ReservationStatus.NoShow => "Mark absent",
             _ => to.ToString()
         };
+    }
+
+    /// <summary>
+    /// The status name shown on badges. NoShow is shown as "Absent"; the stored value stays NoShow,
+    /// so the database and the shared enum do not change.
+    /// </summary>
+    /// <param name="status">The booking's status.</param>
+    public static string Label(ReservationStatus status)
+    {
+        return status == ReservationStatus.NoShow ? "Absent" : status.ToString();
     }
 }
