@@ -1,11 +1,57 @@
 @model Rroms.Web.Areas.Customer.Pages.Tracking.IndexModel
+@using Rroms.Web.Common
 @using Rroms.Web.Contracts
-<h2 class="h4">Reservations</h2>
-@if (Model.Reservations.Count == 0) { <p>You have no reservations yet.</p> }
-@foreach (var booking in Model.Reservations)
-{
-    <p><a asp-area="Customer" asp-page="/Reservations/Details" asp-route-id="@booking.Id">Reservation #@booking.Id</a>: <strong>@booking.Status</strong></p>
+@{
+    // Bookings that can still change are shown first; finished ones are folded away.
+    var current = Model.Reservations
+        .Where(r => r.Status is ReservationStatus.Pending or ReservationStatus.Confirmed or ReservationStatus.Seated)
+        .OrderBy(r => r.StartUtc).ToList();
+    var past = Model.Reservations.Except(current).OrderByDescending(r => r.StartUtc).ToList();
 }
+<section class="tg-card h-auto mb-4" aria-labelledby="track-reservations-heading">
+    <h2 id="track-reservations-heading" class="h4 mb-3">Reservations</h2>
+    @if (Model.Reservations.Count == 0)
+    {
+        <p class="mb-0 text-secondary">You have no reservations yet. <a asp-area="Customer" asp-page="/Reservations/Book">Book a table</a></p>
+    }
+    else if (current.Count == 0)
+    {
+        <p class="text-secondary">No upcoming visits. <a asp-area="Customer" asp-page="/Reservations/Book">Book a table</a></p>
+    }
+    <ul class="track-list list-unstyled mb-0">
+        @foreach (var booking in current)
+        {
+            DateTime start = MalaysiaTime.FromUtc(booking.StartUtc);
+            DateTime end = MalaysiaTime.FromUtc(booking.EndUtc);
+            <li class="track-visit">
+                <div class="track-date" aria-hidden="true"><span>@start.ToString("MMM")</span><strong>@start.Day</strong></div>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold">@start.ToString("dddd d MMMM") · @start.ToString("h:mm tt") – @end.ToString("h:mm tt")</div>
+                    <div class="small text-secondary">@booking.PartySize @(booking.PartySize == 1 ? "guest" : "guests") · Table @booking.TableLabel · @booking.AreaName</div>
+                </div>
+                <span class="badge @ReservationStatusDisplay.BadgeClass(booking.Status)">@booking.Status</span>
+                <a class="btn btn-outline-primary btn-sm" asp-area="Customer" asp-page="/Reservations/Details" asp-route-id="@booking.Id"
+                   aria-label="View reservation on @start.ToString("d MMMM")">View</a>
+            </li>
+        }
+    </ul>
+    @if (past.Count > 0)
+    {
+        <details class="track-past mt-3" id="track-past">
+            <summary>Past visits (@past.Count)</summary>
+            <ul class="list-unstyled mb-0 mt-2">
+                @foreach (var booking in past)
+                {
+                    DateTime start = MalaysiaTime.FromUtc(booking.StartUtc);
+                    <li class="d-flex align-items-center gap-2 py-1">
+                        <a asp-area="Customer" asp-page="/Reservations/Details" asp-route-id="@booking.Id">@start.ToString("ddd d MMM yyyy, h:mm tt")</a>
+                        <span class="badge @ReservationStatusDisplay.BadgeClass(booking.Status) ms-auto">@booking.Status</span>
+                    </li>
+                }
+            </ul>
+        </details>
+    }
+</section>
 <h2 class="h4">Orders</h2>
 @if (Model.Orders.Count == 0) { <p>You have no orders yet.</p> }
 @foreach (var order in Model.Orders)

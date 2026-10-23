@@ -60,6 +60,27 @@ public class ChatbotTests
         Assert.Equal(0, handler.Calls);
     }
 
+    [Theory]
+    [InlineData("how do I reserve a table", "press Book a table")]
+    [InlineData("how to cancel my booking", "Cancel booking")]
+    [InlineData("how do I leave feedback", "Submit feedback")]
+    public async Task HowToQuestionsExplainTheSteps(string question, string expectedStep)
+    {
+        using var factory = new TestWebApplicationFactory();
+        using var scope = factory.Services.CreateScope();
+        var reply = await Service(scope.ServiceProvider, new Provider()).AskAsync(question, true);
+        Assert.Contains(reply.Steps, step => step.Contains(expectedStep));
+    }
+    [Fact]
+    public async Task GuestStillSeesBookingStepsAfterSigningIn()
+    {
+        using var factory = new TestWebApplicationFactory();
+        using var scope = factory.Services.CreateScope();
+        var reply = await Service(scope.ServiceProvider, new Provider()).AskAsync("how do I book a table", false);
+        Assert.Equal("/Account/Login", reply.PageUrl);
+        Assert.StartsWith("Sign in", reply.Steps[0]);
+        Assert.True(reply.Steps.Count > 1);
+    }
     [Fact]
     public async Task GuestIsSentToLoginForPersonalRecords()
     {
