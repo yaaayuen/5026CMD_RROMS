@@ -1,14 +1,30 @@
-<button class="btn btn-primary position-fixed bottom-0 end-0 m-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#alex-chat" aria-controls="alex-chat" style="z-index:1030">Ask Three Grills</button>
-<div class="offcanvas offcanvas-end" tabindex="-1" id="alex-chat" aria-labelledby="chatbot-title">
-    <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="chatbot-title">Three Grills assistant</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button></div>
-    <div class="offcanvas-body">
-        <p>Common questions use local answers. Other questions may be sent to NVIDIA AI. Please do not enter passwords or payment details.</p>
-        <div id="chatbot-log" role="log" aria-live="polite" aria-relevant="additions"></div>
-        <form method="post" asp-area="" asp-page="/Chat/Index" id="chatbot-form">
-            <label for="chatbot-question" class="form-label">Your question</label>
-            <input id="chatbot-question" name="Question" maxlength="500" required class="form-control mb-2" autocomplete="off" />
+@* The chat history is kept per signed-in user, so data-chat-user separates two people sharing a browser tab. *@
+<button class="btn btn-primary chat-launcher position-fixed bottom-0 end-0 m-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#alex-chat" aria-controls="alex-chat">Ask Three Grills</button>
+<div class="offcanvas offcanvas-end chat-panel" tabindex="-1" id="alex-chat" aria-labelledby="chatbot-title" data-chat-user="@(User.Identity?.Name ?? "")">
+    <div class="offcanvas-header chat-header">
+        <div>
+            <h2 class="offcanvas-title h5 mb-0" id="chatbot-title">Three Grills assistant</h2>
+            <p class="small mb-0 chat-header-note">Ask about bookings, the menu or your visit</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-sm chat-clear" id="chatbot-clear">Clear chat</button>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+    </div>
+    <div class="offcanvas-body chat-body">
+        <p class="chat-privacy small">Common questions use local answers. Other questions may be sent to NVIDIA AI. Please do not enter passwords or payment details.</p>
+        <div id="chatbot-log" class="chat-log" role="log" aria-live="polite" aria-relevant="additions"></div>
+        <div id="chatbot-suggestions" class="chat-suggestions" aria-label="Suggested questions">
+            <button type="button" class="chat-chip">How do I book a table?</button>
+            <button type="button" class="chat-chip">How do I order food?</button>
+            <button type="button" class="chat-chip">What are your opening hours?</button>
+            <button type="button" class="chat-chip">Show menu</button>
+        </div>
+        <p id="chatbot-state" role="status" class="chat-state small"></p>
+        <form method="post" asp-area="" asp-page="/Chat/Index" id="chatbot-form" class="chat-form">
+            <label for="chatbot-question" class="visually-hidden">Your question</label>
+            <input id="chatbot-question" name="Question" maxlength="500" required class="form-control" autocomplete="off" placeholder="Type your question..." />
             <button class="btn btn-primary" id="chatbot-send">Ask</button>
         </form>
-        <p id="chatbot-state" role="status" class="mt-2"></p>
     </div>
 </div>

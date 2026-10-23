@@ -41,7 +41,10 @@ public class ChatbotService : IChatbotService
         // Personal records remain on authenticated pages; they are never sent to the AI service.
         if (Has(text, "order", "orders", "tracking", "status", "ready"))
         {
-            return CustomerPage(isCustomer, "Pre-orders reach the kitchen only after you are seated. You can check your current order and reservation status on Track my visit.", "/Customer/Tracking", "Track my visit");
+            return CustomerPage(isCustomer, "Pre-orders reach the kitchen only after you are seated. You can check your current order and reservation status on Track my visit.", "/Customer/Tracking", "Track my visit",
+                "Open My reservations and choose a confirmed booking.",
+                "Press Order food, add the dishes you want, then press Place order.",
+                "The kitchen starts cooking once staff seat you. Follow each step on Track my visit.");
         }
         if (Has(text, "book", "booking", "reservation", "reserve", "table", "availability", "available tables"))
         {
@@ -55,15 +58,31 @@ public class ChatbotService : IChatbotService
                     : string.Join(" ", result.Errors);
                 return CustomerPage(isCustomer, answer, "/Customer/Reservations", "My reservations");
             }
-            return CustomerPage(isCustomer, "For a live check, ask: table yyyy-MM-dd HH:mm for 2. Or choose a date, time and party size on the booking page to check live availability. Existing bookings can be changed from My reservations.", "/Customer/Reservations", "My reservations");
+            if (Has(text, "cancel", "change", "edit", "move"))
+            {
+                return CustomerPage(isCustomer, "You can change or cancel a pending or confirmed booking before your visit starts.", "/Customer/Reservations", "My reservations",
+                    "Open My reservations and choose the booking.",
+                    "Press Change booking to pick a new date, time or party size, or press Cancel booking.",
+                    "A changed booking goes back to our staff to confirm again.");
+            }
+            return CustomerPage(isCustomer, "Here is how to book a table. For a quick live check you can also ask: table yyyy-MM-dd HH:mm for 2.", "/Customer/Reservations", "My reservations",
+                "Open My reservations and press Book a table.",
+                "Choose a date, a time and the number of guests, then press Find tables.",
+                "Pick one of the free tables and add any special requests, such as a birthday or a high chair.",
+                "Press Book. Your booking stays Pending until staff confirm it, and you get a notification when they do.");
         }
         if (Has(text, "feedback", "review", "rating", "rate"))
         {
-            return CustomerPage(isCustomer, "You can leave one rating from 1 to 5 stars after staff complete your visit.", "/Customer/Feedback", "Dining feedback");
+            return CustomerPage(isCustomer, "You can leave one rating from 1 to 5 stars after staff complete your visit.", "/Customer/Feedback", "Dining feedback",
+                "Open Dining feedback after your visit is marked as completed.",
+                "Choose the visit, pick a rating from 1 to 5 stars and add a comment if you like.",
+                "Press Submit feedback.");
         }
         if (Has(text, "profile", "password", "account"))
         {
-            return CustomerPage(isCustomer, "Your profile page contains your account details and links to password settings.", "/Account/Profile", "My profile");
+            return CustomerPage(isCustomer, "Your profile page contains your account details and links to password settings.", "/Account/Profile", "My profile",
+                "Open My profile from your email address at the top of the page.",
+                "Update your details there, or press Change password to choose a new password.");
         }
         if (Has(text, "promotion", "promotions", "campaign", "announcement", "offers"))
         {
@@ -146,10 +165,18 @@ public class ChatbotService : IChatbotService
     {
         return new ChatReply { Answer = answer, PageUrl = url, PageLabel = label };
     }
-    private static ChatReply CustomerPage(bool customer, string answer, string url, string label)
+    private static ChatReply CustomerPage(bool customer, string answer, string url, string label, params string[] steps)
     {
-        if (!customer) { return Reply("Please sign in with a customer account to use this feature.", "/Account/Login", "Sign in"); }
-        return Reply(answer, url, label);
+        if (!customer)
+        {
+            // Guests still see how it works, with signing in as the first step.
+            var reply = Reply("Please sign in with a customer account to use this feature.", "/Account/Login", "Sign in");
+            reply.Steps = steps.Length == 0 ? steps : steps.Prepend("Sign in, or create a customer account if you are new.").ToArray();
+            return reply;
+        }
+        var answerWithSteps = Reply(answer, url, label);
+        answerWithSteps.Steps = steps;
+        return answerWithSteps;
     }
     private static ChatReply Fallback()
     {

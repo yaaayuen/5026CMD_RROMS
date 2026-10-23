@@ -673,3 +673,203 @@ input[type="password"]::-ms-clear {
 [data-bs-theme="dark"] .site-navbar .navbar-toggler-icon {
     filter: invert(1);
 }
+
+/* -----------------------------------------------------------------------------
+   7. TRACK MY VISIT AND THE CHAT SIDEBAR
+   Colours come from the tokens above, so dark mode needs no extra rules.
+   ----------------------------------------------------------------------------- */
+.track-visit {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+    .track-visit:last-child {
+        border-bottom: 0;
+    }
+
+.track-date {
+    flex: 0 0 3.25rem;
+    text-align: center;
+    border-radius: 0.75rem;
+    background-color: var(--tg-blush);
+    color: var(--tg-link);
+    padding: 0.35rem 0;
+    line-height: 1.1;
+}
+
+    .track-date span {
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .track-date strong {
+        font-family: var(--tg-font-heading);
+        font-size: 1.35rem;
+    }
+
+.track-past summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--tg-link);
+}
+
+@media (max-width: 575.98px) {
+    .track-visit {
+        flex-wrap: wrap;
+    }
+}
+
+.chat-launcher {
+    z-index: 1030;
+    border-radius: var(--tg-radius-pill);
+    box-shadow: var(--tg-shadow-hover);
+}
+
+.chat-panel {
+    background-color: var(--tg-cream);
+}
+
+.chat-header {
+    background: var(--tg-gradient);
+    color: var(--tg-on-brand);
+}
+
+.chat-header-note {
+    opacity: 0.9;
+}
+
+.chat-clear {
+    white-space: nowrap;
+    color: var(--tg-on-brand);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: var(--tg-radius-pill);
+}
+
+    .chat-clear:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+        color: var(--tg-on-brand);
+    }
+
+.chat-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.chat-privacy {
+    color: var(--tg-muted);
+    background-color: var(--tg-peach);
+    border-radius: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    margin: 0;
+}
+
+.chat-log {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+    .chat-log:empty::before {
+        content: "Hi! Ask me how to book a table, order food or leave feedback, and I will walk you through it.";
+        align-self: flex-start;
+        max-width: 88%;
+        padding: 0.6rem 0.85rem;
+        border-radius: 1rem 1rem 1rem 0.25rem;
+        background-color: var(--tg-surface);
+        box-shadow: var(--tg-shadow);
+    }
+
+.chat-msg {
+    max-width: 88%;
+    padding: 0.6rem 0.85rem;
+    border-radius: 1rem;
+}
+
+    .chat-msg.from-you {
+        align-self: flex-end;
+        background-color: var(--tg-raspberry);
+        color: var(--tg-on-brand);
+        border-bottom-right-radius: 0.25rem;
+    }
+
+    .chat-msg.from-bot {
+        align-self: flex-start;
+        background-color: var(--tg-surface);
+        box-shadow: var(--tg-shadow);
+        border-bottom-left-radius: 0.25rem;
+    }
+
+.chat-who {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--tg-link);
+    margin-bottom: 0.15rem;
+}
+
+.chat-steps {
+    margin: 0.5rem 0 0;
+    padding-left: 1.2rem;
+}
+
+    .chat-steps li + li {
+        margin-top: 0.25rem;
+    }
+
+.chat-action {
+    margin-top: 0.6rem;
+    background-color: var(--tg-blush);
+    color: var(--tg-link);
+    border-radius: var(--tg-radius-pill);
+    font-weight: 600;
+}
+
+    .chat-action:hover {
+        background-color: var(--tg-link);
+        color: var(--tg-on-brand);
+    }
+
+.chat-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+    .chat-suggestions[hidden] {
+        display: none;
+    }
+
+.chat-chip {
+    border: 1px solid var(--tg-link);
+    background-color: transparent;
+    color: var(--tg-link);
+    border-radius: var(--tg-radius-pill);
+    padding: 0.3rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+    .chat-chip:hover {
+        background-color: var(--tg-blush);
+    }
+
+.chat-state {
+    margin: 0;
+    color: var(--tg-muted);
+}
+
+    .chat-state:empty {
+        display: none;
+    }
+
+.chat-form {
+    display: flex;
+    gap: 0.5rem;
+}

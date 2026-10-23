@@ -15,7 +15,9 @@
             }
             if (!response.ok) { throw new Error("Update failed"); }
             // This is a Razor-rendered same-origin partial; Razor encodes all stored text.
+            const open = Array.from(content.querySelectorAll("details[open][id]"), d => d.id);
             content.innerHTML = await response.text();
+            open.forEach(id => document.getElementById(id)?.setAttribute("open", ""));
             state.textContent = "Last checked " + new Date().toLocaleTimeString();
         } catch {
             state.textContent = "Connection interrupted. Retrying automatically.";
