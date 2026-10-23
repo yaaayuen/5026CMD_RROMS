@@ -102,6 +102,15 @@ public class DiningExperiencePageTests
         Assert.DoesNotContain("order-steps", html);
         Assert.Contains("Tracking Pasta", html);
     }
+    [Fact]
+    public async Task MissedVisitShowsAsAbsentLikeOtherPages()
+    {
+        await using var tracking = await TrackingAsync();
+        await tracking.VisitAsync(DateTime.UtcNow.AddDays(-3), ReservationStatus.NoShow);
+        string html = await tracking.StatusHtmlAsync();
+        Assert.Contains(">Absent</span>", html);
+        Assert.DoesNotContain("NoShow", html);
+    }
 
     /// <summary>A signed-in customer with their own visits and orders, for the Track my visit tests.</summary>
     private sealed class Tracking : IAsyncDisposable

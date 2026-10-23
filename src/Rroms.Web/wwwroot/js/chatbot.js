@@ -9,7 +9,7 @@
     const clear = document.getElementById("chatbot-clear");
     const suggestions = document.getElementById("chatbot-suggestions");
     const panel = document.getElementById("alex-chat");
-    const allowedPages = new Set(["/Menu", "/Announcements", "/Customer/Reservations", "/Customer/Tracking", "/Customer/Feedback", "/Account/Profile", "/Account/Login"]);
+    const allowedPages = new Set(["/Menu", "/Announcements", "/Customer/Reservations", "/Customer/Tracking", "/Customer/Feedback", "/Account/Profile", "/Account/Login", "/Visit"]);
     // History stays in this browser tab only, and each signed-in user gets their own.
     const storageKey = "tg-chat:" + ((panel && panel.dataset && panel.dataset.chatUser) || "guest");
     const maxMessages = 40;

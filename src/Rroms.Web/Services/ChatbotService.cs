@@ -63,13 +63,13 @@ public class ChatbotService : IChatbotService
                 return CustomerPage(isCustomer, "You can change or cancel a pending or confirmed booking before your visit starts.", "/Customer/Reservations", "My reservations",
                     "Open My reservations and choose the booking.",
                     "Press Change booking to pick a new date, time or party size, or press Cancel booking.",
-                    "A changed booking goes back to our staff to confirm again.");
+                    "Press Save changes. If a table is free, the changed booking is confirmed straight away.");
             }
             return CustomerPage(isCustomer, "Here is how to book a table. For a quick live check you can also ask: table yyyy-MM-dd HH:mm for 2.", "/Customer/Reservations", "My reservations",
                 "Open My reservations and press Book a table.",
                 "Choose a date, a time and the number of guests, then press Find tables.",
                 "Pick one of the free tables and add any special requests, such as a birthday or a high chair.",
-                "Press Book. Your booking stays Pending until staff confirm it, and you get a notification when they do.");
+                "Press Book. Your booking is confirmed straight away, and you get a notification.");
         }
         if (Has(text, "feedback", "review", "rating", "rate"))
         {
@@ -95,12 +95,12 @@ public class ChatbotService : IChatbotService
             string todayText = await _restaurant.IsClosedOnAsync(today) ? "Closed today. " : "";
             string week = string.Join("; ", hours.Select(h => h.DayOfWeek + ": " +
                 (h.IsClosed ? "closed" : h.OpensAt.ToString("HH:mm") + " to " + h.ClosesAt.ToString("HH:mm"))));
-            return Reply(todayText + "Usual hours (Malaysia time): " + week + ". Special closures are checked on the booking page.");
+            return Reply(todayText + "Usual hours (Malaysia time): " + week + ". Special closures are listed on Opening hours.", "/Visit", "Opening hours");
         }
         if (Has(text, "address", "location", "contact", "phone", "email"))
         {
             var profile = await _restaurant.GetProfileAsync();
-            return Reply(profile.Name + ": " + profile.Address + ". Phone: " + profile.Phone + ". Email: " + profile.Email);
+            return Reply(profile.Name + ": " + profile.Address + ". Phone: " + profile.Phone + ". Email: " + profile.Email, "/Visit", "Opening hours and contact");
         }
         if (Has(text, "payment", "pay", "bill", "cash", "card"))
         {

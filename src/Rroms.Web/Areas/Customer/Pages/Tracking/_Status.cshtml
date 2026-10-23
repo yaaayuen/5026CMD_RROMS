@@ -85,7 +85,7 @@
                         <div class="small text-secondary">Your note: @booking.SpecialRequests</div>
                     }
                 </div>
-                <span class="badge @ReservationStatusDisplay.BadgeClass(booking.Status)">@booking.Status</span>
+                <span class="badge @ReservationStatusDisplay.BadgeClass(booking.Status)">@ReservationStatusDisplay.Label(booking.Status)</span>
                 @if (happeningNow)
                 {
                     <a class="small" asp-area="Customer" asp-page="/Reservations/Details" asp-route-id="@booking.Id"
@@ -116,7 +116,7 @@
                     <li class="track-past-visit">
                         <div class="d-flex align-items-center gap-2">
                             <a asp-area="Customer" asp-page="/Reservations/Details" asp-route-id="@booking.Id">@start.ToString("ddd d MMM yyyy, h:mm tt")</a>
-                            <span class="badge @ReservationStatusDisplay.BadgeClass(booking.Status) ms-auto">@booking.Status</span>
+                            <span class="badge @ReservationStatusDisplay.BadgeClass(booking.Status) ms-auto">@ReservationStatusDisplay.Label(booking.Status)</span>
                         </div>
                         @if (ordersByVisit[booking.Id].Any())
                         {
