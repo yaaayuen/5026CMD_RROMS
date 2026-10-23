@@ -19,8 +19,8 @@ public class ChatbotTests
     [InlineData("book a table", "/Customer/Reservations")]
     [InlineData("my order status", "/Customer/Tracking")]
     [InlineData("leave feedback", "/Customer/Feedback")]
-    [InlineData("opening hours", null)]
-    [InlineData("contact phone", null)]
+    [InlineData("opening hours", "/Visit")]
+    [InlineData("contact phone", "/Visit")]
     [InlineData("promotions", "/Announcements")]
     public async Task CommonQuestionsStayLocal(string question, string? expectedPage)
     {
@@ -64,6 +64,7 @@ public class ChatbotTests
     [Theory]
     [InlineData("how do I reserve a table", "press Book a table")]
     [InlineData("how to cancel my booking", "Cancel booking")]
+    [InlineData("how do I change my booking", "confirmed straight away")]
     [InlineData("how do I leave feedback", "Submit feedback")]
     public async Task HowToQuestionsExplainTheSteps(string question, string expectedStep)
     {
@@ -71,6 +72,15 @@ public class ChatbotTests
         using var scope = factory.Services.CreateScope();
         var reply = await Service(scope.ServiceProvider, new Provider()).AskAsync(question, true);
         Assert.Contains(reply.Steps, step => step.Contains(expectedStep));
+    }
+    [Fact]
+    public async Task BookingStepsMatchAutoConfirmation()
+    {
+        using var factory = new TestWebApplicationFactory();
+        using var scope = factory.Services.CreateScope();
+        var reply = await Service(scope.ServiceProvider, new Provider()).AskAsync("how do I reserve a table", true);
+        Assert.Contains(reply.Steps, step => step.Contains("confirmed straight away"));
+        Assert.DoesNotContain(reply.Steps, step => step.Contains("Pending") || step.Contains("confirm again"));
     }
     [Fact]
     public async Task GuestStillSeesBookingStepsAfterSigningIn()

@@ -57,6 +57,11 @@ test('the suggested page is a link inside the answer, with no popup', async () =
     assert.equal(link.textContent, 'Open Menu →');
     assert.deepEqual(chat.page.prompts, []);
 });
+test('the opening hours page is an approved link', async () => {
+    const chat = load();
+    await chat.ask('opening hours', { answer: 'Hours', pageUrl: '/Visit', pageLabel: 'Opening hours' });
+    assert.equal(chat.bubbles()[1].find('a').href, '/Visit');
+});
 test('external or unapproved pages never become links', async () => {
     for (const url of ['https://example.com', '//example.com', '/Admin/Announcements', 'javascript:alert(1)']) {
         const chat = load();
