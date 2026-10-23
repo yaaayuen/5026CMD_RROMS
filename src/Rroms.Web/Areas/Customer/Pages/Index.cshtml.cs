@@ -51,7 +51,7 @@ public class IndexModel : PageModel
                 "Past reservations, orders and payment receipts.",
                 "receipt",
                 "Sprint 3 · YJ",
-                "/Customer/Reservations"),
+                "/Customer/History"),
             new ModuleTileViewModel(
                 "Notifications",
                 "Booking confirmations, order updates and offers.",
