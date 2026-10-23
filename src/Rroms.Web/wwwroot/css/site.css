@@ -957,3 +957,69 @@ input[type="password"]::-ms-clear {
     display: flex;
     gap: 0.5rem;
 }
+
+/* News and offers: tabs and cards. Offers and news differ by a word badge as well as the top colour. */
+.news-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.news-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 1rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 999px;
+    background-color: var(--tg-surface);
+    color: var(--bs-body-color);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+    .news-tab:hover {
+        border-color: var(--tg-raspberry);
+        color: var(--tg-link);
+    }
+
+    .news-tab.active {
+        background-color: var(--tg-raspberry);
+        border-color: var(--tg-raspberry);
+        color: #fff;
+    }
+
+.news-tab-count {
+    min-width: 1.5rem;
+    padding: 0 0.4rem;
+    border-radius: 999px;
+    background-color: var(--tg-blush);
+    color: var(--tg-link);
+    font-size: 0.8rem;
+    text-align: center;
+}
+
+.news-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 1.25rem;
+    border-top: 4px solid var(--tg-teal);
+}
+
+    .news-card.is-offer {
+        border-top-color: var(--tg-raspberry);
+    }
+
+.news-message {
+    white-space: pre-wrap;
+    flex-grow: 1;
+}
+
+.news-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
