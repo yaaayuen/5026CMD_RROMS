@@ -77,13 +77,16 @@
 							<a class="nav-link @(homeActive ? "active" : "")" aria-current="@(homeActive ? "page" : null)"
 							   asp-area="" asp-page="/Index">Home</a>
 						</li>
-						<li class="nav-item">
-							@{
-								bool menuActive = currentArea == string.Empty && currentPage == "/Menu/Index";
-							}
-							<a class="nav-link @(menuActive ? "active" : "")" aria-current="@(menuActive ? "page" : null)"
-							   asp-area="" asp-page="/Menu/Index">Menu</a>
-						</li>
+						@* Menu link for visitors who are not signed in. Signed-in customers open the menu from the
+                           "Menu and ordering" tile on My dining; staff and administrators have their own menu pages. *@
+						@if (!isSignedIn)
+						{
+							bool menuActive = currentArea == string.Empty && currentPage == "/Menu/Index";
+							<li class="nav-item">
+								<a class="nav-link @(menuActive ? "active" : "")" aria-current="@(menuActive ? "page" : null)"
+								   asp-area="" asp-page="/Menu/Index">Menu</a>
+							</li>
+						}
 						<li class="nav-item">
 							@{
 								bool newsActive = currentArea == string.Empty && currentPage == "/Announcements/Index";
