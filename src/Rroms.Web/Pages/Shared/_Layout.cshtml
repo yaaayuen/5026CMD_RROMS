@@ -80,6 +80,12 @@
                             <a class="nav-link @(newsActive ? "active" : "")" aria-current="@(newsActive ? "page" : null)"
                                asp-area="" asp-page="/Announcements/Index">News and offers</a>
                         </li>
+                        <li class="nav-item">
+                            @* WL-1: public opening hours and contact, so guests can see them before signing in. *@
+                            @{ bool visitActive = currentArea == string.Empty && currentPage == "/Visit/Index"; }
+                            <a class="nav-link @(visitActive ? "active" : "")" aria-current="@(visitActive ? "page" : null)"
+                               asp-area="" asp-page="/Visit/Index">Opening hours</a>
+                        </li>
 						
 						@* Each role only sees the link it is allowed to use.
 						The server still checks permissions on every page Hiding links is for convenience, not security*@
