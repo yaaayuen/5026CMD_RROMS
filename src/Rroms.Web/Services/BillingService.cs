@@ -17,6 +17,8 @@ public class BillingService : IBillingService
     public const string AlreadyPaidMessage = "This order has already been paid. Open its receipt instead.";
     public const string InvalidMethodMessage = "Choose a valid payment method.";
     public const string InvalidStaffMessage = "An active staff or administrator account is required.";
+    public const string NothingToPayMessage = "Every order of this visit is already paid.";
+    public const string VisitNotReadyMessage = "Every order of this visit must be completed by the kitchen before the visit can be paid.";
     public const string NotificationWarning = "Payment was saved, but its confirmation notification could not be sent. Do not record the payment again.";
 
     private readonly ApplicationDbContext _context;
@@ -51,6 +53,7 @@ public class BillingService : IBillingService
             .Select(order => new BillSummary
             {
                 OrderId = order.Id,
+                ReservationId = order.ReservationId,
                 CustomerName = order.Customer!.FullName,
                 TableLabel = order.Reservation!.DiningTable!.Label,
                 TotalAmount = order.TotalAmount,
@@ -171,6 +174,127 @@ public class BillingService : IBillingService
     }
 
     /// <inheritdoc />
+    public async Task<VisitBill?> GetVisitBillAsync(int reservationId)
+    {
+        var visit = await _context.Reservations.AsNoTracking()
+            .Where(reservation => reservation.Id == reservationId)
+            .Select(reservation => new
+            {
+                reservation.Id,
+                CustomerName = reservation.Customer!.FullName,
+                TableLabel = reservation.DiningTable!.Label
+            }).SingleOrDefaultAsync();
+        if (visit == null)
+        {
+            return null;
+        }
+        List<Order> orders = await OrdersWithDetails()
+            .Where(order => order.ReservationId == reservationId && order.Status != OrderStatus.Cancelled
+                && !_context.Payments.Any(payment => payment.OrderId == order.Id && payment.Status == PaymentStatus.Paid))
+            .OrderBy(order => order.Id)
+            .ToListAsync();
+        return new VisitBill
+        {
+            ReservationId = visit.Id,
+            CustomerName = visit.CustomerName,
+            TableLabel = visit.TableLabel,
+            UnpaidOrders = orders.Select(MapBill).ToList()
+        };
+    }
+
+    /// <inheritdoc />
+    public async Task<ServiceResult<PaymentRecordingResult>> RecordVisitPaymentAsync(int reservationId, PaymentMethod method, string staffId)
+    {
+        if (!Enum.IsDefined(method))
+        {
+            return ServiceResult<PaymentRecordingResult>.Failure(InvalidMethodMessage);
+        }
+        if (!await IsActiveStaffAsync(staffId))
+        {
+            return ServiceResult<PaymentRecordingResult>.Failure(InvalidStaffMessage);
+        }
+        List<Order> unpaid = await _context.Orders.AsNoTracking()
+            .Where(order => order.ReservationId == reservationId && order.Status != OrderStatus.Cancelled
+                && !_context.Payments.Any(payment => payment.OrderId == order.Id && payment.Status == PaymentStatus.Paid))
+            .OrderBy(order => order.Id)
+            .ToListAsync();
+        if (unpaid.Count == 0)
+        {
+            return ServiceResult<PaymentRecordingResult>.Failure(NothingToPayMessage);
+        }
+        if (unpaid.Any(order => order.Status != OrderStatus.Completed))
+        {
+            return ServiceResult<PaymentRecordingResult>.Failure(VisitNotReadyMessage);
+        }
+
+        // One Payment row per order keeps the existing rules (one Paid record per order, saved order total).
+        // They share one timestamp, staff and method, which is how the receipt finds them together.
+        DateTime paidAtUtc = DateTime.UtcNow;
+        List<Payment> payments = unpaid.Select(order => new Payment
+        {
+            OrderId = order.Id,
+            Amount = order.TotalAmount,
+            Method = method,
+            Status = PaymentStatus.Paid,
+            StaffId = staffId,
+            PaidAtUtc = paidAtUtc
+        }).ToList();
+        _context.Payments.AddRange(payments);
+        try
+        {
+            // One SaveChanges = one transaction: either every order of the visit is paid, or none is.
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception) when (IsDuplicatePaidOrder(exception))
+        {
+            foreach (Payment payment in payments)
+            {
+                _context.Entry(payment).State = EntityState.Detached;
+            }
+            return ServiceResult<PaymentRecordingResult>.Failure(AlreadyPaidMessage);
+        }
+
+        int receiptId = payments[0].Id;
+        bool notificationSent = true;
+        try
+        {
+            decimal total = payments.Sum(payment => payment.Amount);
+            string message = FormattableString.Invariant(
+                $"Payment of RM {total:F2} for {payments.Count} order(s) of your visit is recorded.");
+            if (method == PaymentMethod.SimulatedOnline)
+            {
+                message += " Demo only - no real payment processed.";
+            }
+            await _notifications.NotifyUserAsync(unpaid[0].CustomerId, NotificationType.PaymentConfirmed,
+                "Payment confirmed", message, $"/Customer/Receipts/Details/{receiptId}");
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Visit payment {PaymentId} was saved but its confirmation failed.", receiptId);
+            notificationSent = false;
+        }
+
+        if (_reservations != null)
+        {
+            try
+            {
+                // WL-3: everything is paid now, so the visit completes by itself.
+                await _reservations.CompleteAfterPaymentAsync(reservationId);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(exception, "Visit payment {PaymentId} was saved but its visit could not be completed.", receiptId);
+            }
+        }
+
+        return ServiceResult<PaymentRecordingResult>.Success(new PaymentRecordingResult
+        {
+            PaymentId = receiptId,
+            NotificationSent = notificationSent
+        });
+    }
+
+    /// <inheritdoc />
     public async Task<ReceiptSummary?> GetReceiptForStaffAsync(int paymentId)
     {
         return await ReadReceiptAsync(paymentId, null);
@@ -202,6 +326,24 @@ public class BillingService : IBillingService
         Order order = await OrdersWithDetails().SingleAsync(order => order.Id == payment.OrderId);
         BillSummary bill = MapBill(order);
         bill.PaidPaymentId = payment.Id;
+
+        // A whole-visit payment saved one Payment per order with the same time, staff and method:
+        // collect them so the customer sees one receipt for the visit.
+        List<Payment> together = await _context.Payments.AsNoTracking()
+            .Where(other => other.Status == PaymentStatus.Paid && other.PaidAtUtc == payment.PaidAtUtc
+                && other.StaffId == payment.StaffId && other.Method == payment.Method
+                && other.Order!.ReservationId == order.ReservationId)
+            .OrderBy(other => other.OrderId)
+            .ToListAsync();
+        List<int> orderIds = together.Select(other => other.OrderId).ToList();
+        List<Order> orders = await OrdersWithDetails().Where(other => orderIds.Contains(other.Id))
+            .OrderBy(other => other.Id).ToListAsync();
+        List<BillSummary> bills = orders.Select(MapBill).ToList();
+        if (bills.Count == 0)
+        {
+            bills.Add(bill);
+        }
+
         return new ReceiptSummary
         {
             PaymentId = payment.Id,
@@ -209,7 +351,9 @@ public class BillingService : IBillingService
             Method = payment.Method,
             PaidAtUtc = payment.PaidAtUtc,
             StaffName = payment.Staff!.FullName,
-            Bill = bill
+            Bill = bill,
+            Bills = bills,
+            TotalPaid = together.Count == 0 ? payment.Amount : together.Sum(other => other.Amount)
         };
     }
 
@@ -225,6 +369,7 @@ public class BillingService : IBillingService
         var bill = new BillSummary
         {
             OrderId = order.Id,
+            ReservationId = order.ReservationId,
             CustomerName = order.Customer!.FullName,
             TableLabel = order.Reservation!.DiningTable!.Label,
             TotalAmount = order.TotalAmount,
@@ -241,6 +386,17 @@ public class BillingService : IBillingService
             });
         }
         return bill;
+    }
+
+    /// <summary>True for an active Staff or Administrator account (same rule as RecordPaymentAsync).</summary>
+    private Task<bool> IsActiveStaffAsync(string staffId)
+    {
+        return (from user in _context.Users
+                join userRole in _context.UserRoles on user.Id equals userRole.UserId
+                join role in _context.Roles on userRole.RoleId equals role.Id
+                where user.Id == staffId && user.IsActive
+                    && (role.Name == RoleNames.Staff || role.Name == RoleNames.Administrator)
+                select user.Id).AnyAsync();
     }
 
     private static bool IsDuplicatePaidOrder(DbUpdateException exception)
