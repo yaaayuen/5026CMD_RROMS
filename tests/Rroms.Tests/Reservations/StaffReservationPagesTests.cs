@@ -86,13 +86,14 @@ public class StaffReservationPagesTests : IClassFixture<TestWebApplicationFactor
 
     // ============================== List and buttons ==============================//
 
-    /// <summary>A Pending booking is listed with its customer and only Confirm and Cancel are offered.</summary>
+    /// <summary>A Pending booking (made before auto-confirm) is listed with only Confirm and Cancel offered.</summary>
     [Fact]
     public async Task PendingBooking_IsListedWithConfirmAndCancel()
     {
         (HttpClient staff, string _) = await SignInAsNewUserAsync(RoleNames.Staff);
         (HttpClient _, string customerId) = await SignInAsNewUserAsync(RoleNames.Customer);
         int id = await BookAsync(customerId, TableT01Id, new TimeOnly(12, 0));
+        await MakePendingAsync(id);
 
         string html = await staff.GetStringAsync(DayUrl);
         string row = RowOf(html, id);
@@ -110,6 +111,7 @@ public class StaffReservationPagesTests : IClassFixture<TestWebApplicationFactor
         (HttpClient staff, string _) = await SignInAsNewUserAsync(RoleNames.Staff);
         (HttpClient _, string customerId) = await SignInAsNewUserAsync(RoleNames.Customer);
         int id = await BookAsync(customerId, TableT02Id, new TimeOnly(12, 0));
+        await MakePendingAsync(id);
 
         HttpResponseMessage response = await PressAsync(staff, id, ReservationStatus.Confirmed);
 
@@ -118,20 +120,19 @@ public class StaffReservationPagesTests : IClassFixture<TestWebApplicationFactor
         Assert.Equal(ReservationStatus.Confirmed, await StatusOfAsync(id));
     }
 
-    /// <summary>After confirming, the row offers Seat, Cancel and No-show instead of Confirm.</summary>
+    /// <summary>A new booking is already Confirmed, so its row offers Seat, Cancel and Mark absent instead of Confirm.</summary>
     [Fact]
     public async Task ConfirmedBooking_OffersSeatCancelAndNoShow()
     {
         (HttpClient staff, string _) = await SignInAsNewUserAsync(RoleNames.Staff);
         (HttpClient _, string customerId) = await SignInAsNewUserAsync(RoleNames.Customer);
         int id = await BookAsync(customerId, TableT03Id, new TimeOnly(12, 0));
-        await PressAsync(staff, id, ReservationStatus.Confirmed);
 
         string row = RowOf(await staff.GetStringAsync(DayUrl), id);
 
         Assert.Contains(">Seat<", row);
         Assert.Contains(">Cancel<", row);
-        Assert.Contains(">No-show<", row);
+        Assert.Contains(">Mark absent<", row);
         Assert.DoesNotContain(">Confirm<", row);
     }
 
@@ -142,6 +143,7 @@ public class StaffReservationPagesTests : IClassFixture<TestWebApplicationFactor
         (HttpClient staff, string _) = await SignInAsNewUserAsync(RoleNames.Staff);
         (HttpClient _, string customerId) = await SignInAsNewUserAsync(RoleNames.Customer);
         int id = await BookAsync(customerId, TableT04Id, new TimeOnly(12, 0));
+        await MakePendingAsync(id);
 
         HttpResponseMessage response = await PressAsync(staff, id, ReservationStatus.Seated);
 
@@ -198,6 +200,15 @@ public class StaffReservationPagesTests : IClassFixture<TestWebApplicationFactor
         int rowStart = html.LastIndexOf("<tr>", idField, StringComparison.Ordinal);
         int rowEnd = html.IndexOf("</tr>", idField, StringComparison.Ordinal);
         return html.Substring(rowStart, rowEnd - rowStart);
+    }
+
+    /// <summary>Turns a booking back into Pending, like one made before bookings were confirmed automatically.</summary>
+    private async Task MakePendingAsync(int id)
+    {
+        using IServiceScope scope = _factory.Services.CreateScope();
+        ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await context.Reservations.Where(r => r.Id == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, ReservationStatus.Pending));
     }
 
     /// <summary>The booking's status as stored now.</summary>

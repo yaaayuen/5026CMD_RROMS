@@ -67,7 +67,32 @@
 
 		@if (Model.Results.Count == 0)
 		{
-			<p class="mb-0">Sorry, every table is taken at that time. Please try another time.</p>
+			string day = Model.Search.Date.ToString("dddd d MMMM");
+			string nextDay = Model.Search.Date.AddDays(1).ToString("yyyy-MM-dd");
+			if (Model.Search.PartySize > Model.LargestTableSeats)
+			{
+				@* No single table is big enough: say so instead of suggesting times that can never work. *@
+				<p class="mb-0">Our largest table seats @Model.LargestTableSeats guests. For a group of @Model.Search.PartySize,
+					please contact the restaurant so we can arrange a larger setting for you.</p>
+			}
+			else if (Model.OtherFreeTimes.Count > 0)
+			{
+				<p>Sorry, every table for @Model.Search.PartySize is taken at @Model.Search.Time.ToString("h:mm tt").
+					These times on @day still have a free table:</p>
+				<div class="d-flex flex-wrap gap-2">
+					@foreach (TimeOnly time in Model.OtherFreeTimes)
+					{
+						<a class="btn btn-sm btn-outline-primary"
+						   href="?Search.Date=@Model.Search.Date.ToString("yyyy-MM-dd")&Search.Time=@time.ToString("HH:mm")&Search.PartySize=@Model.Search.PartySize&Find=true">@time.ToString("h:mm tt")</a>
+					}
+				</div>
+			}
+			else
+			{
+				<p class="mb-2">Sorry, we are fully booked for @Model.Search.PartySize on @day. Please choose another day.</p>
+				<a class="btn btn-sm btn-outline-primary"
+				   href="?Search.Date=@nextDay&Search.PartySize=@Model.Search.PartySize">Try the next day</a>
+			}
 		}
 		else
 		{

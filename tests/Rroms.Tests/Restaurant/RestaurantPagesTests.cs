@@ -42,6 +42,21 @@ public class RestaurantPagesTests : IClassFixture<TestWebApplicationFactory>
 
     // ============================== Access control ==============================//
 
+    /// <summary>The public Opening hours page works without signing in and shows the weekly hours.</summary>
+    [Fact]
+    public async Task OpeningHoursPage_Anonymous_ShowsWeeklyHours()
+    {
+        HttpClient client = _factory.CreateSecureClient();
+
+        HttpResponseMessage response = await client.GetAsync("/Visit");
+        string html = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("Opening hours", html);
+        Assert.Contains("Monday", html);
+        Assert.Contains("11:00 AM", html);
+    }
+
     /// <summary>Someone who is not signed in is sent to the login page.</summary>
     [Theory]
     [InlineData(DetailsUrl)]

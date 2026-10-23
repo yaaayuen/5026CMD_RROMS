@@ -36,6 +36,9 @@ public class ReservationPagesTests : IClassFixture<TestWebApplicationFactory>
     /// <summary>Seeded table P01 (2 seats, Patio).</summary>
     private const int TableP01Id = 7;
 
+    /// <summary>T06 in Main Hall, the only 8-seat table in the seed data.</summary>
+    private const int TableT06Id = 6;
+
     /// <summary>A visit one week ahead (Malaysia), always in the future and inside the booking window.</summary>
     private static readonly DateOnly VisitDate = DateOnly.FromDateTime(MalaysiaTime.FromUtc(DateTime.UtcNow)).AddDays(7);
 
@@ -108,12 +111,45 @@ public class ReservationPagesTests : IClassFixture<TestWebApplicationFactory>
         Assert.DoesNotContain("Table T01", html);
     }
 
+    /// <summary>When the only table for 7 is taken, the page suggests other times that day instead of a dead end.</summary>
+    [Fact]
+    public async Task Search_TimeFullyBooked_SuggestsOtherFreeTimes()
+    {
+        HttpClient client = await SignInAsNewUserAsync(RoleNames.Customer);
+        DateOnly day = VisitDate.AddDays(2);
+        Dictionary<string, string> fields = new Dictionary<string, string>
+        {
+            ["Search.Date"] = day.ToString("yyyy-MM-dd"),
+            ["Search.Time"] = "13:00",
+            ["Search.PartySize"] = "7",
+            ["DiningTableId"] = TableT06Id.ToString(),
+            ["SpecialRequests"] = string.Empty
+        };
+        await FormHelper.PostFormAsync(client, BookUrl, BookUrl, fields);
+
+        string html = await client.GetStringAsync($"{BookUrl}?Search.Date={day:yyyy-MM-dd}&Search.Time=13:00&Search.PartySize=7&Find=true");
+
+        Assert.Contains("still have a free table", html);
+        Assert.Contains("Search.Time=18:00", html);
+    }
+
+    /// <summary>A party bigger than the largest table is told to contact the restaurant.</summary>
+    [Fact]
+    public async Task Search_PartyBiggerThanLargestTable_AsksToContactRestaurant()
+    {
+        HttpClient client = await SignInAsNewUserAsync(RoleNames.Customer);
+
+        string html = await client.GetStringAsync($"{BookUrl}?Search.Date={VisitDate:yyyy-MM-dd}&Search.Time=19:00&Search.PartySize=20&Find=true");
+
+        Assert.Contains("Our largest table seats 8 guests", html);
+    }
+
     /// <summary>
     /// A full booking through the form: it redirects to My reservations (Post-Redirect-Get),
-    /// the booking is listed as Pending, and every active staff member is notified.
+    /// the booking is listed as Confirmed, and every active staff member is notified.
     /// </summary>
     [Fact]
-    public async Task Book_ValidForm_SavesPendingBookingAndNotifiesStaff()
+    public async Task Book_ValidForm_SavesConfirmedBookingAndNotifiesStaff()
     {
         ApplicationUser staff = await _factory.CreateUserAsync(UniqueEmail(RoleNames.Staff), Password, RoleNames.Staff);
         HttpClient client = await SignInAsNewUserAsync(RoleNames.Customer);
@@ -125,8 +161,8 @@ public class ReservationPagesTests : IClassFixture<TestWebApplicationFactory>
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.Contains(MyReservationsUrl, response.Headers.Location?.ToString());
         Assert.Contains(note, myReservations);
-        Assert.Contains("Pending", myReservations);
-        Assert.True(await HasNotificationAsync(staff.Id, "New reservation to confirm"));
+        Assert.Contains("Confirmed", myReservations);
+        Assert.True(await HasNotificationAsync(staff.Id, "New reservation"));
     }
 
     /// <summary>When the table was taken first, the second customer sees the friendly message, not an error page.</summary>

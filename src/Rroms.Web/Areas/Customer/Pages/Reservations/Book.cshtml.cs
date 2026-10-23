@@ -21,14 +21,18 @@ namespace Rroms.Web.Areas.Customer.Pages.Reservations;
 public class BookModel : PageModel
 {
     private readonly IReservationService _reservationService;
+    private readonly IRestaurantService _restaurantService;
     private readonly ReservationRulesOptions _rules;
 
-    /// <summary>Receives the booking service and the booking rules from dependency injection.</summary>
+    /// <summary>Receives the booking service, the restaurant set-up and the booking rules from dependency injection.</summary>
     /// <param name="reservationService">Availability search and booking.</param>
+    /// <param name="restaurantService">Bookable tables, used to find the largest table when nothing fits.</param>
     /// <param name="rules">Party size limits and booking window, used for the form's min/max.</param>
-    public BookModel(IReservationService reservationService, IOptions<ReservationRulesOptions> rules)
+    public BookModel(IReservationService reservationService, IRestaurantService restaurantService,
+        IOptions<ReservationRulesOptions> rules)
     {
         _reservationService = reservationService;
+        _restaurantService = restaurantService;
         _rules = rules.Value;
     }
 
@@ -53,6 +57,15 @@ public class BookModel : PageModel
 
     /// <summary>Free tables, or null when no search has been run yet.</summary>
     public IReadOnlyList<AvailableTable>? Results { get; private set; }
+
+    /// <summary>
+    /// When nothing is free at the chosen time: other start times on the same day that still have a table
+    /// for this party. Empty when the whole day is full.
+    /// </summary>
+    public IReadOnlyList<TimeOnly> OtherFreeTimes { get; private set; } = new List<TimeOnly>();
+
+    /// <summary>Seats at the largest bookable table; a bigger party can never be seated online.</summary>
+    public int LargestTableSeats { get; private set; }
 
     /// <summary>Earliest date the date picker allows (today, Malaysia).</summary>
     public DateOnly MinDate { get; private set; }
@@ -106,8 +119,42 @@ public class BookModel : PageModel
             return Page();
         }
 
-        TempData["StatusMessage"] = "Your table is booked. It is pending until our staff confirm it; we will notify you.";
+        TempData["StatusMessage"] = "Your table is booked and confirmed. You can pre-order food from the booking's details.";
         return RedirectToPage("Index");
+    }
+
+    /// <summary>
+    /// Nothing is free at the chosen time: find the largest table and the other times that day that still
+    /// have a table for this party, so the page can suggest them instead of a dead end.
+    /// </summary>
+    private async Task FindAlternativesAsync()
+    {
+        var tables = await _restaurantService.GetBookableTablesAsync();
+        LargestTableSeats = tables.Count == 0 ? 0 : tables.Max(t => t.Capacity);
+        if (Search.PartySize > LargestTableSeats)
+        {
+            return;
+        }
+
+        List<TimeOnly> free = new List<TimeOnly>();
+        foreach (TimeOnly time in StartTimes.Where(t => t != Search.Time))
+        {
+            AvailabilitySearchInput other = new AvailabilitySearchInput
+            {
+                Date = Search.Date,
+                Time = time,
+                PartySize = Search.PartySize
+            };
+
+            // Times already in the past simply fail the search and are skipped.
+            ServiceResult<IReadOnlyList<AvailableTable>> found = await _reservationService.SearchAvailableTablesAsync(other);
+            if (found.Succeeded && found.Value!.Count > 0)
+            {
+                free.Add(time);
+            }
+        }
+
+        OtherFreeTimes = free;
     }
 
     /// <summary>Fills the date limits, the start times and, when asked, the search results.</summary>
@@ -133,6 +180,10 @@ public class BookModel : PageModel
         if (result.Succeeded)
         {
             Results = result.Value;
+            if (Results!.Count == 0)
+            {
+                await FindAlternativesAsync();
+            }
         }
         else
         {
