@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -115,6 +116,16 @@ public class ChatbotTests
         Assert.Null(reply.PageUrl);
         Assert.Equal(1, handler.Calls);
     }
+    [Fact]
+    public async Task AiUsesAModelNvidiaStillServesByDefault()
+    {
+        using var factory = new TestWebApplicationFactory();
+        using var scope = factory.Services.CreateScope();
+        var handler = new Provider();
+        await Service(scope.ServiceProvider, handler).AskAsync("Explain grilling", true);
+        Assert.Equal("meta/llama-3.2-11b-vision-instruct", handler.Model);
+        Assert.Equal(12, new ChatbotOptions().TimeoutSeconds);
+    }
     private static ChatbotService Service(IServiceProvider services, Provider handler, string key = "test-placeholder")
     {
         return new ChatbotService(services.GetRequiredService<IMenuService>(), services.GetRequiredService<IRestaurantService>(), services.GetRequiredService<IReservationService>(),
@@ -124,15 +135,18 @@ public class ChatbotTests
     {
         public int Calls { get; private set; }
         public string Mode { get; set; } = "ok";
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        public string? Model { get; private set; }
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Calls++;
             Assert.Equal("https://integrate.api.nvidia.com/v1/chat/completions", request.RequestUri!.ToString());
+            using var body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(cancellationToken));
+            Model = body.RootElement.GetProperty("model").GetString();
             if (Mode == "timeout") { throw new TaskCanceledException(); }
-            return Task.FromResult(new HttpResponseMessage(Mode == "error" ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK)
+            return new HttpResponseMessage(Mode == "error" ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK)
             {
                 Content = new StringContent(Mode == "malformed" ? "{}" : "{\"choices\":[{\"message\":{\"content\":\"Grilling uses direct heat.\"}}]}")
-            });
+            };
         }
     }
 }
