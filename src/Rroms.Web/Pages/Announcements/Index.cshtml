@@ -1,9 +1,55 @@
 @page
 @model Rroms.Web.Pages.Announcements.IndexModel
-@{ ViewData["Title"] = "News and offers"; }
-<h1>News and offers</h1>
-@if (Model.Items.Count == 0) { <p>There are no active announcements today.</p> }
-@foreach (var item in Model.Items)
-{
-    <article class="tg-card p-3 mb-3"><h2 class="h4">@item.Title</h2><p style="white-space:pre-wrap">@item.Message</p></article>
+@using Rroms.Web.Common
+@{
+    ViewData["Title"] = "News and offers";
+    DateTime soon = DateTime.UtcNow.AddDays(7);
+    (string? Key, string Label, int Count)[] tabs = { (null, "All", Model.AllCount), ("offers", "Offers", Model.OfferCount), ("news", "News", Model.NewsCount) };
 }
+<section class="hero hero-compact mb-4" aria-labelledby="news-heading">
+    <span class="hero-bubble one" aria-hidden="true"></span>
+    <div class="position-relative">
+        <span class="eyebrow">Three Grills</span>
+        <h1 id="news-heading" class="mb-1">News and offers</h1>
+        <p class="lead mb-0">Current deals, opening hours and what is new on the menu.</p>
+    </div>
+</section>
+
+<nav class="news-tabs mb-4" aria-label="Show">
+    @foreach (var tab in tabs)
+    {
+        bool active = Model.Show == tab.Key;
+        <a class="news-tab @(active ? "active" : null)" asp-page="/Announcements/Index" asp-route-show="@tab.Key"
+           aria-current="@(active ? "page" : null)">@tab.Label <span class="news-tab-count">@tab.Count</span></a>
+    }
+</nav>
+
+@if (Model.Items.Count == 0)
+{
+    <div class="tg-card h-auto text-center py-5">
+        <p class="mb-2">@(Model.Show == "offers" ? "There are no offers running right now." : Model.Show == "news" ? "There is no news right now." : "There are no active announcements today.")</p>
+        <a class="btn btn-outline-primary btn-sm" asp-page="/Menu/Index">Browse the menu</a>
+    </div>
+}
+<div class="row g-3">
+    @foreach (var item in Model.Items)
+    {
+        <div class="col-md-6">
+            <article class="tg-card news-card @(item.IsPromotion ? "is-offer" : "is-news")" aria-labelledby="news-@item.Id">
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                    <span class="badge @(item.IsPromotion ? "text-bg-primary" : "text-bg-secondary")">@(item.IsPromotion ? "Offer" : "News")</span>
+                    @if (item.EndUtc <= soon) { <span class="badge text-bg-warning">Ends soon</span> }
+                </div>
+                <h2 id="news-@item.Id" class="h5">@item.Title</h2>
+                <p class="news-message">@item.Message</p>
+                <div class="news-footer">
+                    <span class="small text-secondary">Until @MalaysiaTime.FromUtc(item.EndUtc).ToString("ddd d MMM yyyy")</span>
+                    @if (item.IsPromotion)
+                    {
+                        <a class="btn btn-primary btn-sm" asp-area="Customer" asp-page="/Reservations/Book">Book a table</a>
+                    }
+                </div>
+            </article>
+        </div>
+    }
+</div>

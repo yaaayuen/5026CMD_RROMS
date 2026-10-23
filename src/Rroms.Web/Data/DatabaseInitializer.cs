@@ -43,5 +43,13 @@ public static class DatabaseInitializer
 
         DatabaseSeeder seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();
         await seeder.SeedAsync();
+
+        if (!environment.IsEnvironment(TestingEnvironment))
+        {
+            // YJ-1: the team's sample menu, so every teammate sees the same dishes. Skipped in tests,
+            // which must start with an empty menu.
+            ILogger<SampleMenuSeeder> menuLogger = scope.ServiceProvider.GetRequiredService<ILogger<SampleMenuSeeder>>();
+            await new SampleMenuSeeder(context, menuLogger).SeedAsync();
+        }
     }
 }

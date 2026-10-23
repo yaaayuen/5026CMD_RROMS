@@ -50,6 +50,10 @@ public static class MenuConfiguration
             // test database is case-sensitive.
             item.HasIndex(i => i.Name).IsUnique();
 
+            // A dish code (S01, P02 ...) is unique too. The column allows null for dishes saved before codes
+            // existed; the unique index ignores nulls, so those rows do not clash with each other.
+            item.HasIndex(i => i.Code).IsUnique();
+
             item.ToTable(table =>
             {
                 table.HasCheckConstraint(

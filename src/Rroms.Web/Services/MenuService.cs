@@ -135,8 +135,10 @@ public class MenuService : IMenuService
 
         if (searchText.Length > 0)
         {
+            // The dish code (for example "P01") is searchable too.
             query = query.Where(item => item.Name.ToLower().Contains(searchText)
-                || item.Description.ToLower().Contains(searchText));
+                || item.Description.ToLower().Contains(searchText)
+                || (item.Code != null && item.Code.ToLower().Contains(searchText)));
         }
 
         List<MenuItem> loaded = await query.ToListAsync();
@@ -190,6 +192,11 @@ public class MenuService : IMenuService
         };
 
         await ApplyInputAsync(item, input, now);
+
+        // The code is made once, from the category the dish is first saved in, and never changes afterwards.
+        // Validation already proved the category exists.
+        MenuCategory? category = await _restaurantService.GetMenuCategoryAsync(input.MenuCategoryId);
+        item.Code = await GenerateCodeAsync(category!.Name);
 
         _context.MenuItems.Add(item);
         await _context.SaveChangesAsync();
@@ -329,6 +336,21 @@ public class MenuService : IMenuService
         return ServiceResult.Success();
     }
 
+    /// <summary>
+    /// Makes the next free code for a category: its first letter plus the next number (S01, S02, P01 ...).
+    /// Categories that share a first letter share one numbering, so a code is unique on the whole menu.
+    /// </summary>
+    /// <param name="categoryName">The name of the dish's category.</param>
+    private async Task<string> GenerateCodeAsync(string categoryName)
+    {
+        List<string?> existingCodes = await _context.MenuItems
+            .Where(item => item.Code != null)
+            .Select(item => item.Code)
+            .ToListAsync();
+
+        return MenuCodeRule.Next(categoryName, existingCodes);
+    }
+
     /// <summary>Turns a dish into the ready-to-display card the customer menu shows.</summary>
     private MenuItemCard BuildCard(MenuItem item, decimal currentPrice, DateTime now)
     {
@@ -351,6 +373,7 @@ public class MenuService : IMenuService
         MenuItemCard card = new MenuItemCard
         {
             Id = item.Id,
+            Code = item.Code ?? string.Empty,
             Name = item.Name,
             Description = item.Description,
             CategoryName = item.MenuCategory?.Name ?? string.Empty,

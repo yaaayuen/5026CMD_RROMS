@@ -41,6 +41,12 @@ public class IndexModel : PageModel
                 "Sprint 1 · YY",
                 "/Admin/Accounts"),
             new ModuleTileViewModel(
+                "Dietary tags",
+                "Add the food tags customers can avoid and dishes can be marked with.",
+                "flame",
+                "Sprint 1 · YY",
+                "/Admin/DietaryTags"),
+            new ModuleTileViewModel(
                 "Announcements",
                 "Promotional campaigns and restaurant notices.",
                 "megaphone",
