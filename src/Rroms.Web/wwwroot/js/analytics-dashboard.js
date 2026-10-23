@@ -12,6 +12,7 @@
     // Brand colours from site.css, one per status, so each status always has the same colour.
     const statusColours = {
         "Completed": "#12867a",
+        "Not finished yet": "#ffbc42",
         "Seated": "#d81159",
         "Confirmed": "#ffbc42",
         "Pending": "#ff8c42",

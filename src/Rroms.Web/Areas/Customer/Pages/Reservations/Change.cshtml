@@ -106,7 +106,8 @@ else
                         <label asp-for="SpecialRequests" class="form-label fw-semibold">Special requests (optional)</label>
                         <textarea asp-for="SpecialRequests" class="form-control" rows="2"
                                   maxlength="@Rroms.Web.Models.Reservation.SpecialRequestsMaxLength"
-                                  placeholder="e.g. Birthday, high chair, allergy, wheelchair access"></textarea>
+                                  placeholder="e.g. Birthday cake, high chair, wheelchair access, anniversary"></textarea>
+                        <div class="form-text">For food allergies, add a note for the kitchen when you order.</div>
                     </div>
 
                     <button type="submit" class="btn btn-primary">Save changes</button>

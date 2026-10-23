@@ -29,6 +29,20 @@ public class AnalyticsService : IAnalyticsService
     /// <summary>How many days ahead the upcoming Confirmed figures look.</summary>
     public const int UpcomingDays = 7;
 
+    /// <summary>How many past weeks the "usual" figures of the outlook average over.</summary>
+    public const int OutlookWeeksBack = 8;
+
+    /// <summary>A day is Busy when its usual guests are at least this much above an average day (and Quiet when below).</summary>
+    public const double BusyMargin = 0.2;
+
+    /// <summary>Statuses of a booking that is still to come (or happening now).</summary>
+    private static readonly ReservationStatus[] BookedStatuses =
+    {
+        ReservationStatus.Pending,
+        ReservationStatus.Confirmed,
+        ReservationStatus.Seated
+    };
+
     /// <summary>Error when the end date is before the start date.</summary>
     public const string EndBeforeStartMessage = "The end date must be on or after the start date.";
 
@@ -96,6 +110,66 @@ public class AnalyticsService : IAnalyticsService
 
         await AddUpcomingConfirmedAsync(report);
         return ServiceResult<OccupancyReport>.Success(report);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<DayOutlook>> GetOutlookAsync(DateOnly today)
+    {
+        DateOnly historyFrom = today.AddDays(-7 * OutlookWeeksBack);
+        DateTime historyFromUtc = MalaysiaTime.ToUtc(historyFrom.ToDateTime(TimeOnly.MinValue));
+        DateTime todayUtc = MalaysiaTime.ToUtc(today.ToDateTime(TimeOnly.MinValue));
+        DateTime untilUtc = MalaysiaTime.ToUtc(today.AddDays(UpcomingDays).ToDateTime(TimeOnly.MinValue));
+
+        // History: visits that really happened in the last few weeks, and the slots they used.
+        var past = await _context.Reservations
+            .Where(r => r.StartUtc >= historyFromUtc && r.StartUtc < todayUtc && OccupiedStatuses.Contains(r.Status))
+            .Select(r => new { r.StartUtc, r.PartySize })
+            .ToListAsync();
+        List<DateTime> pastSlots = await GetOccupiedSlotStartsAsync(historyFromUtc, todayUtc);
+
+        // What is already booked for the coming days.
+        var booked = await _context.Reservations
+            .Where(r => r.StartUtc >= todayUtc && r.StartUtc < untilUtc && BookedStatuses.Contains(r.Status))
+            .Select(r => new { r.StartUtc, r.PartySize })
+            .ToListAsync();
+
+        double weeks = OutlookWeeksBack;
+        double averageDayGuests = past.Sum(p => p.PartySize) / (7 * weeks);
+
+        List<DayOutlook> outlook = new List<DayOutlook>();
+        for (int offset = 0; offset < UpcomingDays; offset++)
+        {
+            DateOnly day = today.AddDays(offset);
+            var sameWeekday = past.Where(p => MalaysiaTime.FromUtc(p.StartUtc).DayOfWeek == day.DayOfWeek).ToList();
+            var bookedThatDay = booked.Where(b => DateOnly.FromDateTime(MalaysiaTime.FromUtc(b.StartUtc)) == day).ToList();
+
+            // The hour with the most occupied slots on this weekday (earliest hour wins a tie).
+            int? busiestHour = pastSlots
+                .Select(MalaysiaTime.FromUtc)
+                .Where(local => local.DayOfWeek == day.DayOfWeek)
+                .GroupBy(local => local.Hour)
+                .OrderByDescending(group => group.Count())
+                .ThenBy(group => group.Key)
+                .Select(group => (int?)group.Key)
+                .FirstOrDefault();
+
+            double usualGuests = sameWeekday.Sum(p => p.PartySize) / weeks;
+            outlook.Add(new DayOutlook
+            {
+                Date = day,
+                BookedSoFar = bookedThatDay.Count,
+                GuestsBookedSoFar = bookedThatDay.Sum(b => b.PartySize),
+                UsualBookings = sameWeekday.Count / weeks,
+                UsualGuests = usualGuests,
+                UsualBusiestHour = busiestHour,
+                Level = averageDayGuests <= 0 ? "No history"
+                    : usualGuests >= averageDayGuests * (1 + BusyMargin) ? "Busy"
+                    : usualGuests <= averageDayGuests * (1 - BusyMargin) ? "Quiet"
+                    : "Normal"
+            });
+        }
+
+        return outlook;
     }
 
     // ============================== Helpers ==============================//

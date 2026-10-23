@@ -1023,3 +1023,36 @@ input[type="password"]::-ms-clear {
     justify-content: space-between;
     gap: 0.5rem;
 }
+
+
+/* ===== Top bar: one tidy line (WL) =====
+   With many links the labels wrapped onto two lines ("News and / offers", "Dark / mode").
+   Every item now stays on one line, the theme switch shows only its icon (the text is kept for
+   screen readers), a long e-mail is shortened with "…", and below 1200px the menu folds into
+   the hamburger button (navbar-expand-xl in _Layout). */
+.site-navbar .nav-link,
+.site-navbar .btn,
+.site-navbar .role-chip,
+.site-navbar .theme-toggle {
+    white-space: nowrap;
+}
+
+.site-navbar .theme-toggle span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+.site-navbar .navbar-user {
+    display: inline-block;
+    max-width: 11rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+}

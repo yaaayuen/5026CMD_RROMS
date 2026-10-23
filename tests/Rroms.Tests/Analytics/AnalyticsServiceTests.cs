@@ -215,6 +215,48 @@ public class AnalyticsServiceTests : IDisposable
         Assert.Equal(AnalyticsService.UpcomingDays, report.UpcomingDays);
     }
 
+    // ============================== 4b. Outlook (simple forecast) ==============================//
+
+    /// <summary>
+    /// Today = Monday 12 Oct, one week after the test week. Over 8 weeks of history only A (Mon, 2 guests, 19:00)
+    /// and B (Tue, 4 guests, 12:00) really dined, so an average day has 6 ÷ 56 = 0.11 guests:
+    /// Monday usual = 2 ÷ 8 = 0.25 guests (Busy, busiest 19:00), Tuesday = 4 ÷ 8 = 0.5 (Busy, 12:00),
+    /// Wednesday = 0 (D was absent) so Quiet, even though 3 guests are already booked for it.
+    /// </summary>
+    [Fact]
+    public async Task Outlook_UsesTheSameWeekdayOfTheLastWeeks()
+    {
+        await AddTestWeekAsync();
+        DateOnly today = Monday.AddDays(7);
+        await InsertReservationAsync(TableT01Id, Utc(today.AddDays(2), 19), ReservationStatus.Confirmed, partySize: 3);
+        await InsertReservationAsync(TableT02Id, Utc(today.AddDays(2), 19), ReservationStatus.Cancelled, partySize: 4, keepSlots: 0);
+
+        IReadOnlyList<DayOutlook> outlook = await _service.GetOutlookAsync(today);
+
+        Assert.Equal(AnalyticsService.UpcomingDays, outlook.Count);
+        Assert.Equal(today, outlook[0].Date);
+        Assert.Equal(0.125, outlook[0].UsualBookings);
+        Assert.Equal(0.25, outlook[0].UsualGuests);
+        Assert.Equal(19, outlook[0].UsualBusiestHour);
+        Assert.Equal("Busy", outlook[0].Level);
+        Assert.Equal(0.5, outlook[1].UsualGuests);
+        Assert.Equal(12, outlook[1].UsualBusiestHour);
+        Assert.Equal(1, outlook[2].BookedSoFar);
+        Assert.Equal(3, outlook[2].GuestsBookedSoFar);
+        Assert.Equal(0, outlook[2].UsualGuests);
+        Assert.Null(outlook[2].UsualBusiestHour);
+        Assert.Equal("Quiet", outlook[2].Level);
+    }
+
+    /// <summary>With no history at all the outlook says so instead of calling every day Quiet.</summary>
+    [Fact]
+    public async Task Outlook_NoHistory_SaysNoHistory()
+    {
+        IReadOnlyList<DayOutlook> outlook = await _service.GetOutlookAsync(Monday);
+
+        Assert.All(outlook, day => Assert.Equal("No history", day.Level));
+    }
+
     // ============================== 5. Range validation ==============================//
 
     /// <summary>An end date before the start date is refused with a clear message.</summary>

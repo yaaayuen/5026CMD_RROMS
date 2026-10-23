@@ -29,6 +29,12 @@ public class DailyReservationCount
     /// <summary>All bookings that day, whatever their status.</summary>
     public int Total => Pending + Confirmed + Seated + Completed + Cancelled + NoShow;
 
+    /// <summary>
+    /// Bookings whose visit has not finished yet (Pending, Confirmed or Seated). Past days are always 0 here,
+    /// because every past visit ends Completed, Cancelled or Absent; only today and later can have some.
+    /// </summary>
+    public int NotFinished => Pending + Confirmed + Seated;
+
     /// <summary>Guests who really dined (Seated or Completed bookings).</summary>
     public int GuestsServed { get; set; }
 }
