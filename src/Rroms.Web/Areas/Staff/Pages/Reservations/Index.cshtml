@@ -72,7 +72,7 @@
 								}
 							</td>
 							<td class="small">@(string.IsNullOrEmpty(booking.SpecialRequests) ? "–" : booking.SpecialRequests)</td>
-							<td><span class="badge @ReservationStatusDisplay.BadgeClass(booking.Status)">@booking.Status</span></td>
+							<td><span class="badge @ReservationStatusDisplay.BadgeClass(booking.Status)">@ReservationStatusDisplay.Label(booking.Status)</span></td>
 							<td>
 								<div class="d-flex flex-wrap gap-1">
 									@foreach (ReservationStatus next in ReservationStatusRules.NextStatuses(booking.Status))
