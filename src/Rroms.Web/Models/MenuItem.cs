@@ -15,6 +15,9 @@ public class MenuItem
     /// <summary>Maximum length of the item description.</summary>
     public const int DescriptionMaxLength = 500;
 
+    /// <summary>Maximum length of the dish code (a letter plus a number, for example "S01").</summary>
+    public const int CodeMaxLength = 10;
+
     /// <summary>Maximum length of the stored image file name.</summary>
     public const int ImageFileNameMaxLength = 100;
 
@@ -24,6 +27,14 @@ public class MenuItem
 
     /// <summary>Primary key.</summary>
     public int Id { get; set; }
+
+    /// <summary>
+    /// Short code for the dish: its category's first letter plus a number, for example "S01" or "P02".
+    /// Made by IMenuService when the dish is created and never changed after that. Null only for a dish that
+    /// was saved before codes existed (the migration gives every existing dish a code).
+    /// </summary>
+    [StringLength(CodeMaxLength)]
+    public string? Code { get; set; }
 
     /// <summary>Display name, for example "Smoky BBQ Burger".</summary>
     [Required]

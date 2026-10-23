@@ -9,6 +9,9 @@ public class MenuItemCard
     /// <summary>The dish's Id, used later to add it to an order.</summary>
     public int Id { get; set; }
 
+    /// <summary>The dish code shown to customers, for example "P01". Empty when the dish has none.</summary>
+    public string Code { get; set; } = string.Empty;
+
     /// <summary>Dish name.</summary>
     public string Name { get; set; } = string.Empty;
 

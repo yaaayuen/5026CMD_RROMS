@@ -48,6 +48,7 @@
 				<thead>
 					<tr>
 						<th scope="col"><span class="visually-hidden">Photo</span></th>
+						<th scope="col">Code</th>
 						<th scope="col">Dish</th>
 						<th scope="col">Category</th>
 						<th scope="col">Price (RM)</th>
@@ -68,6 +69,7 @@
 									<img src="@photoUrl" alt="Photo of @item.Name" width="64" height="64" class="rounded" style="object-fit: cover;" />
 								}
 							</td>
+							<td>@item.Code</td>
 							<th scope="row">@item.Name</th>
 							<td>@item.MenuCategory?.Name</td>
 							<td>

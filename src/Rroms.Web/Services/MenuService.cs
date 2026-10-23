@@ -51,6 +51,12 @@ public class MenuService : IMenuService
     /// <summary>Error shown when someone tries to delete a dish that customers have already ordered.</summary>
     public const string ItemHasOrdersMessage = "This dish has been ordered, so it cannot be deleted. Mark it unavailable instead.";
 
+    /// <summary>Digits in the number part of a dish code: S01, S02 ... S10, S11 (it grows past 99 without breaking).</summary>
+    private const int CodeNumberMinDigits = 2;
+
+    /// <summary>Letter used when a category name does not start with a letter.</summary>
+    private const char FallbackCodeLetter = 'X';
+
     /// <summary>Passed to validation when there is no existing item or category to compare with.</summary>
     private const int NoExistingId = 0;
 
@@ -135,8 +141,10 @@ public class MenuService : IMenuService
 
         if (searchText.Length > 0)
         {
+            // The dish code (for example "P01") is searchable too.
             query = query.Where(item => item.Name.ToLower().Contains(searchText)
-                || item.Description.ToLower().Contains(searchText));
+                || item.Description.ToLower().Contains(searchText)
+                || (item.Code != null && item.Code.ToLower().Contains(searchText)));
         }
 
         List<MenuItem> loaded = await query.ToListAsync();
@@ -190,6 +198,11 @@ public class MenuService : IMenuService
         };
 
         await ApplyInputAsync(item, input, now);
+
+        // The code is made once, from the category the dish is first saved in, and never changes afterwards.
+        // Validation already proved the category exists.
+        MenuCategory? category = await _restaurantService.GetMenuCategoryAsync(input.MenuCategoryId);
+        item.Code = await GenerateCodeAsync(category!.Name);
 
         _context.MenuItems.Add(item);
         await _context.SaveChangesAsync();
@@ -329,6 +342,45 @@ public class MenuService : IMenuService
         return ServiceResult.Success();
     }
 
+    /// <summary>
+    /// Makes the next free code for a category: its first letter plus the next number (S01, S02, P01 ...).
+    /// Categories that share a first letter share one numbering, so a code is unique on the whole menu.
+    /// </summary>
+    /// <param name="categoryName">The name of the dish's category.</param>
+    private async Task<string> GenerateCodeAsync(string categoryName)
+    {
+        char letter = FallbackCodeLetter;
+        string trimmedName = categoryName.Trim();
+
+        if (trimmedName.Length > 0 && char.IsLetter(trimmedName[0]))
+        {
+            letter = char.ToUpperInvariant(trimmedName[0]);
+        }
+
+        string prefix = letter.ToString();
+
+        List<string?> existingCodes = await _context.MenuItems
+            .Where(item => item.Code != null && item.Code.StartsWith(prefix))
+            .Select(item => item.Code)
+            .ToListAsync();
+
+        int highest = 0;
+
+        foreach (string? code in existingCodes)
+        {
+            string numberPart = code!.Substring(prefix.Length);
+
+            if (int.TryParse(numberPart, out int number) && number > highest)
+            {
+                highest = number;
+            }
+        }
+
+        string next = (highest + 1).ToString().PadLeft(CodeNumberMinDigits, '0');
+
+        return prefix + next;
+    }
+
     /// <summary>Turns a dish into the ready-to-display card the customer menu shows.</summary>
     private MenuItemCard BuildCard(MenuItem item, decimal currentPrice, DateTime now)
     {
@@ -351,6 +403,7 @@ public class MenuService : IMenuService
         MenuItemCard card = new MenuItemCard
         {
             Id = item.Id,
+            Code = item.Code ?? string.Empty,
             Name = item.Name,
             Description = item.Description,
             CategoryName = item.MenuCategory?.Name ?? string.Empty,
