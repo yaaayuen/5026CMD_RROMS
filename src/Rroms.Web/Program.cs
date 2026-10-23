@@ -143,6 +143,7 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<IAccountService, AccountService>(); //YY-2
 builder.Services.AddScoped<IProfileService, ProfileService>(); //YY-4
+builder.Services.AddScoped<IDietaryTagService, DietaryTagService>(); //YY-8b
 builder.Services.AddScoped<IUserAdministrationService, UserAdministrationService>();  //YY-5
 builder.Services.AddScoped<IAccountSecurityService, AccountSecurityService>(); //YY-7
 

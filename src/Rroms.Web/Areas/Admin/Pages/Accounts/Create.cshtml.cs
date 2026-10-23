@@ -52,7 +52,7 @@ public class CreateModel : PageModel
             return Page();
         }
 
-        TempData["StatusMessage"] = $"{Input.RoleName} account created for {Input.FullName.Trim()}. Give them their temporary password in person and ask them to change it.";
+        TempData["StatusMessage"] = $"{Input.RoleName} account created for {Input.FullName.Trim()}. They have been emailed an invitation to choose their own password.";
         return RedirectToPage("Index");
     }
 

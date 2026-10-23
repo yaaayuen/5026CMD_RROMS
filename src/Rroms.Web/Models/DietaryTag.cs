@@ -12,7 +12,7 @@ namespace Rroms.Web.Models;
 /// </para>
 /// <para>
 /// The rows are seeded with fixed IDs (see <see cref="Seed"/>), so every database has the same tags.
-/// Adding a tag later is a new seed row and a migration, not a code change in the rules.
+/// Administrators can add more tags from Admin → Dietary tags (YY-8b); these three seeded rows stay fixed.
 /// </para>
 /// </remarks>
 public class DietaryTag
@@ -22,7 +22,7 @@ public class DietaryTag
 
     /// <summary>
     /// Fixed seed data: a proof of concept with three tags. Never change an existing ID: other tables refer to it.
-    /// More tags (e.g. nuts, seafood, pork) are future work: new rows, same rules.
+    /// Administrators add more tags (e.g. nuts, seafood) at runtime through DietaryTagService (YY-8b).
     /// </summary>
     public static readonly DietaryTag[] Seed =
     {

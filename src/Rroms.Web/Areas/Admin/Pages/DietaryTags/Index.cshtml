@@ -1,0 +1,54 @@
+﻿@page
+@model Rroms.Web.Areas.Admin.Pages.DietaryTags.IndexModel
+@using Rroms.Web.Models
+@{
+	ViewData["Title"] = "Dietary tags";
+}
+
+<section class="hero hero-compact mb-4" aria-labelledby="tags-heading">
+	<span class="hero-bubble one" aria-hidden="true"></span>
+	<div class="position-relative">
+		<h1 id="tags-heading" class="mb-2">Dietary tags</h1>
+		<p class="mb-0">Customers tick the tags they avoid on their profile, and dishes are marked with the tags they contain.</p>
+	</div>
+</section>
+
+<div class="row g-4">
+	<div class="col-lg-5">
+		<section class="tg-card" aria-labelledby="add-heading">
+			<h2 id="add-heading" class="h5 mb-3">Add a tag</h2>
+
+			<form method="post" novalidate>
+				<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+				<div class="mb-3">
+					<label asp-for="NewName" class="form-label fw-semibold"></label>
+					<input asp-for="NewName" class="form-control" maxlength="30" placeholder="e.g. Nuts" />
+					<span asp-validation-for="NewName" class="text-danger small"></span>
+				</div>
+
+				<button type="submit" class="btn btn-primary">Add tag</button>
+			</form>
+
+			<p class="form-text mt-3 mb-0">
+				Tags cannot be deleted, because customers and dishes may already use them.
+			</p>
+		</section>
+	</div>
+
+	<div class="col-lg-7">
+		<section class="tg-card" aria-labelledby="list-heading">
+			<h2 id="list-heading" class="h5 mb-3">Current tags (@Model.Tags.Count)</h2>
+			<ul class="list-group list-group-flush">
+				@foreach (DietaryTag tag in Model.Tags)
+				{
+					<li class="list-group-item px-0">@tag.Name</li>
+				}
+			</ul>
+		</section>
+	</div>
+</div>
+
+@section Scripts {
+	<partial name="_ValidationScriptsPartial" />
+}
