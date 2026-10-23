@@ -51,12 +51,6 @@ public class MenuService : IMenuService
     /// <summary>Error shown when someone tries to delete a dish that customers have already ordered.</summary>
     public const string ItemHasOrdersMessage = "This dish has been ordered, so it cannot be deleted. Mark it unavailable instead.";
 
-    /// <summary>Digits in the number part of a dish code: S01, S02 ... S10, S11 (it grows past 99 without breaking).</summary>
-    private const int CodeNumberMinDigits = 2;
-
-    /// <summary>Letter used when a category name does not start with a letter.</summary>
-    private const char FallbackCodeLetter = 'X';
-
     /// <summary>Passed to validation when there is no existing item or category to compare with.</summary>
     private const int NoExistingId = 0;
 
@@ -349,36 +343,12 @@ public class MenuService : IMenuService
     /// <param name="categoryName">The name of the dish's category.</param>
     private async Task<string> GenerateCodeAsync(string categoryName)
     {
-        char letter = FallbackCodeLetter;
-        string trimmedName = categoryName.Trim();
-
-        if (trimmedName.Length > 0 && char.IsLetter(trimmedName[0]))
-        {
-            letter = char.ToUpperInvariant(trimmedName[0]);
-        }
-
-        string prefix = letter.ToString();
-
         List<string?> existingCodes = await _context.MenuItems
-            .Where(item => item.Code != null && item.Code.StartsWith(prefix))
+            .Where(item => item.Code != null)
             .Select(item => item.Code)
             .ToListAsync();
 
-        int highest = 0;
-
-        foreach (string? code in existingCodes)
-        {
-            string numberPart = code!.Substring(prefix.Length);
-
-            if (int.TryParse(numberPart, out int number) && number > highest)
-            {
-                highest = number;
-            }
-        }
-
-        string next = (highest + 1).ToString().PadLeft(CodeNumberMinDigits, '0');
-
-        return prefix + next;
+        return MenuCodeRule.Next(categoryName, existingCodes);
     }
 
     /// <summary>Turns a dish into the ready-to-display card the customer menu shows.</summary>
