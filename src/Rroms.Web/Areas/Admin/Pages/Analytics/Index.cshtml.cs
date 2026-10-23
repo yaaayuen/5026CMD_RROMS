@@ -46,6 +46,9 @@ public class IndexModel : PageModel
     /// <summary>DA-3 sales for the same range, or null if the sales report could not be built.</summary>
     public ReportDashboard? Sales { get; private set; }
 
+    /// <summary>The next 7 days: booked so far against the usual for that weekday (simple forecast).</summary>
+    public IReadOnlyList<DayOutlook> Outlook { get; private set; } = new List<DayOutlook>();
+
     /// <summary>Handles GET /Admin/Analytics, with or without a date range.</summary>
     public async Task OnGetAsync()
     {
@@ -63,6 +66,7 @@ public class IndexModel : PageModel
         }
 
         Report = result.Value;
+        Outlook = await _analyticsService.GetOutlookAsync(DateOnly.FromDateTime(MalaysiaTime.FromUtc(DateTime.UtcNow)));
         Sales = await GetSalesAsync();
     }
 

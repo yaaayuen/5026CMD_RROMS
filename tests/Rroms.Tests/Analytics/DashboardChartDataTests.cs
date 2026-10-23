@@ -40,8 +40,8 @@ public class DashboardChartDataTests
 
         Assert.Equal(new[] { "Mon 5 Oct", "Tue 6 Oct" }, data.DayLabels);
         Assert.Equal(new[] { 3, 0 }, Series(data, "Completed"));
-        Assert.Equal(new[] { 0, 1 }, Series(data, "Seated"));
-        Assert.Equal(new[] { 0, 2 }, Series(data, "Pending"));
+        // Pending 2 + Seated 1 are visits not finished yet, shown together as one series.
+        Assert.Equal(new[] { 0, 3 }, Series(data, "Not finished yet"));
         Assert.Equal(new[] { 1, 0 }, Series(data, "Cancelled"));
         Assert.Equal(new[] { 8, 4 }, data.GuestsServed);
         Assert.Equal(new[] { "18:00", "19:00", "20:00" }, data.HourLabels);
@@ -50,22 +50,21 @@ public class DashboardChartDataTests
         Assert.False(data.SalesAvailable);
     }
 
-    /// <summary>With no Pending bookings in the range (new bookings are confirmed at once), the Pending series is left out.</summary>
+    /// <summary>Past days only have finished visits, so the chart shows just the three outcomes.</summary>
     [Fact]
-    public void FromReport_NoPendingBookings_LeavesPendingOut()
+    public void FromReport_OnlyFinishedVisits_ShowsTheThreeOutcomes()
     {
         OccupancyReport report = new OccupancyReport
         {
             DailyTrend = new List<DailyReservationCount>
             {
-                new DailyReservationCount { Date = new DateOnly(2026, 10, 5), Completed = 2, Confirmed = 1, GuestsServed = 5 }
+                new DailyReservationCount { Date = new DateOnly(2026, 10, 5), Completed = 2, Cancelled = 1, NoShow = 1, GuestsServed = 5 }
             }
         };
 
         DashboardChartData data = DashboardChartData.FromReport(report);
 
-        Assert.DoesNotContain(data.BookingsByStatus, s => s.Name == "Pending");
-        Assert.Contains(data.BookingsByStatus, s => s.Name == "Absent");
+        Assert.Equal(new[] { "Completed", "Cancelled", "Absent" }, data.BookingsByStatus.Select(s => s.Name));
     }
 
     /// <summary>

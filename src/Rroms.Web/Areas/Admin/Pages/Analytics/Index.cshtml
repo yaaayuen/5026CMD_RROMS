@@ -74,10 +74,48 @@
 			<section class="tg-card h-100" aria-labelledby="upcoming-heading">
 				<h2 id="upcoming-heading" class="h6 text-secondary mb-2">Confirmed, next @report.UpcomingDays days</h2>
 				<p class="display-6 fw-bold mb-1">@report.UpcomingConfirmedBookings</p>
-				<p class="small text-secondary mb-0">bookings · @report.UpcomingConfirmedGuests guests expected</p>
+				<p class="small text-secondary mb-0">bookings · @report.UpcomingConfirmedGuests guests expected · <a href="#outlook-heading">day by day</a></p>
 			</section>
 		</div>
 	</div>
+
+	if (Model.Outlook.Count > 0)
+	{
+		<section class="tg-card h-auto mb-4" aria-labelledby="outlook-heading">
+			<h2 id="outlook-heading" class="h5 mb-1">Next 7 days: booked so far vs. usual</h2>
+			<p class="text-secondary small mb-3">
+				"Usual" is the average of the same weekday over the last @Rroms.Web.Services.AnalyticsService.OutlookWeeksBack weeks
+				(guests who really dined). Busy = at least 20% above an average day, Quiet = at least 20% below.
+			</p>
+			<div class="table-responsive">
+				<table class="table table-sm align-middle mb-0">
+					<thead>
+						<tr>
+							<th scope="col">Day</th>
+							<th scope="col" class="text-end">Booked so far</th>
+							<th scope="col" class="text-end">Usual bookings</th>
+							<th scope="col" class="text-end">Usual guests</th>
+							<th scope="col" class="text-end">Usual busiest hour</th>
+							<th scope="col">Expected</th>
+						</tr>
+					</thead>
+					<tbody>
+						@foreach (var day in Model.Outlook)
+						{
+							<tr>
+								<th scope="row">@day.Date.ToString("ddd d MMM", CultureInfo.InvariantCulture)</th>
+								<td class="text-end">@day.BookedSoFar <span class="text-secondary small">(@day.GuestsBookedSoFar guests)</span></td>
+								<td class="text-end">@day.UsualBookings.ToString("0.0", CultureInfo.InvariantCulture)</td>
+								<td class="text-end">@day.UsualGuests.ToString("0.0", CultureInfo.InvariantCulture)</td>
+								<td class="text-end">@(day.UsualBusiestHour.HasValue ? $"{day.UsualBusiestHour:00}:00" : "–")</td>
+								<td><span class="badge @(day.Level == "Busy" ? "text-bg-danger" : day.Level == "Quiet" ? "text-bg-secondary" : "text-bg-success")">@day.Level</span></td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		</section>
+	}
 
 	<p class="small text-secondary mb-4">
 		<strong>How utilisation is worked out:</strong> table-hours really used (Seated or Completed bookings, counted in 30-minute slots)
@@ -204,8 +242,9 @@
 	</section>
 
 	var busyDays = report.DailyTrend.Where(d => d.Total > 0).ToList();
-	// New bookings are confirmed at once, so Pending only appears for old bookings: show the column only then.
-	bool showPending = busyDays.Any(d => d.Pending > 0);
+	// Past visits always end Completed, Cancelled or Absent; Pending/Confirmed/Seated are visits still to come,
+	// shown as one "Not finished yet" column, and only when the range has some (today or later).
+	bool showNotFinished = busyDays.Any(d => d.NotFinished > 0);
 	<section class="tg-card h-auto" aria-labelledby="trend-heading">
 		<details>
 			<summary class="h5 mb-0" id="trend-heading">Daily numbers (@busyDays.Count day(s) with bookings)</summary>
@@ -222,13 +261,11 @@
 						<thead>
 							<tr>
 								<th scope="col">Date</th>
-								@if (showPending)
-								{
-									<th scope="col" class="text-end">Pending</th>
-								}
-								<th scope="col" class="text-end">Confirmed</th>
-								<th scope="col" class="text-end">Seated</th>
 								<th scope="col" class="text-end">Completed</th>
+								@if (showNotFinished)
+								{
+									<th scope="col" class="text-end">Not finished yet</th>
+								}
 								<th scope="col" class="text-end">Cancelled</th>
 								<th scope="col" class="text-end">Absent</th>
 								<th scope="col" class="text-end">Total</th>
@@ -240,13 +277,11 @@
 							{
 								<tr>
 									<th scope="row">@day.Date.ToString("ddd d MMM", CultureInfo.InvariantCulture)</th>
-									@if (showPending)
-									{
-										<td class="text-end">@day.Pending</td>
-									}
-									<td class="text-end">@day.Confirmed</td>
-									<td class="text-end">@day.Seated</td>
 									<td class="text-end">@day.Completed</td>
+									@if (showNotFinished)
+									{
+										<td class="text-end">@day.NotFinished</td>
+									}
 									<td class="text-end">@day.Cancelled</td>
 									<td class="text-end">@day.NoShow</td>
 									<td class="text-end fw-semibold">@day.Total</td>
@@ -257,13 +292,11 @@
 						<tfoot>
 							<tr class="fw-semibold">
 								<th scope="row">Total</th>
-								@if (showPending)
-								{
-									<td class="text-end">@busyDays.Sum(d => d.Pending)</td>
-								}
-								<td class="text-end">@busyDays.Sum(d => d.Confirmed)</td>
-								<td class="text-end">@busyDays.Sum(d => d.Seated)</td>
 								<td class="text-end">@busyDays.Sum(d => d.Completed)</td>
+								@if (showNotFinished)
+								{
+									<td class="text-end">@busyDays.Sum(d => d.NotFinished)</td>
+								}
 								<td class="text-end">@busyDays.Sum(d => d.Cancelled)</td>
 								<td class="text-end">@busyDays.Sum(d => d.NoShow)</td>
 								<td class="text-end">@busyDays.Sum(d => d.Total)</td>

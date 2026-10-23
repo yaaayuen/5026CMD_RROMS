@@ -85,20 +85,19 @@ public class DashboardChartData
     {
         IReadOnlyList<DailyReservationCount> days = report.DailyTrend;
 
+        // Every finished visit ends in one of three outcomes: Completed, Cancelled or Absent.
         List<ChartSeries> byStatus = new List<ChartSeries>
         {
             new ChartSeries("Completed", days.Select(d => d.Completed).ToList()),
-            new ChartSeries("Seated", days.Select(d => d.Seated).ToList()),
-            new ChartSeries("Confirmed", days.Select(d => d.Confirmed).ToList()),
             new ChartSeries("Cancelled", days.Select(d => d.Cancelled).ToList()),
             new ChartSeries("Absent", days.Select(d => d.NoShow).ToList())
         };
 
-        // New bookings are confirmed at once, so Pending only exists for old bookings.
-        // Show it only when the range really has some, so no number is ever hidden.
-        if (days.Any(d => d.Pending > 0))
+        // Pending, Confirmed and Seated are not outcomes but visits still to come (only today or later),
+        // so they are shown as one series, and only when the range really has some: no number is ever hidden.
+        if (days.Any(d => d.NotFinished > 0))
         {
-            byStatus.Insert(3, new ChartSeries("Pending", days.Select(d => d.Pending).ToList()));
+            byStatus.Insert(1, new ChartSeries("Not finished yet", days.Select(d => d.NotFinished).ToList()));
         }
 
         return new DashboardChartData
