@@ -57,7 +57,13 @@ else
 							<article class="tg-card h-100 @(dish.CanOrder ? "" : "opacity-75")">
 								<div class="d-flex justify-content-between gap-3">
 									<div>
-										<h3 class="h5 mb-1">@dish.Name</h3>
+										<h3 class="h5 mb-1">
+											@if (!string.IsNullOrEmpty(dish.Code))
+											{
+												<span class="small fw-semibold text-secondary me-2">@dish.Code</span>
+											}
+											@dish.Name
+										</h3>
 										<p class="text-secondary small mb-2">@dish.Description</p>
 										<p class="mb-0">
 											@if (dish.IsOfferActive)
