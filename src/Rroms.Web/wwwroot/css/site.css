@@ -718,9 +718,93 @@ input[type="password"]::-ms-clear {
     color: var(--tg-link);
 }
 
+.track-visit {
+    flex-wrap: wrap;
+}
+
+.track-orders {
+    flex: 1 0 100%;
+    padding-left: 4.25rem;
+}
+
+.track-order {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+    margin-top: 0.5rem;
+}
+
+.track-past-visit {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+    .track-past-visit:last-child {
+        border-bottom: 0;
+    }
+
+    .track-past-visit .track-orders {
+        padding-left: 0;
+    }
+
+.track-dishes {
+    font-size: 0.9rem;
+}
+
+/* Order progress: done steps get a tick and the current step is bold, so colour is never the only signal. */
+.order-steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.5rem;
+    font-size: 0.85rem;
+    color: var(--bs-secondary-color);
+}
+
+    .order-steps li {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .order-steps .is-done {
+        color: var(--bs-body-color);
+    }
+
+    .order-steps .is-current {
+        color: var(--tg-link);
+        font-weight: 700;
+    }
+
+.order-step-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 50%;
+    border: 1px solid var(--bs-border-color);
+    font-size: 0.75rem;
+}
+
+.order-steps .is-done .order-step-mark {
+    background-color: var(--tg-blush);
+    border-color: var(--tg-blush);
+    color: var(--tg-link);
+}
+
+.order-steps .is-current .order-step-mark {
+    background-color: var(--tg-raspberry);
+    border-color: var(--tg-raspberry);
+    color: #fff;
+    box-shadow: 0 0 0 3px var(--tg-blush);
+}
+
 @media (max-width: 575.98px) {
-    .track-visit {
-        flex-wrap: wrap;
+    .track-orders {
+        padding-left: 0;
     }
 }
 
