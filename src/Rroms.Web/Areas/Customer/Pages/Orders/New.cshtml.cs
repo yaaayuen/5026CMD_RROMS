@@ -27,22 +27,26 @@ public class NewModel : PageModel
     private readonly IOrderService _orderService;
     private readonly IMenuService _menuService;
     private readonly IRecommendationService _recommendationService;
+    private readonly IProfileService _profileService;
     private readonly OrderRulesOptions _rules;
 
     /// <summary>Receives the services from dependency injection.</summary>
     /// <param name="orderService">Places the order.</param>
     /// <param name="menuService">Lists the dishes with their current prices.</param>
     /// <param name="recommendationService">Suggests dishes the customer may like (YJ-4).</param>
+    /// <param name="profileService">Read only: the dietary tags the customer avoids (YY-9), for the warnings.</param>
     /// <param name="options">The ordering limits, used to limit the quantity boxes.</param>
     public NewModel(
         IOrderService orderService,
         IMenuService menuService,
         IRecommendationService recommendationService,
+        IProfileService profileService,
         IOptions<OrderRulesOptions> options)
     {
         _orderService = orderService;
         _menuService = menuService;
         _recommendationService = recommendationService;
+        _profileService = profileService;
         _rules = options.Value;
     }
 
@@ -65,6 +69,12 @@ public class NewModel : PageModel
 
     /// <summary>The "Recommended for you" strip (YJ-4). Falls back to popular dishes when there is no history.</summary>
     public DishSuggestionSection Recommended { get; private set; } = new DishSuggestionSection();
+
+    /// <summary>
+    /// Names of the dietary tags this customer avoids. Empty when they have not consented or avoid nothing,
+    /// so the page then shows no warnings.
+    /// </summary>
+    public IReadOnlySet<string> AvoidedTagNames { get; private set; } = new HashSet<string>();
 
     /// <summary>The largest quantity of one dish that can be ordered.</summary>
     public int MaxQuantity
@@ -153,6 +163,13 @@ public class NewModel : PageModel
         return RedirectToPage("Details", new { id = result.Value });
     }
 
+    /// <summary>The tags of a dish that the customer avoids (empty when none). A guide only: it never blocks an order.</summary>
+    /// <param name="dish">The dish.</param>
+    public IReadOnlyList<string> AvoidedIn(MenuItemCard dish)
+    {
+        return dish.DietaryTags.Where(tag => AvoidedTagNames.Contains(tag)).ToList();
+    }
+
     /// <summary>The quantity to show in a dish's box: what the customer typed before, or 0.</summary>
     /// <param name="dishId">The dish.</param>
     public int QuantityFor(int dishId)
@@ -204,6 +221,7 @@ public class NewModel : PageModel
 
         Reservation = result.Value;
         Dishes = await _menuService.SearchMenuAsync(new MenuSearchCriteria());
+        AvoidedTagNames = await LoadAvoidedTagNamesAsync();
 
         Recommended = new DishSuggestionSection
         {
@@ -213,5 +231,25 @@ public class NewModel : PageModel
         };
 
         return null;
+    }
+
+    /// <summary>
+    /// The names of the tags the customer avoids. GetAvoidedTagIdsAsync already returns nothing without consent.
+    /// </summary>
+    private async Task<IReadOnlySet<string>> LoadAvoidedTagNamesAsync()
+    {
+        IReadOnlyList<int> avoidedIds = await _profileService.GetAvoidedTagIdsAsync(User.GetUserId());
+
+        if (avoidedIds.Count == 0)
+        {
+            return new HashSet<string>();
+        }
+
+        IReadOnlyList<DietaryTag> allTags = await _profileService.GetDietaryTagsAsync();
+
+        return allTags
+            .Where(tag => avoidedIds.Contains(tag.Id))
+            .Select(tag => tag.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 }
