@@ -22,6 +22,7 @@ public class DetailsModel : PageModel
 
     private readonly IBillingService _billing;
     public ReceiptSummary? PaymentReceipt { get; private set; }
+    private readonly IMenuService _menuService;
     private readonly IOrderService _orderService;
     private readonly IRecommendationService _recommendationService;
 
@@ -29,8 +30,10 @@ public class DetailsModel : PageModel
     /// <param name="billing">Reads the payment after ownership is verified.</param>
     /// <param name="orderService">Reads the customer's orders.</param>
     /// <param name="recommendationService">Suggests dishes often ordered with these ones (YJ-4).</param>
-    public DetailsModel(IOrderService orderService, IRecommendationService recommendationService, IBillingService billing)
+    /// <param name="menuService">Gives each ordered dish its code and photo.</param>
+    public DetailsModel(IOrderService orderService, IRecommendationService recommendationService, IBillingService billing, IMenuService menuService)
     {
+        _menuService = menuService;
         _orderService = orderService;
         _billing = billing;
         _recommendationService = recommendationService;
@@ -38,6 +41,9 @@ public class DetailsModel : PageModel
 
     /// <summary>The order being shown.</summary>
     public OrderSummary Summary { get; private set; } = new OrderSummary();
+
+    /// <summary>The ordered dishes as the menu shows them (code, photo), by dish Id. A dish missing here shows without a photo.</summary>
+    public IReadOnlyDictionary<int, MenuItemCard> Dishes { get; private set; } = new Dictionary<int, MenuItemCard>();
 
     /// <summary>"People who ordered these also ordered..." (YJ-4).</summary>
     public DishSuggestionSection Together { get; private set; } = new DishSuggestionSection();
@@ -54,9 +60,10 @@ public class DetailsModel : PageModel
         }
 
         Summary = summary;
+        Dishes = await LoadDishesAsync();
         // Read payment only after the existing service has verified order ownership.
         var bill = await _billing.GetBillAsync(id);
-        if(bill?.PaidPaymentId is int paymentId)
+        if (bill?.PaidPaymentId is int paymentId)
             PaymentReceipt = await _billing.GetReceiptForCustomerAsync(paymentId, User.GetUserId());
 
         List<int> dishIds = summary.Lines.Select(line => line.MenuItemId).ToList();
@@ -69,6 +76,20 @@ public class DetailsModel : PageModel
         };
 
         return Page();
+    }
+
+    /// <summary>The menu card of an ordered dish, or null when the menu no longer lists it (for example its category is hidden).</summary>
+    /// <param name="line">The order line.</param>
+    public MenuItemCard? DishFor(OrderSummaryLine line)
+    {
+        return Dishes.TryGetValue(line.MenuItemId, out MenuItemCard? card) ? card : null;
+    }
+
+    private async Task<IReadOnlyDictionary<int, MenuItemCard>> LoadDishesAsync()
+    {
+        IReadOnlyList<MenuItemCard> cards = await _menuService.SearchMenuAsync(new MenuSearchCriteria());
+
+        return cards.ToDictionary(card => card.Id);
     }
 
     /// <summary>The words the customer sees for a status.</summary>
