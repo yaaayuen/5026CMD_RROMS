@@ -19,3 +19,20 @@ else
         <button class="btn btn-primary">Submit feedback</button>
     </form>
 }
+@if (Model.Past.Count > 0)
+{
+    <section class="mt-4" aria-labelledby="past-feedback-heading">
+        <h2 id="past-feedback-heading" class="h4">Your reviews</h2>
+        @foreach (var review in Model.Past)
+        {
+            <article class="tg-card p-3 mb-3">
+                <h3 class="h6 mb-1">@review.Rating / 5 · Visit on @MalaysiaTime.FromUtc(review.Reservation!.StartUtc).ToString("dd MMM yyyy")</h3>
+                <p class="mb-1">@(review.CommentRemoved ? "Your comment was removed by the restaurant." : review.Comment.Length == 0 ? "No comment." : review.Comment)</p>
+                @if (!string.IsNullOrEmpty(review.Reply))
+                {
+                    <div class="review-reply"><strong>Reply from Three Grills</strong> (@MalaysiaTime.FromUtc(review.RepliedAtUtc!.Value).ToString("dd MMM yyyy")): @review.Reply</div>
+                }
+            </article>
+        }
+    </section>
+}

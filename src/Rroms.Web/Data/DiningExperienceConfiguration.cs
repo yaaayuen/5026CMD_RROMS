@@ -12,10 +12,14 @@ public static class DiningExperienceConfiguration
         builder.Entity<Order>().Property(o => o.Status).IsConcurrencyToken();
         builder.Entity<Announcement>().ToTable("Announcements", table =>
             table.HasCheckConstraint("CK_Announcements_Dates", "[EndUtc] > [StartUtc]"));
+        // Deleting a dish keeps the announcement; it simply loses its menu link.
+        builder.Entity<Announcement>().HasOne(a => a.MenuItem).WithMany()
+            .HasForeignKey(a => a.MenuItemId).OnDelete(DeleteBehavior.SetNull);
         builder.Entity<Feedback>().HasIndex(f => f.ReservationId).IsUnique();
         builder.Entity<Feedback>().HasOne(f => f.Reservation).WithMany()
             .HasForeignKey(f => f.ReservationId).OnDelete(DeleteBehavior.Restrict);
         builder.Entity<Feedback>().ToTable("Feedback", table =>
             table.HasCheckConstraint("CK_Feedback_Rating", "[Rating] BETWEEN 1 AND 5"));
+        builder.Entity<BlockedWord>().HasIndex(w => w.Word).IsUnique();
     }
 }

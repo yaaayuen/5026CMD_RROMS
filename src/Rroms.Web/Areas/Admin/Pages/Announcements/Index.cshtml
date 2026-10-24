@@ -1,7 +1,11 @@
 @page
 @model Rroms.Web.Areas.Admin.Pages.Announcements.IndexModel
 @using Rroms.Web.Common
-@{ ViewData["Title"] = "Announcements"; }
+@{
+    ViewData["Title"] = "Announcements";
+    DateTime now = DateTime.UtcNow;
+    (string? Key, string Label)[] tabs = { (null, "All"), ("upcoming", "Upcoming"), ("live", "Live"), ("drafts", "Drafts"), ("ended", "Ended") };
+}
 <h1>Announcements and campaigns</h1>
 <p><a asp-area="Admin" asp-page="/Restaurant/Index">Restaurant settings</a> · <a asp-area="" asp-page="/Announcements/Index">Customer view</a></p>
 <form method="post" class="tg-card p-3 mb-4">
@@ -11,14 +15,35 @@
     <label asp-for="Input.Message" class="form-label">Message</label><textarea asp-for="Input.Message" class="form-control mb-2" rows="3"></textarea>
     <label asp-for="StartLocal" class="form-label">Starts (Malaysia time)</label><input asp-for="StartLocal" type="datetime-local" class="form-control mb-2" />
     <label asp-for="EndLocal" class="form-label">Ends (Malaysia time)</label><input asp-for="EndLocal" type="datetime-local" class="form-control mb-2" />
+    <label asp-for="Input.MenuItemId" class="form-label">Linked dish (optional)</label>
+    <select asp-for="Input.MenuItemId" asp-items="Model.Dishes" class="form-select mb-1" aria-describedby="dish-help"><option value="">No dish</option></select>
+    <p id="dish-help" class="form-text mt-0 mb-2">Customers get a button that opens this dish on the menu.</p>
     <div><label><input asp-for="Input.IsPromotion" /> Promotional campaign</label></div>
-    <div class="mb-3"><label><input asp-for="Input.IsPublished" /> Published (visible only within the dates above)</label></div>
+    <div class="mb-1"><label><input asp-for="Input.IsPublished" /> Published (visible only within the dates above)</label></div>
+    <p class="form-text mt-0 mb-3">A published promotion with a future start is scheduled: customers are notified once, when it starts.</p>
     <button class="btn btn-primary">Save</button> <a asp-page="./Index" class="btn btn-outline-primary">New announcement</a>
 </form>
+<nav class="news-tabs mb-3" aria-label="Show">
+    @foreach (var tab in tabs)
+    {
+        bool active = Model.Show == tab.Key;
+        int count = tab.Key == null ? Model.Counts.Values.Sum() : Model.Counts.GetValueOrDefault(tab.Key);
+        <a class="news-tab @(active ? "active" : null)" asp-page="./Index" asp-route-show="@tab.Key"
+           aria-current="@(active ? "page" : null)">@tab.Label <span class="news-tab-count">@count</span></a>
+    }
+</nav>
+@if (Model.Items.Count == 0) { <p class="text-secondary">No announcements in this list.</p> }
 @foreach (var item in Model.Items)
 {
-    <article class="tg-card p-3 mb-3"><h2 class="h5">@item.Title</h2><p>@item.Message</p>
-        <p>@(item.IsPublished ? "Published" : "Draft") · @MalaysiaTime.FromUtc(item.StartUtc).ToString("dd MMM HH:mm") to @MalaysiaTime.FromUtc(item.EndUtc).ToString("dd MMM HH:mm")</p>
+    string state = Rroms.Web.Areas.Admin.Pages.Announcements.IndexModel.StateOf(item, now);
+    <article class="tg-card p-3 mb-3">
+        <div class="d-flex flex-wrap gap-2 mb-2">
+            <span class="badge @(state switch { "live" => "text-bg-success", "upcoming" => "text-bg-info", "ended" => "text-bg-secondary", _ => "text-bg-light" })">@(state switch { "live" => "Live", "upcoming" => "Scheduled", "ended" => "Ended", _ => "Draft" })</span>
+            @if (item.IsPromotion) { <span class="badge text-bg-primary">Offer</span> }
+            @if (item.NotifiedAtUtc.HasValue) { <span class="badge text-bg-light">Customers notified @MalaysiaTime.FromUtc(item.NotifiedAtUtc.Value).ToString("dd MMM HH:mm")</span> }
+        </div>
+        <h2 class="h5">@item.Title</h2><p>@item.Message</p>
+        <p>@MalaysiaTime.FromUtc(item.StartUtc).ToString("dd MMM HH:mm") to @MalaysiaTime.FromUtc(item.EndUtc).ToString("dd MMM HH:mm")@(item.MenuItem == null ? "" : $" · Dish: {item.MenuItem.Name}")</p>
         <a asp-page="./Index" asp-route-id="@item.Id">Edit or unpublish</a>
     </article>
 }

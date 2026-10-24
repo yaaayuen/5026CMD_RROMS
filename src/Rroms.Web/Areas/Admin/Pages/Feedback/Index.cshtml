@@ -1,11 +1,89 @@
 @page
 @model Rroms.Web.Areas.Admin.Pages.Feedback.IndexModel
 @using Rroms.Web.Common
-@{ ViewData["Title"] = "Customer feedback"; }
+@using Rroms.Web.Models.ViewModels
+@{
+    ViewData["Title"] = "Customer feedback";
+    var summary = Model.Summary;
+    int most = Math.Max(1, summary.StarCounts.Max());
+    (FeedbackView Value, string Label)[] views = { (FeedbackView.All, "All"), (FeedbackView.Shown, "Shown on website"),
+        (FeedbackView.Hidden, "Hidden"), (FeedbackView.Flagged, "Flagged by word filter"), (FeedbackView.AwaitingReply, "Awaiting reply"), (FeedbackView.Replied, "Replied") };
+}
 <h1>Customer feedback</h1>
+
+<section class="row g-3 mb-4" aria-label="Rating summary">
+    <div class="col-md-4">
+        <div class="tg-card h-100 p-3">
+            <h2 class="h6 text-secondary mb-1">All-time average</h2>
+            <p class="display-6 mb-1">@(summary.Average?.ToString("0.0") ?? "–")<span class="fs-6 text-secondary"> / 5</span></p>
+            <p class="small mb-0">@summary.Count reviews · @summary.AwaitingReplyCount awaiting reply · @summary.HiddenCount hidden · @summary.FlaggedCount flagged</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="tg-card h-100 p-3">
+            <h2 class="h6 text-secondary">Reviews by stars</h2>
+            <ul class="list-unstyled feedback-bars mb-0">
+                @for (int stars = 5; stars >= 1; stars--)
+                {
+                    int count = summary.StarCounts[stars - 1];
+                    <li><span class="feedback-bar-label">@stars ★</span>
+                        <span class="feedback-bar" aria-hidden="true"><span style="width:@(count * 100 / most)%"></span></span>
+                        <span class="feedback-bar-count">@count<span class="visually-hidden"> reviews with @stars stars</span></span></li>
+                }
+            </ul>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="tg-card h-100 p-3">
+            <h2 class="h6 text-secondary">Last @Rroms.Web.Areas.Admin.Pages.Feedback.IndexModel.TrendWeeks weeks</h2>
+            <table class="table table-sm mb-0 small">
+                <thead><tr><th scope="col">Week of</th><th scope="col">Reviews</th><th scope="col">Average</th></tr></thead>
+                <tbody>
+                @foreach (var week in summary.Weeks)
+                {
+                    <tr><td>@week.StartLocal.ToString("d MMM")</td><td>@week.Count</td><td>@(week.Average?.ToString("0.0") ?? "–")</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<section class="tg-card p-3 mb-4" aria-labelledby="blocked-heading">
+    <h2 id="blocked-heading" class="h5">Blocked words</h2>
+    <p class="small text-secondary">A new review containing one of these words is hidden from the website and flagged for you to check.
+        Disguises such as "sh1t" or "shiiit" are caught too.</p>
+    <div class="d-flex flex-wrap gap-2 mb-3" aria-label="Words you added">
+        @if (Model.CustomWords.Count == 0) { <span class="small text-secondary">You have not added any words yet.</span> }
+        @foreach (var word in Model.CustomWords)
+        {
+            <form method="post" asp-page-handler="RemoveWord" asp-all-route-data="Model.Filters" asp-route-wordId="@word.Id" class="blocked-word">
+                <span>@word.Word</span>
+                <button class="btn btn-sm btn-link p-0" aria-label="Remove @word.Word">&times;</button>
+            </form>
+        }
+    </div>
+    <div class="d-flex flex-wrap gap-2 align-items-end">
+        <form method="post" asp-page-handler="AddWord" asp-all-route-data="Model.Filters" class="d-flex gap-2">
+            <label for="new-word" class="visually-hidden">Word to block</label>
+            <input id="new-word" name="word" class="form-control form-control-sm" maxlength="@Rroms.Web.Models.BlockedWord.MaxLength" placeholder="Add a word" required />
+            <button class="btn btn-sm btn-primary">Add</button>
+        </form>
+        <form method="post" asp-page-handler="Recheck" asp-all-route-data="Model.Filters">
+            <button class="btn btn-sm btn-outline-primary">Re-check existing reviews</button>
+        </form>
+    </div>
+    <details class="mt-3 small">
+        <summary>Built-in words (@Model.FixedWords.Count, cannot be removed)</summary>
+        <p class="mb-0 mt-2">@string.Join(", ", Model.FixedWords)</p>
+    </details>
+</section>
+
 <div asp-validation-summary="All" class="text-danger"></div>
 <form method="get" class="row g-2 mb-3">
     <div class="col-sm"><label asp-for="Rating">Stars</label><select asp-for="Rating" class="form-select"><option value="">All</option>@for(int n = 1; n <= 5; n++) { <option value="@n">@n</option> }</select></div>
+    <div class="col-sm"><label asp-for="View">Show</label><select asp-for="View" class="form-select">@foreach (var view in views) { <option value="@view.Value">@view.Label</option> }</select></div>
+    <div class="col-sm"><label asp-for="Search">Comment contains</label><input asp-for="Search" class="form-control" /></div>
     <div class="col-sm"><label asp-for="From">From</label><input asp-for="From" type="date" class="form-control" /></div>
     <div class="col-sm"><label asp-for="Until">Through</label><input asp-for="Until" type="date" class="form-control" /></div>
     <div class="col-sm align-self-end"><button class="btn btn-primary">Filter</button></div>
@@ -13,7 +91,39 @@
 <p>@Model.Items.Count reviews · Average: @(Model.Average?.ToString("0.0") ?? "No ratings")</p>
 @foreach(var item in Model.Items)
 {
-    <article class="tg-card p-3 mb-3"><h2 class="h5">@item.Rating / 5 · Reservation #@item.ReservationId</h2>
-        <p>@item.Comment</p><small>@MalaysiaTime.FromUtc(item.CreatedAtUtc).ToString("dd MMM yyyy HH:mm")</small>
+    <article class="tg-card p-3 mb-3 @(item.IsHidden ? "feedback-hidden" : null)">
+        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+            <h2 class="h5 mb-0">@item.Rating / 5 · Reservation #@item.ReservationId</h2>
+            @if (item.IsHidden) { <span class="badge text-bg-secondary">Hidden from website</span> }
+            @if (item.IsFlagged)
+            {
+                var words = Model.BlockedWordsIn(item.Comment);
+                <span class="badge text-bg-danger">Flagged by word filter@(words.Count == 0 ? "" : ": " + string.Join(", ", words))</span>
+            }
+            @if (item.RepliedAtUtc == null) { <span class="badge text-bg-warning">Awaiting reply</span> }
+        </div>
+        <p class="mb-1">@(item.CommentRemoved ? "Comment deleted by an administrator." : item.Comment.Length == 0 ? "No comment." : item.Comment)</p>
+        <small>@item.Reservation?.Customer?.FullName · @MalaysiaTime.FromUtc(item.CreatedAtUtc).ToString("dd MMM yyyy HH:mm")</small>
+
+        <form method="post" asp-page-handler="Reply" asp-all-route-data="Model.Filters" asp-route-id="@item.Id" class="mt-3">
+            <label for="reply-@item.Id" class="form-label small">@(item.RepliedAtUtc == null ? "Reply" : $"Reply (sent {MalaysiaTime.FromUtc(item.RepliedAtUtc.Value):dd MMM HH:mm})")</label>
+            <textarea id="reply-@item.Id" name="reply" class="form-control mb-2" rows="2" maxlength="1000">@item.Reply</textarea>
+            <button class="btn btn-sm btn-primary">@(item.RepliedAtUtc == null ? "Send reply" : "Update reply")</button>
+        </form>
+        <div class="d-flex flex-wrap gap-2 mt-2">
+            <form method="post" asp-page-handler="Hide" asp-all-route-data="Model.Filters" asp-route-id="@item.Id" asp-route-hidden="@(!item.IsHidden)">
+                <button class="btn btn-sm btn-outline-primary">@(item.IsHidden ? "Show on website" : "Hide from website")</button>
+            </form>
+            @if (!item.CommentRemoved && item.Comment.Length > 0)
+            {
+                <details>
+                    <summary class="btn btn-sm btn-outline-danger">Delete comment</summary>
+                    <form method="post" asp-page-handler="RemoveComment" asp-all-route-data="Model.Filters" asp-route-id="@item.Id" class="mt-2">
+                        <p class="small mb-1">This permanently deletes the text. The star rating is kept.</p>
+                        <button class="btn btn-sm btn-danger">Delete permanently</button>
+                    </form>
+                </details>
+            }
+        </div>
     </article>
 }

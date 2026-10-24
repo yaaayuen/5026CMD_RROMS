@@ -69,6 +69,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     // ----- Sprint 4 (Alex): announcements and feedback -----
     public DbSet<Announcement> Announcements => Set<Announcement>();
     public DbSet<Feedback> Feedback => Set<Feedback>();
+    public DbSet<BlockedWord> BlockedWords => Set<BlockedWord>();
 
     // ----- Sprint 5 (Darren): payments -----
 

@@ -1056,3 +1056,71 @@ input[type="password"]::-ms-clear {
     white-space: nowrap;
     vertical-align: middle;
 }
+
+/* Feedback (Alex): star bars on the admin summary, and guest reviews on News and offers. */
+.feedback-bars li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+}
+
+.feedback-bar-label {
+    width: 2.5rem;
+}
+
+.feedback-bar {
+    flex-grow: 1;
+    height: 0.6rem;
+    border-radius: 999px;
+    background-color: var(--tg-blush);
+    overflow: hidden;
+}
+
+    .feedback-bar > span {
+        display: block;
+        height: 100%;
+        background-color: var(--tg-raspberry);
+    }
+
+.feedback-bar-count {
+    min-width: 1.5rem;
+    text-align: right;
+}
+
+.feedback-hidden {
+    opacity: 0.75;
+    border-left: 4px solid var(--bs-secondary);
+}
+
+.review-card {
+    height: 100%;
+    padding: 1.25rem;
+}
+
+.review-stars {
+    color: var(--tg-raspberry);
+    font-size: 1.1rem;
+    letter-spacing: 0.1rem;
+}
+
+.review-stars-off {
+    color: var(--bs-border-color);
+}
+
+.review-reply {
+    padding: 0.5rem 0.75rem;
+    border-left: 3px solid var(--tg-teal);
+    background-color: var(--tg-surface);
+    font-size: 0.9rem;
+}
+
+.blocked-word {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.15rem 0.6rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 999px;
+    background-color: var(--tg-blush);
+}

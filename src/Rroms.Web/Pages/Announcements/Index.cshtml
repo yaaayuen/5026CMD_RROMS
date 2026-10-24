@@ -44,12 +44,50 @@
                 <p class="news-message">@item.Message</p>
                 <div class="news-footer">
                     <span class="small text-secondary">Until @MalaysiaTime.FromUtc(item.EndUtc).ToString("ddd d MMM yyyy")</span>
-                    @if (item.IsPromotion)
-                    {
-                        <a class="btn btn-primary btn-sm" asp-area="Customer" asp-page="/Reservations/Book">Book a table</a>
-                    }
+                    <span class="d-flex flex-wrap gap-2">
+                        @if (item.MenuItem != null)
+                        {
+                            <a class="btn btn-outline-primary btn-sm" asp-area="" asp-page="/Menu/Index" asp-route-q="@item.MenuItem.Name">View @item.MenuItem.Name</a>
+                        }
+                        @if (item.IsPromotion)
+                        {
+                            <a class="btn btn-primary btn-sm" asp-area="Customer" asp-page="/Reservations/Book">Book a table</a>
+                        }
+                    </span>
                 </div>
             </article>
         </div>
     }
 </div>
+
+<section class="mt-5" aria-labelledby="reviews-heading">
+    <div class="d-flex flex-wrap align-items-baseline gap-2 mb-3">
+        <h2 id="reviews-heading" class="h4 mb-0">What guests say</h2>
+        @if (Model.Ratings.Average.HasValue)
+        {
+            <span class="text-secondary">@Model.Ratings.Average.Value.ToString("0.0") out of 5 from @Model.Ratings.Count @(Model.Ratings.Count == 1 ? "review" : "reviews")</span>
+        }
+    </div>
+    @if (Model.Reviews.Count == 0)
+    {
+        <p class="text-secondary">No reviews yet. Guests can rate their visit after dining with us.</p>
+    }
+    <div class="row g-3">
+        @foreach (var review in Model.Reviews)
+        {
+            <div class="col-md-6">
+                <figure class="tg-card review-card mb-0">
+                    <div class="review-stars" aria-label="@review.Rating out of 5 stars">
+                        <span aria-hidden="true">@(new string('★', review.Rating))<span class="review-stars-off">@(new string('★', 5 - review.Rating))</span></span>
+                    </div>
+                    <blockquote class="mb-2"><p class="mb-0">@review.Comment</p></blockquote>
+                    <figcaption class="small text-secondary">@Rroms.Web.Pages.Announcements.IndexModel.GuestName(review) · @MalaysiaTime.FromUtc(review.CreatedAtUtc).ToString("MMM yyyy")</figcaption>
+                    @if (!string.IsNullOrEmpty(review.Reply))
+                    {
+                        <div class="review-reply mt-2"><strong>Reply from Three Grills:</strong> @review.Reply</div>
+                    }
+                </figure>
+            </div>
+        }
+    </div>
+</section>
