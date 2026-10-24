@@ -1,11 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Rroms.Web.Common;
 using Rroms.Web.Models;
 using Rroms.Web.Services;
 namespace Rroms.Web.Areas.Admin.Pages.Announcements;
 
-/// <summary>Creates, edits, schedules and unpublishes announcements.</summary>
+/// <summary>Creates, edits, schedules and unpublishes announcements, grouped by Upcoming, Live, Drafts and Ended.</summary>
 public class IndexModel : PageModel
 {
     private readonly IAnnouncementService _service;
@@ -13,13 +14,26 @@ public class IndexModel : PageModel
     [BindProperty] public Announcement Input { get; set; } = new Announcement();
     [BindProperty] public DateTime StartLocal { get; set; } = MalaysiaTime.FromUtc(DateTime.UtcNow);
     [BindProperty] public DateTime EndLocal { get; set; } = MalaysiaTime.FromUtc(DateTime.UtcNow).AddDays(7);
+    /// <summary>The tab from the query string: "upcoming", "live", "drafts", "ended", or anything else for all.</summary>
+    [BindProperty(SupportsGet = true)] public string? Show { get; set; }
     public List<Announcement> Items { get; set; } = new List<Announcement>();
+    public List<SelectListItem> Dishes { get; set; } = new List<SelectListItem>();
+    public Dictionary<string, int> Counts { get; set; } = new Dictionary<string, int>();
+
+    /// <summary>The tab an announcement belongs to at the given moment.</summary>
+    public static string StateOf(Announcement item, DateTime nowUtc)
+    {
+        if (!item.IsPublished) { return "drafts"; }
+        if (item.EndUtc <= nowUtc) { return "ended"; }
+        return item.StartUtc > nowUtc ? "upcoming" : "live";
+    }
+
     public async Task<IActionResult> OnGetAsync(int? id)
     {
-        Items = await _service.GetAsync(false);
+        await LoadAsync();
         if (id.HasValue)
         {
-            var item = Items.SingleOrDefault(a => a.Id == id.Value);
+            var item = (await _service.GetAsync(false)).SingleOrDefault(a => a.Id == id.Value);
             if (item == null) { return NotFound(); }
             Input = item;
             StartLocal = MalaysiaTime.FromUtc(item.StartUtc);
@@ -34,10 +48,30 @@ public class IndexModel : PageModel
             Input.StartUtc = MalaysiaTime.ToUtc(StartLocal);
             Input.EndUtc = MalaysiaTime.ToUtc(EndLocal);
             var result = await _service.SaveAsync(Input);
-            if (result.Succeeded) { TempData["StatusMessage"] = "Announcement saved."; return RedirectToPage(); }
+            if (result.Succeeded)
+            {
+                bool scheduled = Input.IsPromotion && Input.IsPublished && Input.StartUtc > DateTime.UtcNow;
+                TempData["StatusMessage"] = scheduled
+                    ? "Announcement scheduled. Customers are notified when it starts."
+                    : "Announcement saved.";
+                return RedirectToPage();
+            }
             foreach (string error in result.Errors) { ModelState.AddModelError("", error); }
         }
-        Items = await _service.GetAsync(false);
+        await LoadAsync();
         return Page();
+    }
+
+    private async Task LoadAsync()
+    {
+        DateTime now = DateTime.UtcNow;
+        List<Announcement> all = await _service.GetAsync(false);
+        Counts = all.GroupBy(a => StateOf(a, now)).ToDictionary(g => g.Key, g => g.Count());
+        Show = Show is "upcoming" or "live" or "drafts" or "ended" ? Show : null;
+        // Upcoming posts are listed soonest first; the others newest first, as the service returns them.
+        Items = Show == null ? all : all.Where(a => StateOf(a, now) == Show).ToList();
+        if (Show == "upcoming") { Items = Items.OrderBy(a => a.StartUtc).ToList(); }
+        Dishes = (await _service.GetDishChoicesAsync())
+            .Select(m => new SelectListItem(m.Code == null ? m.Name : $"{m.Code} · {m.Name}", m.Id.ToString())).ToList();
     }
 }

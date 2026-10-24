@@ -12,4 +12,14 @@ public class Feedback
     [StringLength(1000)]
     public string Comment { get; set; } = "";
     public DateTime CreatedAtUtc { get; set; }
+    /// <summary>The restaurant's public answer, shown to the customer and under the review.</summary>
+    [StringLength(1000)]
+    public string? Reply { get; set; }
+    public DateTime? RepliedAtUtc { get; set; }
+    /// <summary>Hidden by an administrator: kept for the averages but never shown on the website.</summary>
+    public bool IsHidden { get; set; }
+    /// <summary>Hidden automatically because the comment contained a blocked word.</summary>
+    public bool IsFlagged { get; set; }
+    /// <summary>The comment text was deleted by an administrator. The star rating is kept.</summary>
+    public bool CommentRemoved { get; set; }
 }

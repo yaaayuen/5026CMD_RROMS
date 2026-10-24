@@ -145,7 +145,7 @@ public class DiningExperienceServiceTests : IDisposable
     public async Task FeedbackRequiresOwnershipCompletionAndSingleSubmission()
     {
         var order = await AddOrder(ReservationStatus.Confirmed);
-        var service = new FeedbackService(_db);
+        var service = new FeedbackService(_db, _notices, new FeedbackWordFilter(Microsoft.Extensions.Options.Options.Create(new FeedbackOptions())));
         Assert.False((await service.SubmitAsync("alice", order.ReservationId, 5, "Nice")).Succeeded);
         var reservation = await _db.Reservations.FindAsync(order.ReservationId);
         reservation!.Status = ReservationStatus.Completed; await _db.SaveChangesAsync();

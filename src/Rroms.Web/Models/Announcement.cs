@@ -14,4 +14,9 @@ public class Announcement
     public DateTime StartUtc { get; set; }
     public DateTime EndUtc { get; set; }
     public DateTime UpdatedAtUtc { get; set; }
+    /// <summary>When customers were told about this promotion. Empty until its start time has arrived.</summary>
+    public DateTime? NotifiedAtUtc { get; set; }
+    /// <summary>Optional dish the post is about, so customers can open it on the menu.</summary>
+    public int? MenuItemId { get; set; }
+    public MenuItem? MenuItem { get; set; }
 }

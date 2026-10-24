@@ -7,4 +7,8 @@ public interface IAnnouncementService
 {
     Task<List<Announcement>> GetAsync(bool activeOnly);
     Task<ServiceResult> SaveAsync(Announcement input);
+    /// <summary>Dishes an announcement may link to, by name.</summary>
+    Task<List<MenuItem>> GetDishChoicesAsync();
+    /// <summary>Notifies customers about every published promotion whose start time has arrived. Returns how many were sent.</summary>
+    Task<int> NotifyDueAsync();
 }

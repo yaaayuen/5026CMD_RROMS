@@ -202,10 +202,16 @@ namespace Rroms.Web.Data.Migrations
                     b.Property<bool>("IsPublished")
                         .HasColumnType("bit");
 
+                    b.Property<int?>("MenuItemId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Message")
                         .IsRequired()
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("NotifiedAtUtc")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("StartUtc")
                         .HasColumnType("datetime2");
@@ -219,6 +225,8 @@ namespace Rroms.Web.Data.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("MenuItemId");
 
                     b.ToTable("Announcements", null, t =>
                         {
@@ -305,6 +313,30 @@ namespace Rroms.Web.Data.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.BlockedWord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Word")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Word")
+                        .IsUnique();
+
+                    b.ToTable("BlockedWords");
                 });
 
             modelBuilder.Entity("Rroms.Web.Models.DietaryTag", b =>
@@ -509,11 +541,27 @@ namespace Rroms.Web.Data.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<bool>("CommentRemoved")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("IsFlagged")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsHidden")
+                        .HasColumnType("bit");
+
                     b.Property<int>("Rating")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("RepliedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Reply")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<int>("ReservationId")
                         .HasColumnType("int");
@@ -1313,6 +1361,16 @@ namespace Rroms.Web.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.Announcement", b =>
+                {
+                    b.HasOne("Rroms.Web.Models.MenuItem", "MenuItem")
+                        .WithMany()
+                        .HasForeignKey("MenuItemId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("MenuItem");
                 });
 
             modelBuilder.Entity("Rroms.Web.Models.DiningTable", b =>

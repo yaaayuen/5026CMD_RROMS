@@ -184,6 +184,9 @@ builder.Services.AddScoped<ICustomerHistoryService, CustomerHistoryService>();
 builder.Services.AddScoped<IOrderProcessingService, OrderProcessingService>();
 builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
+builder.Services.Configure<FeedbackOptions>(builder.Configuration.GetSection(FeedbackOptions.SectionName));
+builder.Services.AddSingleton<FeedbackWordFilter>();
+builder.Services.AddHostedService<AnnouncementScheduler>();
 
 // ----- Sprint 5 (Darren): billing and receipts (DA-1) -----
 builder.Services.AddScoped<IBillingService, BillingService>();

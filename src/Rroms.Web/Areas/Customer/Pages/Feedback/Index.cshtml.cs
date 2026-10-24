@@ -6,7 +6,7 @@ using Rroms.Web.Security;
 using Rroms.Web.Services;
 namespace Rroms.Web.Areas.Customer.Pages.Feedback;
 
-/// <summary>Accepts feedback only for the customer's own completed visit.</summary>
+/// <summary>Accepts feedback only for the customer's own completed visit and lists their past reviews with any reply.</summary>
 public class IndexModel : PageModel
 {
     private readonly IFeedbackService _service;
@@ -15,7 +15,12 @@ public class IndexModel : PageModel
     [BindProperty, Range(1, 5)] public int Rating { get; set; } = 5;
     [BindProperty, StringLength(1000)] public string? Comment { get; set; }
     public List<Reservation> Visits { get; set; } = new List<Reservation>();
-    public async Task OnGetAsync() { Visits = await _service.GetEligibleAsync(User.GetUserId()); }
+    public List<Models.Feedback> Past { get; set; } = new List<Models.Feedback>();
+    public async Task OnGetAsync()
+    {
+        Visits = await _service.GetEligibleAsync(User.GetUserId());
+        Past = await _service.GetMineAsync(User.GetUserId());
+    }
     public async Task<IActionResult> OnPostAsync()
     {
         if (ModelState.IsValid)
