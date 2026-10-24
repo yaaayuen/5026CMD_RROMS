@@ -12,4 +12,6 @@ public class RecordPaymentInput
     [EnumDataType(typeof(PaymentMethod), ErrorMessage = "Choose a valid payment method.")]
     [Display(Name = "Payment method")]
     public PaymentMethod? Method { get; set; }
+    /// <summary>Test mode (not in Production): makes the terminal decline, to show the failure path.</summary>
+    public bool SimulateDecline { get; set; }
 }

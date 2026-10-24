@@ -15,6 +15,8 @@ public class ReceiptSummary
     public string CustomerEmail { get; set; } = "";
     public string Number => $"R-{PaymentId:D4}";
     public decimal? CashReceived { get; set; }
+    /// <summary>Card / e-wallet terminal slip details; null for cash and older payments.</summary>
+    public TerminalSlip? Terminal { get; set; }
     public decimal? Change => CashReceived.HasValue ? CashReceived.Value - TotalPaid : null;
     public int PaymentId { get; set; }
     public decimal Amount { get; set; }

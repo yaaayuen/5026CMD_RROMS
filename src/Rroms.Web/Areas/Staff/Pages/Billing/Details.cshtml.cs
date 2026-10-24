@@ -44,7 +44,7 @@ public class DetailsModel : PageModel
             return Page();
         }
         ServiceResult<PaymentRecordingResult> result = await _billing.RecordPaymentAsync(
-            id, Input.Method!.Value, User.GetUserId(), Input.CashReceived);
+            id, Input.Method!.Value, User.GetUserId(), Input.CashReceived, Input.SimulateDecline);
         if (!result.Succeeded)
         {
             foreach (string error in result.Errors)

@@ -1,0 +1,58 @@
+﻿@page "{id:int}/{copy:regex(^(merchant|customer)$)}"
+@model Rroms.Web.Areas.Staff.Pages.Billing.SlipModel
+@using Rroms.Web.Common
+@using Rroms.Web.Contracts
+@{
+    ViewData["Title"] = (Model.IsMerchantCopy ? "Merchant copy" : "Customer copy") + " · " + Model.Receipt.Number;
+    var slip = Model.Receipt.Terminal!;
+}
+<link rel="stylesheet" href="~/css/billing.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/billing-print.css" asp-append-version="true" />
+<article class="terminal-slip mb-4" aria-label="Terminal slip">
+    <h1>@slip.Acquirer</h1>
+    <p class="slip-center mb-0">@Model.Receipt.Profile.Name</p>
+    <p class="slip-center small">@Model.Receipt.Profile.Address</p>
+    <dl>
+        <dt>MID</dt><dd>@Rroms.Web.Services.SimulatedPaymentTerminal.MerchantId</dd>
+        <dt>TID</dt><dd>@slip.TerminalId</dd>
+        <dt>Date</dt><dd>@MalaysiaTime.FromUtc(Model.Receipt.PaidAtUtc).ToString("dd/MM/yyyy HH:mm")</dd>
+        <dt>Receipt</dt><dd>@Model.Receipt.Number</dd>
+    </dl>
+    <hr />
+    <p class="slip-center fw-bold mb-1">SALE</p>
+    <dl>
+        @if (slip.IsCard)
+        {
+            <dt>Card</dt><dd>@slip.CardBrand @slip.CardType</dd>
+            <dt>No.</dt><dd>**** **** **** @slip.CardLast4</dd>
+            <dt>Approval</dt><dd>@slip.ApprovalCode</dd>
+            <dt>RRN</dt><dd>@slip.Reference</dd>
+        }
+        else
+        {
+            <dt>Type</dt><dd>E-wallet (QR)</dd>
+            <dt>Trans ID</dt><dd>@slip.Reference</dd>
+        }
+    </dl>
+    <hr />
+    <dl>
+        <dt class="fs-5">TOTAL</dt><dd class="fs-5 fw-bold">@Money.Format(Model.Receipt.TotalPaid)</dd>
+    </dl>
+    <p class="slip-center fw-bold">@(Model.Receipt.Status == PaymentStatus.Voided ? "*** VOIDED IN RROMS ***" : "APPROVED")</p>
+    @if (Model.IsMerchantCopy)
+    {
+        <p class="slip-center small mb-1">PIN verified · no signature required</p>
+        <p class="slip-center fw-bold mb-0">-- MERCHANT COPY --</p>
+        <p class="slip-center small">Keep with the day's settlement.</p>
+    }
+    else
+    {
+        <p class="slip-center small mb-1">Thank you. Please keep this slip.</p>
+        <p class="slip-center fw-bold mb-0">-- CUSTOMER COPY --</p>
+    }
+</article>
+<div class="receipt-actions d-print-none justify-content-center">
+    <button type="button" class="btn btn-primary" onclick="window.print()">Print slip</button>
+    <a asp-page="Slip" asp-route-id="@Model.Receipt.PaymentId" asp-route-copy="@(Model.IsMerchantCopy ? "customer" : "merchant")" class="btn btn-outline-primary">@(Model.IsMerchantCopy ? "Customer copy" : "Merchant copy")</a>
+    <a asp-page="Receipt" asp-route-id="@Model.Receipt.PaymentId" class="btn btn-outline-primary">Back to receipt</a>
+</div>

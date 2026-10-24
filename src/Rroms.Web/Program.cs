@@ -186,6 +186,8 @@ builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 
 // ----- Sprint 5 (Darren): billing and receipts (DA-1) -----
+builder.Services.AddSingleton<IPaymentTerminal>(
+    new SimulatedPaymentTerminal(allowTestDeclines: !builder.Environment.IsProduction()));
 builder.Services.AddScoped<IBillingService, BillingService>();
 builder.Services.AddScoped<ReceiptDocumentService>();
 

@@ -14,6 +14,11 @@
 <div class="receipt-actions d-print-none">
     <a asp-page-handler="Pdf" asp-route-id="@Model.Receipt.PaymentId" class="btn btn-outline-primary">Download PDF</a>
     <button type="button" class="btn btn-primary" onclick="window.print()">Print receipt</button>
+    @if (Model.Receipt.Terminal != null)
+    {
+        <a asp-page="Slip" asp-route-id="@Model.Receipt.PaymentId" asp-route-copy="merchant" class="btn btn-outline-primary">Terminal slip: merchant copy</a>
+        <a asp-page="Slip" asp-route-id="@Model.Receipt.PaymentId" asp-route-copy="customer" class="btn btn-outline-primary">Terminal slip: customer copy</a>
+    }
     <form method="post" asp-page-handler="Email" asp-route-id="@Model.Receipt.PaymentId"><button class="btn btn-outline-primary">Email to customer</button></form>
     <a asp-page="Index" class="btn btn-outline-primary">Back to billing</a>
 </div>
