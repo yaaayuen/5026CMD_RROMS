@@ -6,6 +6,10 @@
 	ViewData["Title"] = "Our menu";
 }
 
+<style>
+	.promo-banner { background: linear-gradient(135deg, #d81159, #ff8c42); color: #fff; border-radius: 14px; padding: .85rem 1.25rem; font-weight: 700; }
+</style>
+
 <section class="hero hero-compact mb-4" aria-labelledby="menu-heading">
 	<span class="hero-bubble one" aria-hidden="true"></span>
 	<div class="position-relative">
@@ -14,6 +18,11 @@
 		<p class="lead mb-0">Fresh from the grill. Search by name, pick a category or set a price range.</p>
 	</div>
 </section>
+
+@foreach (string promotion in Model.Promotions)
+{
+	<div class="promo-banner mb-3" role="status">🎉 @promotion</div>
+}
 
 <section class="tg-card h-auto mb-4" aria-labelledby="filter-heading">
 	<h2 id="filter-heading" class="h5 mb-3">Find a dish</h2>
@@ -101,7 +110,7 @@ else
 								{
 									<span class="text-decoration-line-through text-secondary">RM @dish.NormalPrice.ToString("N2")</span>
 									<strong class="fs-5">RM @dish.CurrentPrice.ToString("N2")</strong>
-									<span class="badge text-bg-warning">Offer</span>
+									<span class="badge text-bg-warning">@dish.OfferBadge</span>
 								}
 								else
 								{
@@ -112,6 +121,11 @@ else
 							@if (dish.IsOfferActive && dish.OfferEndsAtUtc.HasValue)
 							{
 								<p class="small text-secondary mb-2">Offer until @Model.FormatOfferEnd(dish.OfferEndsAtUtc.Value)</p>
+							}
+
+							@if (!string.IsNullOrEmpty(dish.OfferNote))
+							{
+								<p class="small text-secondary mb-2">@dish.OfferNote</p>
 							}
 
 							@if (dish.IsAvailable)

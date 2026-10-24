@@ -1,0 +1,73 @@
+﻿@page
+@model IndexModel
+@using Rroms.Web.Models
+@{
+	ViewData["Title"] = "Promotions";
+}
+
+<section class="hero hero-compact mb-4" aria-labelledby="discounts-heading">
+	<span class="hero-bubble one" aria-hidden="true"></span>
+	<div class="position-relative">
+		<span class="eyebrow">Menu</span>
+		<h1 id="discounts-heading" class="mb-1">Promotions</h1>
+		<p class="lead mb-0">Percentage discounts by date, day and time.</p>
+	</div>
+</section>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+	<p class="text-secondary mb-0">Discounts that apply by date, day and time. A dish with its own offer gets whichever price is cheaper.</p>
+	<div class="d-flex flex-wrap gap-2">
+		<a class="btn btn-primary" asp-page="/Discounts/Edit">+ New promotion</a>
+	</div>
+</div>
+
+<section class="tg-card h-auto" aria-labelledby="list-heading">
+	<h2 id="list-heading" class="visually-hidden">All promotions</h2>
+
+	@if (Model.Discounts.Count == 0)
+	{
+		<p class="text-secondary mb-0">No promotions yet. Use "+ New promotion" to create the first one.</p>
+	}
+	else
+	{
+		<div class="table-responsive">
+			<table class="table align-middle mb-0">
+				<thead>
+					<tr>
+						<th scope="col">Name</th>
+						<th scope="col">Discount</th>
+						<th scope="col">Applies to</th>
+						<th scope="col">When</th>
+						<th scope="col">Status</th>
+						<th scope="col"><span class="visually-hidden">Actions</span></th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (MenuDiscount discount in Model.Discounts)
+					{
+						string status = Model.StatusText(discount);
+						<tr>
+							<td><strong>@discount.Name</strong></td>
+							<td><strong>@discount.Percent.ToString("0.##")%</strong></td>
+							<td>@Model.DescribeScope(discount)</td>
+							<td>@Model.DescribeDates(discount)<br /><span class="small text-secondary">@Model.DescribeSchedule(discount)</span></td>
+							<td><span class="badge @Model.StatusClass(status)">@status</span></td>
+							<td class="text-end">
+								<div class="d-flex flex-wrap justify-content-end gap-2">
+									<a class="btn btn-sm btn-outline-primary" asp-page="/Discounts/Edit" asp-route-id="@discount.Id">Edit</a>
+									<form method="post" asp-page-handler="Toggle" asp-route-id="@discount.Id" asp-route-makeActive="@(!discount.IsActive)">
+										<button type="submit" class="btn btn-sm btn-outline-secondary">@(discount.IsActive ? "Switch off" : "Switch on")</button>
+									</form>
+									<form method="post" asp-page-handler="Delete" asp-route-id="@discount.Id"
+										  onsubmit="return confirm('Delete this promotion? This cannot be undone.');">
+										<button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+									</form>
+								</div>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+</section>

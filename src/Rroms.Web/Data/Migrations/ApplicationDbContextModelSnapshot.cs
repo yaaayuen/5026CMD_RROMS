@@ -37,6 +37,36 @@ namespace Rroms.Web.Data.Migrations
                     b.ToTable("CustomerAvoidedDietaryTags");
                 });
 
+            modelBuilder.Entity("MenuCategoryMenuDiscount", b =>
+                {
+                    b.Property<int>("CategoriesId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MenuDiscountId")
+                        .HasColumnType("int");
+
+                    b.HasKey("CategoriesId", "MenuDiscountId");
+
+                    b.HasIndex("MenuDiscountId");
+
+                    b.ToTable("MenuDiscountCategories", (string)null);
+                });
+
+            modelBuilder.Entity("MenuDiscountMenuItem", b =>
+                {
+                    b.Property<int>("DishesId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MenuDiscountId")
+                        .HasColumnType("int");
+
+                    b.HasKey("DishesId", "MenuDiscountId");
+
+                    b.HasIndex("MenuDiscountId");
+
+                    b.ToTable("MenuDiscountDishes", (string)null);
+                });
+
             modelBuilder.Entity("MenuItemDietaryTags", b =>
                 {
                     b.Property<int>("DietaryTagId")
@@ -639,6 +669,56 @@ namespace Rroms.Web.Data.Migrations
                             IsActive = true,
                             Name = "Beverages"
                         });
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.MenuDiscount", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DaysOfWeek")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("EndUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("FromMinute")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<decimal>("Percent")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("StartUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ToMinute")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.ToTable("MenuDiscounts");
                 });
 
             modelBuilder.Entity("Rroms.Web.Models.MenuItem", b =>
@@ -1293,6 +1373,36 @@ namespace Rroms.Web.Data.Migrations
                     b.HasOne("Rroms.Web.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MenuCategoryMenuDiscount", b =>
+                {
+                    b.HasOne("Rroms.Web.Models.MenuCategory", null)
+                        .WithMany()
+                        .HasForeignKey("CategoriesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Rroms.Web.Models.MenuDiscount", null)
+                        .WithMany()
+                        .HasForeignKey("MenuDiscountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MenuDiscountMenuItem", b =>
+                {
+                    b.HasOne("Rroms.Web.Models.MenuItem", null)
+                        .WithMany()
+                        .HasForeignKey("DishesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Rroms.Web.Models.MenuDiscount", null)
+                        .WithMany()
+                        .HasForeignKey("MenuDiscountId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

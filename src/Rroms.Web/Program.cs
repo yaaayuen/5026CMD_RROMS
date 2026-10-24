@@ -8,17 +8,20 @@
 //   3. Start-up   - database preparation, then run
 // =============================================================================
 
+using System.Threading.RateLimiting;
+
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using System.Threading.RateLimiting;
 using Microsoft.Extensions.Options;
+
 using Rroms.Web.Constants;
-using Rroms.Web.Security;
+using Rroms.Web.Contracts;
 using Rroms.Web.Data;
+using Rroms.Web.Hubs;
 using Rroms.Web.Models;
 using Rroms.Web.Options;
+using Rroms.Web.Security;
 using Rroms.Web.Services;
-using Rroms.Web.Hubs;
 using Rroms.Web.Services.Email;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -179,6 +182,9 @@ builder.Services.AddScoped<IRecommendationService, RecommendationService>();
 
 // Customer history: my reservations, orders and payments (YJ-5).
 builder.Services.AddScoped<ICustomerHistoryService, CustomerHistoryService>();
+
+// YJ: promotions (discounts) set by the administrator, and the banner on the menu
+builder.Services.AddScoped<IDiscountService, DiscountService>();
 
 // Alex (Sprint 4)
 builder.Services.AddScoped<IOrderProcessingService, OrderProcessingService>();

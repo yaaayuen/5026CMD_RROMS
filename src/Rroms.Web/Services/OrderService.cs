@@ -197,6 +197,7 @@ public class OrderService : IOrderService
         // 5. Build the order. Each line copies the price the customer pays RIGHT NOW (an offer price while an
         //    offer runs); the total is added up here, once, by the server.
         DateTime now = DateTime.UtcNow;
+        DiscountSet discounts = await DiscountSet.LoadAsync(_context);
 
         Order order = new Order
         {
@@ -214,7 +215,7 @@ public class OrderService : IOrderService
         foreach (MergedLine line in lines)
         {
             MenuItem dish = dishes.Single(d => d.Id == line.MenuItemId);
-            decimal unitPrice = MenuItemPricing.GetCurrentPrice(dish, now);
+            decimal unitPrice = MenuItemPricing.Quote(dish, now, discounts).Price;
 
             order.Items.Add(new OrderItem
             {
@@ -229,7 +230,7 @@ public class OrderService : IOrderService
         }
 
         var charges = _billing.Calculate(total);
-        if(charges.Total > 99999999.99m) return ServiceResult<int>.Failure("Order total is too large.");
+        if (charges.Total > 99999999.99m) return ServiceResult<int>.Failure("Order total is too large.");
         order.TotalAmount = charges.Total;
         order.Subtotal = charges.Subtotal;
         order.ServiceChargePercent = charges.ServiceChargePercent;
