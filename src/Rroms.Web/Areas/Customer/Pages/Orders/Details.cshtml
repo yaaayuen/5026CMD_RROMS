@@ -1,4 +1,4 @@
-﻿@page "{id:int}"
+@page "{id:int}"
 @model DetailsModel
 @using Rroms.Web.Common
 @using Rroms.Web.Contracts
@@ -16,9 +16,10 @@
 	</div>
 </section>
 
-<section class="tg-card h-auto mb-4" aria-labelledby="items-heading">
+<link rel="stylesheet" href="~/css/billing.css" asp-append-version="true" />
+<div class="billing-columns mb-4"><section class="tg-card h-auto" aria-labelledby="items-heading">
 	<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
-		<h2 id="items-heading" class="h4 mb-0">Your dishes</h2>
+		<h2 id="items-heading" class="h4 mb-0">Your bill</h2>
 		<span class="badge @DetailsModel.StatusBadgeClass(Model.Summary.Status) fs-6">@DetailsModel.StatusText(Model.Summary.Status)</span>
 	</div>
 
@@ -28,8 +29,8 @@
 				<tr>
 					<th scope="col">Dish</th>
 					<th scope="col" class="text-end">Quantity</th>
-					<th scope="col" class="text-end">Price (RM)</th>
-					<th scope="col" class="text-end">Total (RM)</th>
+					<th scope="col" class="text-end">Price</th>
+					<th scope="col" class="text-end">Total</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -44,18 +45,19 @@
 							}
 						</th>
 						<td class="text-end">@line.Quantity</td>
-						<td class="text-end">@line.UnitPrice.ToString("N2")</td>
-						<td class="text-end">@line.LineTotal.ToString("N2")</td>
+						<td class="text-end">@Money.Format(line.UnitPrice)</td>
+						<td class="text-end">@Money.Format(line.LineTotal)</td>
 					</tr>
 				}
 			</tbody>
 			<tfoot>
 				<tr>
 					<th scope="row" colspan="3" class="text-end">Total</th>
-					<td class="text-end fw-bold">RM @Model.Summary.TotalAmount.ToString("N2")</td>
+					<td class="text-end fw-bold">@Money.Format(Model.Summary.TotalAmount)</td>
 				</tr>
 			</tfoot>
 		</table>
+<partial name="_BillBreakdown" model="Model.Summary.Breakdown" />
 	</div>
 
 	@if (!string.IsNullOrEmpty(Model.Summary.Notes))
@@ -69,6 +71,19 @@
 	}
 </section>
 
+<section class="tg-card h-auto"><span class="eyebrow">Payment</span>
+@if(Model.PaymentReceipt is { } receipt) {
+<h2 class="h4 mt-2">Payment <span class="badge text-bg-success">@(receipt.Refund?.Status == RefundStatus.Completed ? "Refunded" : "Paid")</span></h2>
+@if(receipt.Refund != null) { <p>Refund status: @receipt.Refund.Status. Open the receipt for details.</p> }<p class="billing-total">@Money.Format(receipt.TotalPaid)</p><p>@Money.Method(receipt.Method)<br />@MalaysiaTime.FromUtc(receipt.PaidAtUtc).ToString("dd MMM yyyy, h:mm tt") (Malaysia)</p><p>Receipt @receipt.Number</p>
+@if(receipt.Bills.Count > 1) { <p class="small text-secondary">This receipt covers @receipt.Bills.Count orders from your visit.</p> }
+@if(receipt.Method == PaymentMethod.SimulatedOnline) { <p class="alert alert-warning">DEMO ONLY — no real payment processed.</p> }
+<div class="d-flex flex-wrap gap-2"><a asp-area="Customer" asp-page="/Receipts/Details" asp-route-id="@receipt.PaymentId" class="btn btn-primary">View receipt</a><a asp-area="Customer" asp-page="/Receipts/Details" asp-route-id="@receipt.PaymentId" asp-page-handler="Pdf" class="btn btn-outline-primary">Download PDF</a></div>
+} else if(Model.Summary.Status == OrderStatus.Cancelled) {
+<h2 class="h4 mt-2">Order cancelled</h2><p>No payment is due for this cancelled order.</p>
+} else {
+<h2 class="h4 mt-2">Ready when you are <span class="badge text-bg-warning">Unpaid</span></h2><p class="billing-total">@Money.Format(Model.Summary.TotalAmount)</p><p>Please pay at the counter. Your receipt will appear here once payment is recorded.</p>
+}
+</section></div>
 <partial name="_DishSuggestions" model="Model.Together" />
 
 <p>

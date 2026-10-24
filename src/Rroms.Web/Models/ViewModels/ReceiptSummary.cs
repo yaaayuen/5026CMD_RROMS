@@ -5,6 +5,17 @@ namespace Rroms.Web.Models.ViewModels;
 /// <summary>Receipt data; the amount comes from the saved payment, not today's menu.</summary>
 public class ReceiptSummary
 {
+    public RefundSummary? Refund { get; set; }
+    public decimal RefundedAmount => Refund?.Status == RefundStatus.Completed ? Refund.Amount : 0m;
+    public decimal NetPaid => TotalPaid - RefundedAmount;
+    public PaymentStatus Status { get; set; }
+    public string? VoidReason { get; set; }
+    public DateTime? VoidedAtUtc { get; set; }
+    public RestaurantProfile Profile { get; set; } = new();
+    public string CustomerEmail { get; set; } = "";
+    public string Number => $"R-{PaymentId:D4}";
+    public decimal? CashReceived { get; set; }
+    public decimal? Change => CashReceived.HasValue ? CashReceived.Value - TotalPaid : null;
     public int PaymentId { get; set; }
     public decimal Amount { get; set; }
     public PaymentMethod Method { get; set; }

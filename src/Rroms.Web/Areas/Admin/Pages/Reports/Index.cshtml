@@ -28,8 +28,8 @@
     <div class="reports-metrics">
         <article class="report-metric"><span>Reservations</span><strong>@r.ReservationCount.ToString("N0")</strong><small>All booking statuses</small></article>
         <article class="report-metric"><span>Booked guests</span><strong>@r.GuestCount.ToString("N0")</strong><small>Booked places, not attendance</small></article>
-        <article class="report-metric report-metric-primary"><span>Non-demo sales</span><strong>RM @r.NonDemoPaidTotal.ToString("N2")</strong><small>Recorded Paid payments</small></article>
-        <article class="report-metric"><span>Demo payments</span><strong>RM @r.DemoPaidTotal.ToString("N2")</strong><small>Simulated activity only</small></article>
+        <article class="report-metric report-metric-primary"><span>Gross payments</span><strong>RM @r.NonDemoPaidTotal.ToString("N2")</strong><small>Gross recorded payments, before refunds</small></article>
+        <article class="report-metric"><span>Net payments</span><strong>RM @r.NetTotal.ToString("N2")</strong><small>After completed refunds</small></article>
     </div>
     <div class="tg-card reports-workspace">
     <nav class="report-tabs" aria-label="Report sections">
@@ -60,23 +60,30 @@
         </tbody></table></div>
     </section>
     <section id="sales" class="report-panel">
-        <h2>Sales</h2><details class="report-rules"><summary>How this report is calculated</summary><p>Recorded Paid payments, based on payment date. Unpaid and voided payments are excluded.</p></details>
-        <div class="report-demo-note">SimulatedOnline is demo activity; no real online payment is processed. Inclusive totals contain demo payments.</div>
-        <p><strong>@r.PaidCount paid payments · Inclusive RM @r.PaidTotal.ToString("N2") · Non-demo RM @r.NonDemoPaidTotal.ToString("N2") · Demo RM @r.DemoPaidTotal.ToString("N2")</strong></p>
+        <p><a asp-area="Staff" asp-page="/Billing/Refunds" class="btn btn-outline-primary btn-sm">All refund requests and records</a></p>
+        <h2>Sales</h2><details class="report-rules"><summary>How this report is calculated</summary><p>Gross recorded Paid payments, based on payment date. Unpaid and voided payments are excluded. Completed refunds below use refund completion date; pending/rejected requests are excluded. Net totals can be negative when refunds relate to earlier payments. Item and customer activity tables remain gross.</p></details>
+        <p><strong>@r.PaidCount paid payments · Gross RM @r.PaidTotal.ToString("N2")</strong></p>
         <div class="table-responsive"><table class="table report-table"><thead><tr><th>Payment method</th><th>Count</th><th>Amount (RM)</th></tr></thead><tbody>
         @foreach (var row in r.SalesMethods) { <tr><td>@row.Method</td><td>@row.Count</td><td>@row.Amount.ToString("N2")</td></tr> }
         </tbody></table></div>
         <h3>Daily sales</h3>
-        <div class="table-responsive"><table class="table report-table"><thead><tr><th>Date</th><th>Payments</th><th>Inclusive (RM)</th><th>Non-demo (RM)</th><th>Demo (RM)</th></tr></thead><tbody>
-        @foreach (var row in r.DailySales) { <tr><td>@row.Date.ToString("dd MMM yyyy")</td><td>@row.Count</td><td>@row.PaidAmount.ToString("N2")</td><td>@row.NonDemoAmount.ToString("N2")</td><td>@row.DemoAmount.ToString("N2")</td></tr> }
+        <div class="table-responsive"><table class="table report-table"><thead><tr><th>Date</th><th>Payments</th><th>Gross (RM)</th></tr></thead><tbody>
+        @foreach (var row in r.DailySales) { <tr><td>@row.Date.ToString("dd MMM yyyy")</td><td>@row.Count</td><td>@row.PaidAmount.ToString("N2")</td></tr> }
         </tbody></table></div>
+        <h3 class="h5 mt-4">Refunds and net payments</h3>
+        <p>Completed refunds: <strong>RM @r.RefundTotal.ToString("N2")</strong>.</p>
+        <p>Net payments: <strong>RM @r.NetTotal.ToString("N2")</strong>.</p>
+        <div class="table-responsive"><table class="table"><thead><tr><th>Receipt</th><th>Customer</th><th>Refund completed (Malaysia)</th><th>Method</th><th>Refund (RM)</th><th>Reason</th></tr></thead><tbody>
+        @foreach(var refund in r.Refunds) { <tr><td><a asp-area="Staff" asp-page="/Billing/Receipt" asp-route-id="@refund.PaymentId">R-@refund.PaymentId.ToString("D4")</a></td><td>@refund.CustomerName</td><td>@Rroms.Web.Common.MalaysiaTime.FromUtc(refund.ProcessedAtUtc!.Value).ToString("dd MMM yyyy, h:mm tt")</td><td>@refund.Method</td><td>@refund.Amount.ToString("N2")</td><td>@refund.DecisionReason</td></tr> }
+        </tbody></table></div>
+        @if(r.Refunds.Count == 0) { <p>No completed refunds in this period.</p> }
     </section>
     <section id="items" class="report-panel">
-        <h2>Popular items</h2><details class="report-rules"><summary>How this report is calculated</summary><p>Ranked by quantity in orders paid during this period, including demo orders. Ties use item ID. Names are current; line values use saved unit prices and may differ from recorded payment totals.</p></details>
+        <h2>Popular items</h2><details class="report-rules"><summary>How this report is calculated</summary><p>Ranked by quantity in orders paid during this period. Ties use item ID. Names are current; line values use saved unit prices and may differ from recorded payment totals.</p></details>
         @if (r.PopularItems.Count == 0) { <div class="report-empty"><strong>No paid items in this period.</strong><p>Try another date range to explore more activity.</p></div> }
         else {
-        <div class="table-responsive"><table class="table report-table"><thead><tr><th>Rank</th><th>Item</th><th>Quantity</th><th>Demo quantity</th><th>Line value (RM)</th><th>Demo line value (RM)</th></tr></thead><tbody>
-        @foreach (var row in r.PopularItems) { <tr><td><span class="report-rank">@row.Rank</span></td><td>@row.Name <small>(#@row.MenuItemId)</small></td><td>@row.Quantity</td><td>@row.DemoQuantity</td><td>@row.LineValue.ToString("N2")</td><td>@row.DemoLineValue.ToString("N2")</td></tr> }
+        <div class="table-responsive"><table class="table report-table"><thead><tr><th>Rank</th><th>Item</th><th>Quantity</th><th>Line value (RM)</th></tr></thead><tbody>
+        @foreach (var row in r.PopularItems) { <tr><td><span class="report-rank">@row.Rank</span></td><td>@row.Name <small>(#@row.MenuItemId)</small></td><td>@row.Quantity</td><td>@row.LineValue.ToString("N2")</td></tr> }
         </tbody></table></div>
         }
     </section>
@@ -84,8 +91,8 @@
         <h2>Customer activity</h2><details class="report-rules"><summary>How this report is calculated</summary><p>Reservation counts use start date; order counts use placement date (all statuses); paid amounts use payment date. These are independent activities, not one booking cohort. Includes historical activity of inactive accounts. Names are current.</p></details>
         @if (r.Customers.Count == 0) { <div class="report-empty"><strong>No customer activity in this period.</strong><p>Try another date range to explore more activity.</p></div> }
         else {
-        <div class="table-responsive"><table class="table report-table"><thead><tr><th>Customer</th><th>Reservations</th><th>Orders</th><th>Payments</th><th>Inclusive (RM)</th><th>Non-demo (RM)</th><th>Demo (RM)</th></tr></thead><tbody>
-        @foreach (var row in r.Customers) { <tr><td>@row.CustomerName <small class="d-block report-customer-id">@row.CustomerId</small></td><td>@row.ReservationCount</td><td>@row.OrderCount</td><td>@row.PaidCount</td><td>@row.PaidAmount.ToString("N2")</td><td>@row.NonDemoAmount.ToString("N2")</td><td>@row.DemoAmount.ToString("N2")</td></tr> }
+        <div class="table-responsive"><table class="table report-table"><thead><tr><th>Customer</th><th>Reservations</th><th>Orders</th><th>Payments</th><th>Gross (RM)</th></tr></thead><tbody>
+        @foreach (var row in r.Customers) { <tr><td>@row.CustomerName <small class="d-block report-customer-id">@row.CustomerId</small></td><td>@row.ReservationCount</td><td>@row.OrderCount</td><td>@row.PaidCount</td><td>@row.PaidAmount.ToString("N2")</td></tr> }
         </tbody></table></div>
         }
     </section>

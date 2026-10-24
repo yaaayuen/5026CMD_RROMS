@@ -174,7 +174,7 @@ public class MonitoringService : IMonitoringService
         }
         (DateTime fromUtc, DateTime untilUtc) = GetUtcRange(filter);
         IQueryable<Payment> query = _context.Payments.AsNoTracking()
-            .Where(p => p.PaidAtUtc >= fromUtc && p.PaidAtUtc < untilUtc);
+            .Where(p => p.Method != PaymentMethod.SimulatedOnline && p.PaidAtUtc >= fromUtc && p.PaidAtUtc < untilUtc);
         if (filter.Status.HasValue) { query = query.Where(p => p.Status == filter.Status.Value); }
         if (filter.Method.HasValue) { query = query.Where(p => p.Method == filter.Method.Value); }
         List<TransactionMonitoringRow> rows = await query.OrderByDescending(p => p.PaidAtUtc).ThenByDescending(p => p.Id)
@@ -182,7 +182,9 @@ public class MonitoringService : IMonitoringService
             {
                 Id = p.Id, OrderId = p.OrderId, CustomerName = p.Order!.Customer!.FullName,
                 StaffName = p.Staff!.FullName, PaidAtUtc = p.PaidAtUtc,
-                Status = p.Status, Method = p.Method, Amount = p.Amount
+                Status = p.Status, Method = p.Method, Amount = p.Amount,
+                RefundStatus = _context.Set<PaymentRefund>().Where(r => r.PaymentId == p.Id).Select(r => (RefundStatus?)r.Status).FirstOrDefault(),
+                VoidReason = p.VoidReason, VoidedAtUtc = p.VoidedAtUtc, VoidedById = p.VoidedById
             }).ToListAsync();
         // Aggregate the projected rows in decimal: SQLite cannot aggregate decimal SUM like SQL Server.
         return ServiceResult<TransactionMonitoringResult>.Success(new TransactionMonitoringResult { Rows = rows });

@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Net;
 using System.Text.Json;
 
@@ -47,8 +47,8 @@ public class SalesReconciliationTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.True(root.GetProperty("salesAvailable").GetBoolean());
 
-        // Worked out by hand: 20.00 + 30.00 + 12.50 = 62.50 (late and Voided payments excluded).
-        Assert.Equal(62.50m, report.PaidTotal);
+        // Worked out by hand: 20.00 + 30.00 = 50.00 (demo, late and Voided payments excluded).
+        Assert.Equal(50m, report.PaidTotal);
         Assert.Equal(report.PaidTotal, root.GetProperty("salesTotal").GetDecimal());
 
         decimal dailySum = root.GetProperty("dailySales").EnumerateArray().Sum(day => day.GetDecimal());

@@ -11,7 +11,7 @@ using Rroms.Web.Models;
 namespace Rroms.Tests.Billing;
 
 /// <summary>DA-1 HTTP tests: real login, antiforgery, access rules, payment forms and receipt ownership.</summary>
-public class BillingPagesTests : IClassFixture<TestWebApplicationFactory>
+public partial class BillingPagesTests : IClassFixture<TestWebApplicationFactory>
 {
     private const string Password = "Grill!Test2026";
     private const string BillingUrl = "/Staff/Billing";
@@ -67,12 +67,27 @@ public class BillingPagesTests : IClassFixture<TestWebApplicationFactory>
         }
     }
 
+    [Fact]
+    public async Task DemoPostIsRejectedAndFormOffersOnlySupportedMethods()
+    {
+        var (client, _) = await SignInAsync(RoleNames.Staff);
+        using(client) {
+            var order = await AddOrderAsync();
+            string url = $"{BillingUrl}/Details/{order.Id}";
+            string html = await client.GetStringAsync(url);
+            Assert.DoesNotContain("value=\"SimulatedOnline\"",html);
+            foreach(var method in new[]{"Cash","CardTerminal","EWallet"}) Assert.Contains($"value=\"{method}\"",html);
+            var response=await FormHelper.PostFormAsync(client,url,url,new Dictionary<string,string>{{"Input.Method","SimulatedOnline"}});
+            Assert.Equal(HttpStatusCode.OK,response.StatusCode);
+            using var scope=_factory.Services.CreateScope();
+            Assert.False(await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Payments.AnyAsync(p=>p.OrderId==order.Id));
+        }
+    }
     /// <summary>Each supported method creates a receipt, ignoring forged amount and recorder fields.</summary>
     [Theory]
     [InlineData(PaymentMethod.Cash)]
     [InlineData(PaymentMethod.CardTerminal)]
     [InlineData(PaymentMethod.EWallet)]
-    [InlineData(PaymentMethod.SimulatedOnline)]
     public async Task PaymentPostUsesTrustedAmountAndIdentity(PaymentMethod method)
     {
         var (staffClient, staff) = await SignInAsync(RoleNames.Staff);
@@ -80,6 +95,11 @@ public class BillingPagesTests : IClassFixture<TestWebApplicationFactory>
         using (staffClient)
         {
             string url = $"{BillingUrl}/Details/{order.Id}";
+            if(method == PaymentMethod.Cash && Environment.GetEnvironmentVariable("BILLING_QA_DIR") is string qa) {
+                Directory.CreateDirectory(qa);
+                await File.WriteAllTextAsync(Path.Combine(qa, "take-payment.html"), await staffClient.GetStringAsync(url));
+                await File.WriteAllTextAsync(Path.Combine(qa, "billing-list.html"), await staffClient.GetStringAsync(BillingUrl));
+            }
             var fields = new Dictionary<string, string>
             {
                 ["Input.Method"] = method.ToString(),
@@ -102,6 +122,11 @@ public class BillingPagesTests : IClassFixture<TestWebApplicationFactory>
             string receipt = await staffClient.GetStringAsync(response.Headers.Location);
             Assert.Contains("40.00", receipt);
             Assert.Contains("Print receipt", receipt);
+            if(method == PaymentMethod.Cash && Environment.GetEnvironmentVariable("BILLING_QA_DIR") is string qaReceipt) {
+                await File.WriteAllTextAsync(Path.Combine(qaReceipt, "receipt.html"), receipt);
+                await File.WriteAllBytesAsync(Path.Combine(qaReceipt, "receipt.pdf"), await staffClient.GetByteArrayAsync(response.Headers.Location + "?handler=Pdf"));
+            }
+
             if (method == PaymentMethod.SimulatedOnline)
             {
                 Assert.Contains("DEMO ONLY", receipt);
@@ -191,8 +216,53 @@ public class BillingPagesTests : IClassFixture<TestWebApplicationFactory>
             string url = $"/Customer/Receipts/Details/{payment.Id}";
             Assert.Equal(HttpStatusCode.OK, (await ownerClient.GetAsync(url)).StatusCode);
             Assert.Equal(HttpStatusCode.NotFound, (await strangerClient.GetAsync(url)).StatusCode);
+            string reservations = await ownerClient.GetStringAsync("/Customer/Reservations");
+            Assert.Contains($"/Customer/Receipts/Details/{payment.Id}", reservations);
+            Assert.True(reservations.IndexOf(">Status</th>") < reservations.IndexOf(">Receipt</th>"));
+            string history = await ownerClient.GetStringAsync("/Customer/History");
+            Assert.Contains($"/Customer/Receipts/Details/{payment.Id}", history);
+            string orderHtml = await ownerClient.GetStringAsync($"/Customer/Orders/Details/{order.Id}");
+            Assert.Contains("Download PDF", orderHtml);
+            Assert.Equal(HttpStatusCode.NotFound, (await strangerClient.GetAsync($"/Customer/Orders/Details/{order.Id}")).StatusCode);
+            var pdf = await ownerClient.GetAsync(url + "?handler=Pdf");
+            Assert.Equal(HttpStatusCode.OK, pdf.StatusCode);
+            Assert.Equal("application/pdf", pdf.Content.Headers.ContentType!.MediaType);
+            using var document = UglyToad.PdfPig.PdfDocument.Open(await pdf.Content.ReadAsByteArrayAsync());
+            Assert.Single(document.GetPages());
+            Assert.Contains("40.00", document.GetPage(1).Text);
+            Assert.Equal(HttpStatusCode.NotFound, (await strangerClient.GetAsync(url + "?handler=Pdf")).StatusCode);
+            var staffPdf = await staffClient.GetAsync($"{BillingUrl}/Receipt/{payment.Id}?handler=Pdf");
+            Assert.Equal("application/pdf", staffPdf.Content.Headers.ContentType!.MediaType);
+
             Assert.Equal(HttpStatusCode.NotFound,
                 (await ownerClient.GetAsync($"/Customer/Receipts/Details/{int.MaxValue}")).StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task EmailAndVoidUseProtectedPosts()
+    {
+        var (staffClient, _) = await SignInAsync(RoleNames.Staff);
+        var (adminClient, _) = await SignInAsync(RoleNames.Administrator);
+        using(staffClient) using(adminClient) {
+            Order order = await AddOrderAsync();
+            string bill = $"{BillingUrl}/Details/{order.Id}";
+            var paid = await FormHelper.PostFormAsync(staffClient, bill, bill,
+                new Dictionary<string,string> { ["Input.Method"] = "Cash", ["Input.CashReceived"] = "50.00" });
+            string receipt = paid.Headers.Location!.ToString();
+            Assert.DoesNotContain("Void this payment", await staffClient.GetStringAsync(receipt));
+            Assert.Contains("Void this payment", await adminClient.GetStringAsync(receipt));
+            var email = await FormHelper.PostFormAsync(staffClient, receipt, receipt + "?handler=Email", new Dictionary<string,string>());
+            Assert.Equal(HttpStatusCode.Redirect, email.StatusCode);
+            var denied = await FormHelper.PostFormAsync(staffClient, receipt, receipt + "?handler=Void", new Dictionary<string,string> { ["VoidReason"] = "Wrong method" });
+            Assert.Equal(HttpStatusCode.Redirect, denied.StatusCode);
+            Assert.Contains("AccessDenied", denied.Headers.Location!.ToString());
+            var voided = await FormHelper.PostFormAsync(adminClient, receipt, receipt + "?handler=Void", new Dictionary<string,string> { ["VoidReason"] = "Wrong method" });
+            Assert.Equal(HttpStatusCode.Redirect, voided.StatusCode);
+            Assert.Contains("VOIDED", await adminClient.GetStringAsync(receipt));
+            var pdf = await adminClient.GetByteArrayAsync(receipt + "?handler=Pdf");
+            using var doc = UglyToad.PdfPig.PdfDocument.Open(pdf);
+            Assert.Contains("VOIDED", doc.GetPage(1).Text);
         }
     }
 

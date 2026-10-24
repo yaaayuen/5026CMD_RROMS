@@ -12,14 +12,16 @@ namespace Rroms.Web.Areas.Staff.Pages;
 /// the page URL as the last constructor argument so the tile becomes a link.
 /// Access to this area is restricted to the correct role in YY-3.
 /// </remarks>
-public class IndexModel : PageModel
+public class IndexModel(Rroms.Web.Services.IBillingService billing) : PageModel
 {
+    public int UnpaidBills { get; private set; }
     /// <summary>The module tiles shown on this dashboard.</summary>
     public IReadOnlyList<ModuleTileViewModel> Tiles { get; private set; } = new List<ModuleTileViewModel>();
 
     /// <summary>Handles GET /Staff.</summary>
-    public void OnGet()
+    public async Task OnGetAsync()
     {
+        UnpaidBills = (await billing.GetDashboardAsync()).UnpaidCount;
         Tiles = new List<ModuleTileViewModel>
         {
             new ModuleTileViewModel(

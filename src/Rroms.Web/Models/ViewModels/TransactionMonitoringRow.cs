@@ -3,6 +3,10 @@ namespace Rroms.Web.Models.ViewModels;
 /// <summary>Read-only transaction row for administrator monitoring.</summary>
 public class TransactionMonitoringRow
 {
+    public RefundStatus? RefundStatus { get; set; }
+    public string? VoidReason { get; set; }
+    public DateTime? VoidedAtUtc { get; set; }
+    public string? VoidedById { get; set; }
     public int Id { get; set; }
     public int OrderId { get; set; }
     public string CustomerName { get; set; } = string.Empty;

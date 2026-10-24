@@ -123,9 +123,9 @@ public class AdminMonitoringServiceTests : IDisposable
         await AddAsync(Start.AddHours(3), 888m, PaymentMethod.Cash, PaymentStatus.Voided);
         await AddAsync(Start.AddHours(4), 777m, PaymentMethod.Cash, PaymentStatus.Unpaid);
         var all = (await _service.GetTransactionMonitoringAsync(new TransactionMonitoringFilter { From = Day, To = Day })).Value!;
-        Assert.Equal(5, all.Count);
-        Assert.Equal(60.75m, all.PaidTotal);
-        Assert.Equal(10m, all.DemoPaidTotal);
+        Assert.Equal(4, all.Count);
+        Assert.Equal(50.75m, all.PaidTotal);
+        Assert.Equal(0m, all.DemoPaidTotal);
         Assert.Equal(50.75m, all.NonDemoPaidTotal);
         var card = (await _service.GetTransactionMonitoringAsync(new TransactionMonitoringFilter
         { From = Day, To = Day, Status = PaymentStatus.Paid, Method = PaymentMethod.CardTerminal })).Value!;

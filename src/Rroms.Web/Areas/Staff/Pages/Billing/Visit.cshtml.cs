@@ -53,7 +53,7 @@ public class VisitModel : PageModel
             return Page();
         }
         ServiceResult<PaymentRecordingResult> result = await _billing.RecordVisitPaymentAsync(
-            id, Input.Method!.Value, User.GetUserId());
+            id, Input.Method!.Value, User.GetUserId(), Input.CashReceived);
         if (!result.Succeeded)
         {
             foreach (string error in result.Errors)

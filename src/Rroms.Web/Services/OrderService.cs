@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 using Rroms.Web.Common;
@@ -42,16 +42,19 @@ public class OrderService : IOrderService
     private readonly ApplicationDbContext _context;
     private readonly INotificationService _notificationService;
     private readonly OrderRulesOptions _rules;
+    private readonly BillingCalculator _billing;
 
     /// <summary>Receives the database, the notification channel and the ordering limits.</summary>
     /// <param name="context">The database context.</param>
     /// <param name="notificationService">Tells the customer and the staff that an order was placed.</param>
     /// <param name="options">The ordering limits from appsettings.json (or their defaults).</param>
-    public OrderService(ApplicationDbContext context, INotificationService notificationService, IOptions<OrderRulesOptions> options)
+    /// <param name="billing">Configured calculator for new order charge snapshots.</param>
+    public OrderService(ApplicationDbContext context, INotificationService notificationService, IOptions<OrderRulesOptions> options, BillingCalculator? billing = null)
     {
         _context = context;
         _notificationService = notificationService;
         _rules = options.Value;
+        _billing = billing ?? new BillingCalculator(Microsoft.Extensions.Options.Options.Create(new BillingOptions()));
     }
 
     /// <summary>The error shown when a quantity is outside 1 to the limit.</summary>
@@ -225,7 +228,16 @@ public class OrderService : IOrderService
             portions += line.Quantity;
         }
 
-        order.TotalAmount = total;
+        var charges = _billing.Calculate(total);
+        if(charges.Total > 99999999.99m) return ServiceResult<int>.Failure("Order total is too large.");
+        order.TotalAmount = charges.Total;
+        order.Subtotal = charges.Subtotal;
+        order.ServiceChargePercent = charges.ServiceChargePercent;
+        order.ServiceCharge = charges.ServiceCharge;
+        order.ServiceTaxPercent = charges.ServiceTaxPercent;
+        order.ServiceTax = charges.ServiceTax;
+        order.TaxIncludesServiceCharge = charges.TaxIncludesServiceCharge;
+
 
         // 6. Save the order AND its lines together. One SaveChanges = one transaction: all or nothing.
         _context.Orders.Add(order);
@@ -259,6 +271,7 @@ public class OrderService : IOrderService
             ReservationId = order.ReservationId,
             TableLabel = order.Reservation?.DiningTable?.Label ?? string.Empty,
             Status = order.Status,
+            Breakdown = BillingCalculator.FromOrder(order),
             TotalAmount = order.TotalAmount,
             Notes = order.Notes,
             PlacedAtUtc = order.PlacedAtUtc

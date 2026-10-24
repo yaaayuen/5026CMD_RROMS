@@ -1,9 +1,17 @@
 @model Rroms.Web.Models.ViewModels.ReceiptSummary
 @using Rroms.Web.Common
 @using Rroms.Web.Contracts
-<section class="tg-card h-auto" aria-labelledby="receipt-title">
-    <span class="eyebrow">Three Grills · Receipt</span>
-    <h1 id="receipt-title">Receipt #@Model.PaymentId</h1>
+<section class="tg-card h-auto receipt-sheet" aria-labelledby="receipt-title">
+    <header class="receipt-heading"><span class="eyebrow">Payment receipt</span><h1 id="receipt-title">@Model.Profile.Name</h1><p>@Model.Profile.Address<br />@Model.Profile.Phone</p><h2 class="h4">@Model.Number</h2><small class="text-secondary">Database ID: @Model.PaymentId</small></header>
+    @if(Model.Status == PaymentStatus.Voided) { <div class="alert alert-danger"><strong>VOIDED — this receipt is no longer proof of payment.</strong><p class="mb-0">@Model.VoidReason</p>@if(Model.VoidedAtUtc.HasValue) { <small>@MalaysiaTime.FromUtc(Model.VoidedAtUtc.Value).ToString("dd MMM yyyy, h:mm tt") (Malaysia)</small> }</div> }
+    @if(Model.Refund is { } refund) {
+        <div class="alert @(refund.Status == RefundStatus.Completed ? "alert-warning" : "alert-info")">
+        <strong>@(refund.Status == RefundStatus.Completed ? "REFUNDED" : refund.Status == RefundStatus.Requested ? "REFUND REQUESTED — awaiting staff review" : "REFUND REQUEST REJECTED")</strong>
+        <p class="mb-1">@Money.Format(refund.Amount) · @refund.Reason</p>
+        @if(refund.ProcessedAtUtc.HasValue) { <p class="mb-1">@MalaysiaTime.FromUtc(refund.ProcessedAtUtc.Value).ToString("dd MMM yyyy, h:mm tt") (Malaysia) · @refund.DecisionReason</p> }
+        @if(refund.Status == RefundStatus.Completed) { <p class="mb-0">Net paid after refund: @Money.Format(Model.NetPaid)</p> }
+        </div>
+    }
     @if (Model.Method == PaymentMethod.SimulatedOnline)
     {
         <div class="alert alert-warning fw-bold">DEMO ONLY - no real payment processed.</div>
@@ -24,13 +32,14 @@
                 case PaymentMethod.SimulatedOnline: <text>Simulated online (demo)</text> break;
             }
         </dd>
-        <dt class="col-sm-3">Status</dt><dd class="col-sm-9"><span class="badge text-bg-success">Paid</span></dd>
+        <dt class="col-sm-3">Status</dt><dd class="col-sm-9"><span class="badge @(Model.Status == PaymentStatus.Paid ? "text-bg-success" : "text-bg-danger")">@Model.Status</span></dd>
     </dl>
     @* A whole-visit receipt lists every order paid together; a single-order receipt lists just one. *@
     @foreach (var paidBill in (Model.Bills.Count > 0 ? Model.Bills : new List<Rroms.Web.Models.ViewModels.BillSummary> { Model.Bill }))
     {
         <partial name="~/Pages/Shared/_BillingLines.cshtml" model="paidBill" />
     }
-    <p class="h3 text-end">Total paid: RM @((Model.TotalPaid > 0 ? Model.TotalPaid : Model.Amount).ToString("N2"))</p>
-    <p class="text-secondary mb-0">Thank you for dining at Three Grills.</p>
+    <p class="billing-total">@(Model.Status == PaymentStatus.Voided ? "Original recorded total:" : "Total paid:") @Money.Format(Model.TotalPaid)</p>
+    @if(Model.CashReceived.HasValue) { <p class="text-end">Paid by cash @Money.Format(Model.CashReceived.Value), change @Money.Format(Model.Change!.Value)</p> }
+    <p class="text-secondary mb-0">Thank you for dining at @Model.Profile.Name.</p>
 </section>

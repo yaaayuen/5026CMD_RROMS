@@ -1,62 +1,39 @@
 @page
 @model Rroms.Web.Areas.Staff.Pages.Billing.IndexModel
 @using Rroms.Web.Common
-@{
-    ViewData["Title"] = "Billing and payments";
+@using Rroms.Web.Contracts
+@{ ViewData["Title"] = "Billing and payments"; var d = Model.Dashboard; }
+<link rel="stylesheet" href="~/css/billing.css" asp-append-version="true" />
+<section class="hero hero-compact mb-4"><span class="eyebrow">Staff · Billing</span><h1>Billing and payments</h1><p class="lead mb-0">A smooth finish to every visit.</p></section>
+<div class="billing-stats mb-4">
+<section class="tg-card h-auto"><span>Bills waiting to pay</span><strong>@d.UnpaidCount</strong><small>Completed orders</small></section>
+<section class="tg-card h-auto"><span>Outstanding</span><strong>@Money.Format(d.Outstanding)</strong><small>Ready to settle</small></section>
+<section class="tg-card h-auto"><span>Gross payments today</span><strong>@Money.Format(d.PaidToday)</strong><small>Malaysia day · before refunds</small></section>
+<section class="tg-card h-auto"><span>Payment records today</span><strong>@d.PaymentCount</strong><small>Cash @d.Methods.GetValueOrDefault(PaymentMethod.Cash) · Card @d.Methods.GetValueOrDefault(PaymentMethod.CardTerminal) · E-wallet @d.Methods.GetValueOrDefault(PaymentMethod.EWallet)</small></section>
+</div>
+<section class="tg-card h-auto billing-card">
+<div class="d-flex flex-wrap gap-3 justify-content-between mb-4">
+<nav class="billing-tabs" aria-label="Billing views">
+@foreach (var tab in new[] { ("unpaid", "Unpaid", d.UnpaidCount), ("paid", "Paid today", d.PaidTodayCount), ("all", "All", d.AllCount) }) {
+<a asp-route-view="@tab.Item1" asp-route-search="@Model.Search" class="btn @(Model.View == tab.Item1 ? "btn-primary" : "btn-outline-primary")" aria-current="@(Model.View == tab.Item1 ? "page" : null)">@tab.Item2 <span class="badge text-bg-light">@tab.Item3</span></a>
 }
-<section class="hero hero-compact mb-4">
-    <span class="eyebrow">Staff · Billing</span>
-    <h1>Billing and payments</h1>
-    <p class="lead mb-0">Generate bills for completed orders and record payments received.</p>
-</section>
-<section class="tg-card h-auto">
-    <form method="get" class="d-flex flex-wrap gap-3 align-items-center mb-4">
-        <div class="form-check">
-            <input asp-for="IncludePaid" class="form-check-input" />
-            <label asp-for="IncludePaid" class="form-check-label">Include paid orders</label>
-        </div>
-        <button type="submit" class="btn btn-primary">Apply</button>
-    </form>
-    @if (Model.Bills.Count == 0)
-    {
-        <p class="text-secondary">No completed orders match this view. Orders appear here after staff complete them.</p>
-    }
-    else
-    {
-        <div class="table-responsive">
-            <table class="table align-middle">
-                <thead><tr><th>Order</th><th>Customer / table</th><th>Ordered (Malaysia)</th><th class="text-end">Total (RM)</th><th>Payment</th><th>Action</th></tr></thead>
-                <tbody>
-                @foreach (var bill in Model.Bills)
-                {
-                    <tr>
-                        <th scope="row">#@bill.OrderId</th>
-                        <td>@bill.CustomerName <span class="text-secondary">· @bill.TableLabel</span></td>
-                        <td>@MalaysiaTime.FromUtc(bill.PlacedAtUtc).ToString("dd MMM yyyy, h:mm tt")</td>
-                        <td class="text-end">@bill.TotalAmount.ToString("N2")</td>
-                        @if (bill.PaidPaymentId.HasValue)
-                        {
-                            <td><span class="badge text-bg-success">Paid</span></td>
-                            <td><a asp-page="Receipt" asp-route-id="@bill.PaidPaymentId" class="btn btn-outline-primary btn-sm">Receipt</a></td>
-                        }
-                        else
-                        {
-                            <td><span class="badge text-bg-warning">Unpaid</span></td>
-                            int unpaidInVisit = Model.Bills.Count(other => other.ReservationId == bill.ReservationId && !other.PaidPaymentId.HasValue);
-                            <td class="d-flex flex-wrap gap-1">
-                                <a asp-page="Details" asp-route-id="@bill.OrderId" class="btn btn-primary btn-sm">Generate bill</a>
-                                @if (unpaidInVisit > 1)
-                                {
-                                    @* Several orders for one visit: pay them together, one receipt. *@
-                                    <a asp-page="Visit" asp-route-id="@bill.ReservationId" class="btn btn-outline-primary btn-sm">Bill whole visit (@unpaidInVisit orders)</a>
-                                }
-                            </td>
-                        }
-                    </tr>
-                }
-                </tbody>
-            </table>
-        </div>
-    }
-</section>
+</nav>
+<form method="get" class="d-flex gap-2"><input type="hidden" name="view" value="@Model.View" /><label class="visually-hidden" for="billing-search">Order number, table or customer</label><input id="billing-search" name="search" value="@Model.Search" class="form-control" placeholder="Order, table or customer" maxlength="100" /><button class="btn btn-outline-primary">Search</button></form>
+</div>
+<div class="table-responsive"><table class="table align-middle"><thead><tr><th>Order</th><th>Customer / table</th><th>Items</th><th>Total</th><th>Payment</th><th>Action</th></tr></thead><tbody>
+@foreach (var bill in d.Rows) {
+<tr><th>#@bill.OrderId</th><td>@bill.CustomerName<small class="d-block text-secondary">@bill.TableLabel · @bill.AreaName</small></td><td>@bill.ItemCount</td><td class="text-nowrap">@Money.Format(bill.TotalAmount)</td>
+@if (bill.PaidPaymentId.HasValue) {
+<td><span class="badge text-bg-success">@(bill.IsRefunded ? "Refunded" : "Paid")</span><small class="d-block">@Money.Method(bill.PaidMethod!.Value) · @MalaysiaTime.FromUtc(bill.PaidAtUtc!.Value).ToString("dd MMM, h:mm tt")</small></td><td><a asp-page="Receipt" asp-route-id="@bill.PaidPaymentId" class="btn btn-outline-primary btn-sm">Receipt</a></td>
+} else {
+<td><span class="badge text-bg-warning">Unpaid</span></td><td><div class="d-flex flex-wrap gap-2"><a asp-page="Details" asp-route-id="@bill.OrderId" class="btn btn-primary btn-sm">Take payment</a><a asp-page="Visit" asp-route-id="@bill.ReservationId" class="btn btn-outline-primary btn-sm">Bill whole visit</a></div></td>
+}</tr>
+}
+</tbody></table></div>
+@if (d.Total == 0) { <p class="text-secondary">No completed orders match this view.</p> }
+<div class="d-flex flex-wrap gap-3 justify-content-between align-items-center"><p class="mb-0">Showing @d.Rows.Count of @d.Total · Page @d.Page</p><nav aria-label="Billing pages">
+@if(d.Page > 1) { <a class="btn btn-outline-primary btn-sm" asp-route-view="@Model.View" asp-route-search="@Model.Search" asp-route-pageNumber="@(d.Page - 1)">Previous</a> }
+@if(d.Page * 20 < d.Total) { <a class="btn btn-outline-primary btn-sm" asp-route-view="@Model.View" asp-route-search="@Model.Search" asp-route-pageNumber="@(d.Page + 1)">Next</a> }
+</nav></div></section>
+<p class="mt-3"><a asp-page="Refunds" class="btn btn-outline-primary">Refund records</a></p>
 <p class="mt-3"><a asp-area="Staff" asp-page="/Index">Back to staff home</a></p>

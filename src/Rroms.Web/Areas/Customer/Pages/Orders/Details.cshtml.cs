@@ -20,15 +20,19 @@ public class DetailsModel : PageModel
 {
     private const int TogetherCount = 3;
 
+    private readonly IBillingService _billing;
+    public ReceiptSummary? PaymentReceipt { get; private set; }
     private readonly IOrderService _orderService;
     private readonly IRecommendationService _recommendationService;
 
     /// <summary>Receives the services from dependency injection.</summary>
+    /// <param name="billing">Reads the payment after ownership is verified.</param>
     /// <param name="orderService">Reads the customer's orders.</param>
     /// <param name="recommendationService">Suggests dishes often ordered with these ones (YJ-4).</param>
-    public DetailsModel(IOrderService orderService, IRecommendationService recommendationService)
+    public DetailsModel(IOrderService orderService, IRecommendationService recommendationService, IBillingService billing)
     {
         _orderService = orderService;
+        _billing = billing;
         _recommendationService = recommendationService;
     }
 
@@ -50,6 +54,10 @@ public class DetailsModel : PageModel
         }
 
         Summary = summary;
+        // Read payment only after the existing service has verified order ownership.
+        var bill = await _billing.GetBillAsync(id);
+        if(bill?.PaidPaymentId is int paymentId)
+            PaymentReceipt = await _billing.GetReceiptForCustomerAsync(paymentId, User.GetUserId());
 
         List<int> dishIds = summary.Lines.Select(line => line.MenuItemId).ToList();
 

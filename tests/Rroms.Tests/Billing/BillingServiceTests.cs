@@ -12,7 +12,7 @@ using Rroms.Web.Services;
 namespace Rroms.Tests.Billing;
 
 /// <summary>DA-1 service and relational constraint tests, using YJ's shared order builder.</summary>
-public class BillingServiceTests : IDisposable
+public partial class BillingServiceTests : IDisposable
 {
     private readonly SqliteConnection _connection;
     private readonly DbContextOptions<ApplicationDbContext> _options;
@@ -45,7 +45,6 @@ public class BillingServiceTests : IDisposable
     [InlineData(PaymentMethod.Cash)]
     [InlineData(PaymentMethod.CardTerminal)]
     [InlineData(PaymentMethod.EWallet)]
-    [InlineData(PaymentMethod.SimulatedOnline)]
     public async Task RecordsServerTotalAndNotifiesAfterSave(PaymentMethod method)
     {
         var (order, staff) = await SeedAsync();
@@ -259,7 +258,7 @@ public class BillingServiceTests : IDisposable
         Assert.Single(await _service.GetCompletedOrdersAsync(includePaid: true));
     }
 
-    /// <summary>Customer receipt lookup filters ownership and never exposes voided receipts.</summary>
+    /// <summary>Customer receipt lookup filters ownership and retains a clearly marked voided receipt.</summary>
     [Fact]
     public async Task ReceiptIsPrivateAndUsesSavedPaymentAmount()
     {
@@ -275,7 +274,120 @@ public class BillingServiceTests : IDisposable
         Payment payment = await _context.Payments.SingleAsync();
         payment.Status = PaymentStatus.Voided;
         await _context.SaveChangesAsync();
-        Assert.Null(await _service.GetReceiptForCustomerAsync(id, order.CustomerId));
+        Assert.Equal(PaymentStatus.Voided, (await _service.GetReceiptForCustomerAsync(id, order.CustomerId))!.Status);
+    }
+
+    [Fact]
+    public async Task VoidRequiresAdminAndReasonThenAllowsCorrectedVisitPayment()
+    {
+        var (order, admin) = await SeedAsync(RoleNames.Administrator);
+        await AddSecondOrderAsync(order, OrderStatus.Completed, 30m);
+        var paid = await _service.RecordVisitPaymentAsync(order.ReservationId, PaymentMethod.Cash, admin.Id, 100m);
+        int id = paid.Value!.PaymentId;
+        Assert.False((await _service.VoidPaymentAsync(id, "Wrong method", order.CustomerId)).Succeeded);
+        Assert.False((await _service.VoidPaymentAsync(id, "  bad  ", admin.Id)).Succeeded);
+        Assert.False((await _service.VoidPaymentAsync(id, new string('x', 201), admin.Id)).Succeeded);
+        Assert.True((await _service.VoidPaymentAsync(id, "Wrong payment method", admin.Id)).Succeeded);
+        Assert.Equal(2, await _context.Payments.CountAsync(p => p.Status == PaymentStatus.Voided));
+        Assert.All(await _context.Payments.ToListAsync(), p => { Assert.Equal(admin.Id, p.VoidedById); Assert.NotNull(p.VoidedAtUtc); });
+        Assert.Equal(2, (await _service.GetDashboardAsync()).UnpaidCount);
+        Assert.Equal(PaymentStatus.Voided, (await _service.GetReceiptForCustomerAsync(id, order.CustomerId))!.Status);
+        Assert.False((await _service.VoidPaymentAsync(id, "Repeat void", admin.Id)).Succeeded);
+        Assert.True((await _service.RecordVisitPaymentAsync(order.ReservationId, PaymentMethod.CardTerminal, admin.Id)).Succeeded);
+        Assert.Equal(4, await _context.Payments.CountAsync());
+        Assert.Equal(70m, (await _service.GetReceiptForStaffAsync(id))!.TotalPaid);
+    }
+    [Fact]
+    public async Task StaffCannotVoid()
+    {
+        var (order, staff) = await SeedAsync();
+        var paid = await _service.RecordPaymentAsync(order.Id, PaymentMethod.Cash, staff.Id);
+        Assert.False((await _service.VoidPaymentAsync(paid.Value!.PaymentId, "Wrong method", staff.Id)).Succeeded);
+    }
+
+    [Fact]
+    public async Task CashTenderIsValidatedAndChangeIsTrusted()
+    {
+        var (order, staff) = await SeedAsync();
+        Assert.False((await _service.RecordPaymentAsync(order.Id, PaymentMethod.Cash, staff.Id, 39m)).Succeeded);
+        Assert.False((await _service.RecordPaymentAsync(order.Id, PaymentMethod.Cash, staff.Id, 50.001m)).Succeeded);
+        var paid = await _service.RecordPaymentAsync(order.Id, PaymentMethod.Cash, staff.Id, 50m);
+        var receipt = await _service.GetReceiptForStaffAsync(paid.Value!.PaymentId);
+        Assert.Equal(50m, receipt!.CashReceived);
+        Assert.Equal(10m, receipt.Change);
+    }
+    [Fact]
+    public async Task CardIgnoresCashAndWholeVisitUsesOneTender()
+    {
+        var (order, staff) = await SeedAsync();
+        await AddSecondOrderAsync(order, OrderStatus.Completed, 30m);
+        Assert.False((await _service.RecordVisitPaymentAsync(order.ReservationId, PaymentMethod.Cash, staff.Id, 50m)).Succeeded);
+        var paid = await _service.RecordVisitPaymentAsync(order.ReservationId, PaymentMethod.Cash, staff.Id, 100m);
+        var receipt = await _service.GetReceiptForStaffAsync(paid.Value!.PaymentId);
+        Assert.Equal(30m, receipt!.Change);
+        Assert.Single(await _context.Payments.Where(p => p.CashReceived != null).ToListAsync());
+        var third = await AddSecondOrderAsync(order, OrderStatus.Completed, 20m);
+        var card = await _service.RecordPaymentAsync(third.Id, PaymentMethod.CardTerminal, staff.Id, -10m);
+        Assert.True(card.Succeeded);
+        Assert.Null((await _service.GetReceiptForStaffAsync(card.Value!.PaymentId))!.CashReceived);
+    }
+
+    [Theory]
+    [InlineData(2601, "UX_Payments_OnePaidPerOrder", true)]
+    [InlineData(2627, "UX_Payments_OnePaidPerOrder", true)]
+    [InlineData(2601, "DifferentIndex", false)]
+    [InlineData(50000, "UX_Payments_OnePaidPerOrder", false)]
+    public void SqlDuplicateMatcherOnlyAcceptsThePaidIndex(int code, string message, bool expected)
+    {
+        var method = typeof(BillingService).GetMethod("IsPaidOrderSqlConstraint", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        Assert.Equal(expected, method.Invoke(null, new object[] { code, message }));
+    }
+    [Theory]
+    [InlineData("UNIQUE constraint failed: Payments.OrderId", true)]
+    [InlineData("UNIQUE constraint failed: Users.Email", false)]
+    public void SqliteDuplicateMatcherIsSpecific(string message, bool expected)
+    {
+        var method = typeof(BillingService).GetMethod("IsDuplicatePaidOrder", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        var exception = new DbUpdateException("write failed", new Exception(message));
+        Assert.Equal(expected, method.Invoke(null, new object[] { exception }));
+    }
+    [Fact]
+    public async Task DashboardPagesAndUsesMalaysiaMidnight()
+    {
+        var (order, staff) = await SeedAsync();
+        for(int i=0; i<20; i++) await AddSecondOrderAsync(order, OrderStatus.Completed, 10m);
+        Assert.Equal(20, (await _service.GetDashboardAsync(page: 1)).Rows.Count);
+        Assert.Single((await _service.GetDashboardAsync(page: 2)).Rows);
+        var paid = await _service.RecordPaymentAsync(order.Id, PaymentMethod.Cash, staff.Id);
+        var payment = await _context.Payments.SingleAsync();
+        payment.PaidAtUtc = new DateTime(2026,10,22,16,0,0,DateTimeKind.Utc);
+        await _context.SaveChangesAsync();
+        var now = new DateTime(2026,10,23,0,0,0,DateTimeKind.Utc);
+        Assert.Equal(40m, (await _service.GetDashboardAsync(nowUtc: now)).PaidToday);
+        payment.PaidAtUtc = payment.PaidAtUtc.AddTicks(-1);
+        await _context.SaveChangesAsync();
+        Assert.Equal(0m, (await _service.GetDashboardAsync(nowUtc: now)).PaidToday);
+    }
+
+    [Fact]
+    public async Task DashboardFiltersAndCountsSavedPayments()
+    {
+        var (order, staff) = await SeedAsync();
+        var unpaid = await _service.GetDashboardAsync();
+        Assert.Equal(1, unpaid.UnpaidCount);
+        Assert.Equal(40m, unpaid.Outstanding);
+        Assert.Single(unpaid.Rows);
+        Assert.Single((await _service.GetDashboardAsync("all", "#" + order.Id)).Rows);
+        Assert.Empty((await _service.GetDashboardAsync("all", "no-such-table")).Rows);
+        await _service.RecordPaymentAsync(order.Id, PaymentMethod.Cash, staff.Id);
+        Assert.Empty((await _service.GetDashboardAsync()).Rows);
+        var paid = await _service.GetDashboardAsync("paid");
+        Assert.Single(paid.Rows);
+        Assert.Equal(40m, paid.PaidToday);
+        Assert.Equal(1, paid.Methods[PaymentMethod.Cash]);
+        Assert.Single((await _service.GetCustomerReceiptLinksAsync(order.CustomerId)));
+        Assert.Empty(await _service.GetCustomerReceiptLinksAsync(staff.Id));
+        Assert.Empty((await _service.GetDashboardAsync("paid", nowUtc: DateTime.UtcNow.AddDays(2))).Rows);
     }
 
     // ============================== Whole-visit bill (pay once, one receipt) ==============================//

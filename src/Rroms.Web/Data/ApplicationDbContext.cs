@@ -155,5 +155,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         // ----- Sprint 5 (Darren): payment safeguards (DA-1) -----
         PaymentConfiguration.Configure(builder);
+        builder.Entity<PaymentRefund>(refund => {
+            refund.HasOne(r => r.Payment).WithMany().HasForeignKey(r => r.PaymentId).OnDelete(DeleteBehavior.Restrict);
+            refund.HasIndex(r => r.PaymentId).IsUnique();
+            refund.HasIndex(r => r.BatchId);
+            refund.Property(r => r.Amount).HasPrecision(18, 2);
+            refund.Property(r => r.Status).HasConversion<string>().HasMaxLength(20).IsConcurrencyToken();
+            refund.ToTable("PaymentRefunds", t => t.HasCheckConstraint("CK_PaymentRefund_Amount", "[Amount] >= 0"));
+        });
     }
 }

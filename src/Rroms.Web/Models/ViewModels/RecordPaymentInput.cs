@@ -3,9 +3,11 @@ using Rroms.Web.Contracts;
 
 namespace Rroms.Web.Models.ViewModels;
 
-/// <summary>The only editable payment field. Amount and staff identity never come from the form.</summary>
+/// <summary>Editable payment method and cash tender. Amount and staff identity never come from the form.</summary>
 public class RecordPaymentInput
 {
+    [Display(Name = "Cash received (RM)")]
+    public decimal? CashReceived { get; set; }
     [Required(ErrorMessage = "Choose a payment method.")]
     [EnumDataType(typeof(PaymentMethod), ErrorMessage = "Choose a valid payment method.")]
     [Display(Name = "Payment method")]

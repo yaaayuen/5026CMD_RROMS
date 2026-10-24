@@ -11,7 +11,6 @@ namespace Rroms.Web.Services;
 public class ReportExportService : IReportExportService
 {
     private readonly IReportService _reports;
-    private const string DemoNote = "SimulatedOnline is demo activity; no real online payment is processed. Inclusive amounts include demo payments.";
     private const int PdfMargin = 28;
     private const int PdfFontSize = 9;
     /// <summary>Receives the existing report service.</summary>
@@ -61,11 +60,11 @@ public class ReportExportService : IReportExportService
             case ReportExportKind.Reservations:
                 return "Reservation start date; all statuses. Guests are booked guests, not attendance or occupancy.";
             case ReportExportKind.Sales:
-                return "Paid payments by payment date; Unpaid and Voided excluded. " + DemoNote;
+                return "Gross Paid payments by payment date; Unpaid and Voided excluded. Refunds use completion date; net = gross minus completed refunds. Pending/rejected requests are excluded. Item/customer tables remain gross. ";
             case ReportExportKind.PopularItems:
-                return "Orders paid in this period; quantity rank with item ID tie-break. Current names, saved unit prices. Line values may differ from payment amounts. " + DemoNote;
+                return "Orders paid in this period; quantity rank with item ID tie-break. Current names, saved unit prices. Line values may differ from payment amounts. ";
             default:
-                return "Reservations use start date; orders use placement date (all statuses); payments use payment date (Paid only). Independent activities, current names; includes inactive accounts. " + DemoNote;
+                return "Reservations use start date; orders use placement date (all statuses); payments use payment date (Paid only). Independent activities, current names; includes inactive accounts. ";
         }
     }
     private static List<ReportExportTable> BuildTables(ReportDashboard r, ReportExportKind kind)
@@ -80,24 +79,33 @@ public class ReportExportService : IReportExportService
                 tables.Add(bookings);
                 break;
             case ReportExportKind.Sales:
-                var totals = new ReportExportTable { Title = "Sales totals", Headers = new[] { "Paid count", "Inclusive RM", "Non-demo RM", "Demo RM" } };
-                totals.Rows.Add(new object[] { r.PaidCount, r.PaidTotal, r.NonDemoPaidTotal, r.DemoPaidTotal });
+                var totals = new ReportExportTable { Title = "Sales totals", Headers = new[] { "Paid count", "Gross RM" } };
+                totals.Rows.Add(new object[] { r.PaidCount, r.PaidTotal });
                 tables.Add(totals);
                 var methods = new ReportExportTable { Title = "Payment methods", Headers = new[] { "Payment method", "Count", "Amount RM" } };
                 foreach (var x in r.SalesMethods) { methods.Rows.Add(new object[] { x.Method.ToString(), x.Count, x.Amount }); }
                 tables.Add(methods);
-                var daily = new ReportExportTable { Title = "Daily sales", Headers = new[] { "Date", "Payments", "Inclusive RM", "Non-demo RM", "Demo RM" } };
-                foreach (var x in r.DailySales) { daily.Rows.Add(new object[] { x.Date, x.Count, x.PaidAmount, x.NonDemoAmount, x.DemoAmount }); }
+                var daily = new ReportExportTable { Title = "Daily sales", Headers = new[] { "Date", "Payments", "Gross RM" } };
+                foreach (var x in r.DailySales) { daily.Rows.Add(new object[] { x.Date, x.Count, x.PaidAmount }); }
                 tables.Add(daily);
+                var refundTotals = new ReportExportTable { Title = "Refund and net totals", Headers = new[] { "Measure", "Gross RM" } };
+                refundTotals.Rows.Add(new object[] { "Completed refunds", r.RefundTotal });
+                refundTotals.Rows.Add(new object[] { "Net payments", r.NetTotal });
+                tables.Add(refundTotals);
+                var refunds = new ReportExportTable { Title = "Completed refunds", Headers = new[] { "Receipt", "Customer", "Completed Malaysia", "Method", "Amount RM", "Reason", "Recorded by" } };
+                foreach(var x in r.Refunds) refunds.Rows.Add(new object[] { $"R-{x.PaymentId:D4}", x.CustomerName,
+                    MalaysiaTime.FromUtc(x.ProcessedAtUtc!.Value).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
+                    x.Method.ToString(), x.Amount, x.DecisionReason ?? x.Reason, x.ProcessedById ?? "" });
+                tables.Add(refunds);
                 break;
             case ReportExportKind.PopularItems:
-                var items = new ReportExportTable { Title = "Popular items", Headers = new[] { "Rank", "Item ID", "Item", "Quantity", "Demo quantity", "Line value RM", "Demo line value RM" } };
-                foreach (var x in r.PopularItems) { items.Rows.Add(new object[] { x.Rank, x.MenuItemId, x.Name, x.Quantity, x.DemoQuantity, x.LineValue, x.DemoLineValue }); }
+                var items = new ReportExportTable { Title = "Popular items", Headers = new[] { "Rank", "Item ID", "Item", "Quantity", "Line value RM" } };
+                foreach (var x in r.PopularItems) { items.Rows.Add(new object[] { x.Rank, x.MenuItemId, x.Name, x.Quantity, x.LineValue }); }
                 tables.Add(items);
                 break;
             default:
-                var customers = new ReportExportTable { Title = "Customer activity", Headers = new[] { "Customer ID", "Customer", "Reservations", "Orders", "Payments", "Inclusive RM", "Non-demo RM", "Demo RM" } };
-                foreach (var x in r.Customers) { customers.Rows.Add(new object[] { x.CustomerId, x.CustomerName, x.ReservationCount, x.OrderCount, x.PaidCount, x.PaidAmount, x.NonDemoAmount, x.DemoAmount }); }
+                var customers = new ReportExportTable { Title = "Customer activity", Headers = new[] { "Customer ID", "Customer", "Reservations", "Orders", "Payments", "Gross RM" } };
+                foreach (var x in r.Customers) { customers.Rows.Add(new object[] { x.CustomerId, x.CustomerName, x.ReservationCount, x.OrderCount, x.PaidCount, x.PaidAmount }); }
                 tables.Add(customers);
                 break;
         }

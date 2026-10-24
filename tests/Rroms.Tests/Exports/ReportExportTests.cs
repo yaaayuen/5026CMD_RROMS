@@ -36,7 +36,7 @@ public class ReportExportTests
             new Payment { OrderId = voided.Id, StaffId = cash.CustomerId, Method = PaymentMethod.Cash, Amount = 999m, PaidAtUtc = paid, Status = PaymentStatus.Voided });
         await db.SaveChangesAsync();
         var report = (await scope.ServiceProvider.GetRequiredService<IReportService>().GetReportAsync(Filter)).Value!;
-        Assert.Equal(146.90m, report.PaidTotal);
+        Assert.Equal(123.45m, report.PaidTotal);
         var service = scope.ServiceProvider.GetRequiredService<IReportExportService>();
         foreach (var format in Enum.GetValues<ReportExportFormat>())
         {
@@ -47,7 +47,8 @@ public class ReportExportTests
             if (format == ReportExportFormat.Csv)
             {
                 string csv = Encoding.UTF8.GetString(file.Content);
-                Assert.Contains("\"2\",\"146.90\",\"123.45\",\"23.45\"", csv);
+                Assert.Contains("\"1\",\"123.45\"", csv);
+                Assert.DoesNotContain("Demo RM", csv);
                 Assert.Contains("Payment method", csv);
             }
             else if (format == ReportExportFormat.Excel)
@@ -56,18 +57,18 @@ public class ReportExportTests
                 Assert.Equal("Sales totals", book.Worksheet(1).Name);
                 Assert.True(book.Worksheet(1).TabActive);
                 var sheet = book.Worksheet("Sales totals");
-                Assert.Equal(2, sheet.Cell(2, 1).GetValue<int>());
+                Assert.Equal(1, sheet.Cell(2, 1).GetValue<int>());
                 Assert.Equal(report.PaidTotal, sheet.Cell(2, 2).GetValue<decimal>());
-                Assert.Equal(report.NonDemoPaidTotal, sheet.Cell(2, 3).GetValue<decimal>());
-                Assert.Equal(report.DemoPaidTotal, sheet.Cell(2, 4).GetValue<decimal>());
+                Assert.True(sheet.Cell(2, 3).IsEmpty());
+                Assert.True(sheet.Cell(2, 4).IsEmpty());
                 Assert.Equal(XLDataType.DateTime, book.Worksheet("Daily sales").Cell(2, 1).DataType);
             }
             else
             {
                 using var pdf = PdfDocument.Open(file.Content);
                 string text = string.Join(" ", pdf.GetPages().Select(p => p.Text));
-                Assert.Contains("146.90", text); Assert.Contains("123.45", text); Assert.Contains("23.45", text);
-                Assert.Contains("SimulatedOnline", text); Assert.Contains("2026-10-20", text);
+                Assert.Contains("123.45", text); Assert.DoesNotContain("146.90", text);
+                Assert.DoesNotContain("SimulatedOnline", text); Assert.Contains("2026-10-20", text);
             }
             SaveSample(file);
         }
@@ -240,7 +241,7 @@ public class ReportExportTests
             {
                 using var book = new XLWorkbook(new MemoryStream(file.Content));
                 var sheet = book.Worksheet(sheetName);
-                int column = kind == ReportExportKind.Reservations ? 2 : 6;
+                int column = kind == ReportExportKind.Reservations ? 2 : kind == ReportExportKind.PopularItems ? 5 : 6;
                 Assert.Equal(decimal.Parse(expected, CultureInfo.InvariantCulture), sheet.Cell(2, column).GetValue<decimal>());
                 if (kind == ReportExportKind.Reservations) { Assert.Equal(14, sheet.Cell(3, 3).GetValue<int>()); }
             }

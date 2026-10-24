@@ -1,0 +1,10 @@
+@model Rroms.Web.Models.ViewModels.BillBreakdown
+@using Rroms.Web.Common
+<dl class="row justify-content-end bill-breakdown">
+<dt class="col-8">Subtotal</dt><dd class="col-4 text-end">@Money.Format(Model.Subtotal)</dd>
+<dt class="col-8">Service charge (@Model.ServiceChargePercent.ToString("0.##")%)</dt><dd class="col-4 text-end">@Money.Format(Model.ServiceCharge)</dd>
+<dt class="col-8">Service tax (@Model.ServiceTaxPercent.ToString("0.##")%)</dt><dd class="col-4 text-end">@Money.Format(Model.ServiceTax)</dd>
+<dt class="col-8">Total</dt><dd class="col-4 text-end fw-bold">@Money.Format(Model.Total)</dd>
+</dl>
+@if(Model.IsLegacy) { <p class="small text-secondary">Original total preserved; no additional charges applied.</p> }
+else { <p class="small text-secondary">Tax applies to @(Model.TaxIncludesServiceCharge ? "subtotal plus service charge" : "subtotal").</p> }

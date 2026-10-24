@@ -1,4 +1,5 @@
 @page "{id:int}"
+@using Rroms.Web.Common
 @model Rroms.Web.Areas.Staff.Pages.Billing.DetailsModel
 @using Rroms.Web.Contracts
 @using Rroms.Web.Services
@@ -10,9 +11,11 @@
     <h1>Order #@Model.Bill.OrderId</h1>
     <p class="lead mb-0">@Model.Bill.CustomerName · Table @Model.Bill.TableLabel</p>
 </section>
-<section class="tg-card h-auto mb-4">
+<link rel="stylesheet" href="~/css/billing.css" asp-append-version="true" />
+<div class="billing-columns mb-4"><section class="tg-card h-auto">
     <partial name="~/Pages/Shared/_BillingLines.cshtml" model="Model.Bill" />
-    <p class="h4 text-end">Bill total: RM @Model.Bill.TotalAmount.ToString("N2")</p>
+    <p class="h4 text-end">Bill total: @Money.Format(Model.Bill.TotalAmount)</p>
+</section><section class="tg-card h-auto">
     <div asp-validation-summary="All" class="text-danger" role="alert"></div>
     @if (Model.Bill.PaidPaymentId.HasValue)
     {
@@ -21,27 +24,15 @@
     }
     else if (Model.Bill.Status != OrderStatus.Completed)
     {
-        <div class="alert alert-warning">@BillingService.NotCompletedMessage Current status: @Model.Bill.Status.</div>
+        <div class="alert alert-warning">@BillingService.NotCompletedMessage Current status: @Model.Bill.Status.</div><a asp-area="Staff" asp-page="/Orders/Index" class="btn btn-outline-primary">Kitchen orders</a>
     }
     else
     {
-        <form method="post">
-            <label asp-for="Input.Method" class="form-label"></label>
-            <select asp-for="Input.Method" class="form-select mb-2" aria-describedby="payment-help demo-help">
-                <option value="">Choose a method</option>
-                <option value="@PaymentMethod.Cash">Cash</option>
-                <option value="@PaymentMethod.CardTerminal">Card terminal</option>
-                <option value="@PaymentMethod.EWallet">E-wallet</option>
-                <option value="@PaymentMethod.SimulatedOnline">Simulated online - DEMO ONLY</option>
-            </select>
-            <span asp-validation-for="Input.Method" class="text-danger"></span>
-            <p id="payment-help" class="text-secondary">For cash, card terminal or e-wallet, confirm the payment was received before recording it. Card and e-wallet details are not collected here.</p>
-            <div id="demo-help" class="alert alert-warning">Simulated online is a demo - no real payment processed.</div>
-            <button type="submit" class="btn btn-primary">Record payment</button>
-        </form>
+            <partial name="~/Pages/Shared/_TakePayment.cshtml" model="Model.Bill.TotalAmount" />
     }
-</section>
+</section></div>
 <a asp-page="Index">Back to billing</a>
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/billing.js" asp-append-version="true"></script>
 }

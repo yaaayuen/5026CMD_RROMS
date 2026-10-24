@@ -49,7 +49,7 @@ public class ReportPagesTests
         Assert.Contains("19 Oct 2026", html); Assert.Contains("25 Oct 2026", html);
         Assert.Contains("&lt;script&gt;guest&lt;/script&gt;", html);
         Assert.DoesNotContain("<script>guest</script>", html);
-        Assert.Contains("no real online payment is processed", html);
+        Assert.DoesNotContain("Demo payments", html);
         Assert.Contains("href=\"/Admin/Reports\"", await client.GetStringAsync("/Admin"));
     }
     /// <summary>Malformed and unsupported filters show errors without report rows.</summary>

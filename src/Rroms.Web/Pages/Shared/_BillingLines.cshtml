@@ -1,13 +1,16 @@
+@using Rroms.Web.Common
 @model Rroms.Web.Models.ViewModels.BillSummary
 <div class="table-responsive">
     <table class="table align-middle">
         <caption>Order #@Model.OrderId · prices recorded when ordered</caption>
-        <thead><tr><th scope="col">Dish</th><th scope="col" class="text-end">Quantity</th><th scope="col" class="text-end">Unit price (RM)</th><th scope="col" class="text-end">Line total (RM)</th></tr></thead>
+        <thead><tr><th scope="col">Dish</th><th scope="col" class="text-end">Quantity</th><th scope="col" class="text-end">Unit price</th><th scope="col" class="text-end">Line total</th></tr></thead>
         <tbody>
         @foreach (var line in Model.Lines)
         {
-            <tr><th scope="row">@line.DishName</th><td class="text-end">@line.Quantity</td><td class="text-end">@line.UnitPrice.ToString("N2")</td><td class="text-end">@line.LineTotal.ToString("N2")</td></tr>
+            <tr><th scope="row">@line.DishName</th><td class="text-end">@line.Quantity</td><td class="text-end">@Money.Format(line.UnitPrice)</td><td class="text-end">@Money.Format(line.LineTotal)</td></tr>
         }
         </tbody>
     </table>
 </div>
+
+<partial name="_BillBreakdown" model="Model.Breakdown" />

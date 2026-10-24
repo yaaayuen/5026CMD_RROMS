@@ -1,4 +1,5 @@
 @page "{id:int}"
+@using Rroms.Web.Common
 @model Rroms.Web.Areas.Staff.Pages.Billing.VisitModel
 @using Rroms.Web.Contracts
 @using Rroms.Web.Services
@@ -10,6 +11,7 @@
     <h1>Visit #@Model.Visit.ReservationId</h1>
     <p class="lead mb-0">@Model.Visit.CustomerName · Table @Model.Visit.TableLabel · @Model.Visit.UnpaidOrders.Count unpaid order(s)</p>
 </section>
+<link rel="stylesheet" href="~/css/billing.css" asp-append-version="true" />
 <section class="tg-card h-auto mb-4">
     <div asp-validation-summary="All" class="text-danger" role="alert"></div>
     @if (Model.Visit.UnpaidOrders.Count == 0)
@@ -26,31 +28,20 @@
                 <p class="text-warning small">Order #@bill.OrderId is still @bill.Status in the kitchen.</p>
             }
         }
-        <p class="h4 text-end">Visit total: RM @Model.Visit.Total.ToString("N2")</p>
+        <p class="h4 text-end">Visit total: @Money.Format(Model.Visit.Total)</p>
 
         if (!Model.Visit.ReadyToPay)
         {
-            <div class="alert alert-warning">@BillingService.VisitNotReadyMessage</div>
+            <div class="alert alert-warning">@BillingService.VisitNotReadyMessage</div><a asp-area="Staff" asp-page="/Orders/Index">Kitchen orders</a>
         }
         else
         {
-            <form method="post">
-                <label asp-for="Input.Method" class="form-label"></label>
-                <select asp-for="Input.Method" class="form-select mb-2" aria-describedby="visit-help">
-                    <option value="">Choose a method</option>
-                    <option value="@PaymentMethod.Cash">Cash</option>
-                    <option value="@PaymentMethod.CardTerminal">Card terminal</option>
-                    <option value="@PaymentMethod.EWallet">E-wallet</option>
-                    <option value="@PaymentMethod.SimulatedOnline">Simulated online - DEMO ONLY</option>
-                </select>
-                <span asp-validation-for="Input.Method" class="text-danger"></span>
-                <p id="visit-help" class="text-secondary">One payment covers every order above; the customer gets one receipt.</p>
-                <button type="submit" class="btn btn-primary">Record payment for the whole visit</button>
-            </form>
+            <partial name="~/Pages/Shared/_TakePayment.cshtml" model="Model.Visit.Total" />
         }
     }
 </section>
 <a asp-page="Index">Back to billing</a>
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/billing.js" asp-append-version="true"></script>
 }

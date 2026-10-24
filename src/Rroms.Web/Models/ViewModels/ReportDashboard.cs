@@ -3,6 +3,13 @@ namespace Rroms.Web.Models.ViewModels;
 /// <summary>All four DA-3 reports for one resolved range; totals derive from the reported rows.</summary>
 public class ReportDashboard
 {
+    public IReadOnlyList<RefundSummary> Refunds { get; set; } = Array.Empty<RefundSummary>();
+    public decimal RefundTotal => Refunds.Sum(r => r.Amount);
+    public decimal DemoRefundTotal => Refunds.Where(r => r.Method == PaymentMethod.SimulatedOnline).Sum(r => r.Amount);
+    public decimal NonDemoRefundTotal => RefundTotal - DemoRefundTotal;
+    public decimal NetTotal => PaidTotal - RefundTotal;
+    public decimal NonDemoNetTotal => NonDemoPaidTotal - NonDemoRefundTotal;
+    public decimal DemoNetTotal => DemoPaidTotal - DemoRefundTotal;
     public ReportRange Range { get; set; } = new ReportRange();
     public IReadOnlyList<ReservationStatusReportRow> Reservations { get; set; } = Array.Empty<ReservationStatusReportRow>();
     public IReadOnlyList<SalesMethodReportRow> SalesMethods { get; set; } = Array.Empty<SalesMethodReportRow>();

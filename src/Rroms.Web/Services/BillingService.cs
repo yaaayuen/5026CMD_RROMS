@@ -10,7 +10,7 @@ using Rroms.Web.Models.ViewModels;
 namespace Rroms.Web.Services;
 
 /// <summary>Records a completed order's saved total and protects against repeated payment requests.</summary>
-public class BillingService : IBillingService
+public partial class BillingService : IBillingService
 {
     public const string MissingOrderMessage = "Order not found.";
     public const string NotCompletedMessage = "Only completed orders can be paid.";
@@ -24,19 +24,25 @@ public class BillingService : IBillingService
     private readonly ApplicationDbContext _context;
     private readonly INotificationService _notifications;
     private readonly ILogger<BillingService> _logger;
+    private readonly IRestaurantService? _restaurant;
     private readonly IReservationService? _reservations;
 
     /// <summary>Receives the shared database, notification publisher and logger.</summary>
+    /// <param name="context">Shared database.</param>
+    /// <param name="notifications">Notification publisher.</param>
+    /// <param name="logger">Records post-save failures.</param>
+    /// <param name="restaurant">Current restaurant profile for receipt headers.</param>
     /// <param name="reservations">
     /// WL-3: completes the visit once its last order is paid. Optional so existing tests can build the service without it.
     /// </param>
     public BillingService(ApplicationDbContext context, INotificationService notifications, ILogger<BillingService> logger,
-        IReservationService? reservations = null)
+        IReservationService? reservations = null, IRestaurantService? restaurant = null)
     {
         _context = context;
         _notifications = notifications;
         _logger = logger;
         _reservations = reservations;
+        _restaurant = restaurant;
     }
 
     /// <inheritdoc />
@@ -56,7 +62,9 @@ public class BillingService : IBillingService
                 ReservationId = order.ReservationId,
                 CustomerName = order.Customer!.FullName,
                 TableLabel = order.Reservation!.DiningTable!.Label,
-                TotalAmount = order.TotalAmount,
+                Breakdown = BillingCalculator.FromOrder(order),
+            TotalAmount = order.TotalAmount,
+
                 Status = order.Status,
                 PlacedAtUtc = order.PlacedAtUtc,
                 PaidPaymentId = _context.Payments.Where(payment =>
@@ -81,9 +89,9 @@ public class BillingService : IBillingService
     }
 
     /// <inheritdoc />
-    public async Task<ServiceResult<PaymentRecordingResult>> RecordPaymentAsync(int orderId, PaymentMethod method, string staffId)
+    public async Task<ServiceResult<PaymentRecordingResult>> RecordPaymentAsync(int orderId, PaymentMethod method, string staffId, decimal? cashReceived = null)
     {
-        if (!Enum.IsDefined(method))
+        if (!PaymentMethods.IsSupported(method))
         {
             return ServiceResult<PaymentRecordingResult>.Failure(InvalidMethodMessage);
         }
@@ -110,15 +118,26 @@ public class BillingService : IBillingService
         {
             return ServiceResult<PaymentRecordingResult>.Failure(AlreadyPaidMessage);
         }
+        if (!ValidCash(method, cashReceived, order.TotalAmount))
+            return ServiceResult<PaymentRecordingResult>.Failure(CashError);
         // Completed is terminal in Alex's workflow, and YJ fixes TotalAmount when placing the order.
         // One SaveChanges is atomic; no manual transaction (or retry wrapper) is needed here.
         var payment = new Payment
         {
             OrderId = order.Id,
             Amount = order.TotalAmount,
+            Subtotal = order.Subtotal,
+            ServiceChargePercent = order.ServiceChargePercent,
+            ServiceCharge = order.ServiceCharge,
+            ServiceTaxPercent = order.ServiceTaxPercent,
+            ServiceTax = order.ServiceTax,
+            TaxIncludesServiceCharge = order.TaxIncludesServiceCharge,
+
             Method = method,
             Status = PaymentStatus.Paid,
             StaffId = staffId,
+            CashReceived = method == PaymentMethod.Cash ? cashReceived ?? order.TotalAmount : null,
+            ReceiptBatchId = Guid.NewGuid(),
             PaidAtUtc = DateTime.UtcNow
         };
         _context.Payments.Add(payment);
@@ -137,10 +156,6 @@ public class BillingService : IBillingService
         try
         {
             string message = FormattableString.Invariant($"Payment of RM {payment.Amount:F2} for order #{order.Id} is recorded.");
-            if (method == PaymentMethod.SimulatedOnline)
-            {
-                message += " Demo only - no real payment processed.";
-            }
             // YY's publisher saves on this same DbContext, so it must run AFTER our payment is saved.
             await _notifications.NotifyUserAsync(order.CustomerId, NotificationType.PaymentConfirmed,
                 "Payment confirmed", message, $"/Customer/Receipts/Details/{payment.Id}");
@@ -203,9 +218,9 @@ public class BillingService : IBillingService
     }
 
     /// <inheritdoc />
-    public async Task<ServiceResult<PaymentRecordingResult>> RecordVisitPaymentAsync(int reservationId, PaymentMethod method, string staffId)
+    public async Task<ServiceResult<PaymentRecordingResult>> RecordVisitPaymentAsync(int reservationId, PaymentMethod method, string staffId, decimal? cashReceived = null)
     {
-        if (!Enum.IsDefined(method))
+        if (!PaymentMethods.IsSupported(method))
         {
             return ServiceResult<PaymentRecordingResult>.Failure(InvalidMethodMessage);
         }
@@ -228,17 +243,31 @@ public class BillingService : IBillingService
         }
 
         // One Payment row per order keeps the existing rules (one Paid record per order, saved order total).
-        // They share one timestamp, staff and method, which is how the receipt finds them together.
+        // New receipts share a batch ID. Timestamp grouping remains only for legacy rows.
+        decimal visitTotal = unpaid.Sum(o => o.TotalAmount);
+        if (!ValidCash(method, cashReceived, visitTotal))
+            return ServiceResult<PaymentRecordingResult>.Failure(CashError);
+        Guid batchId = Guid.NewGuid();
         DateTime paidAtUtc = DateTime.UtcNow;
         List<Payment> payments = unpaid.Select(order => new Payment
         {
             OrderId = order.Id,
             Amount = order.TotalAmount,
+            Subtotal = order.Subtotal,
+            ServiceChargePercent = order.ServiceChargePercent,
+            ServiceCharge = order.ServiceCharge,
+            ServiceTaxPercent = order.ServiceTaxPercent,
+            ServiceTax = order.ServiceTax,
+            TaxIncludesServiceCharge = order.TaxIncludesServiceCharge,
+
             Method = method,
             Status = PaymentStatus.Paid,
             StaffId = staffId,
+            ReceiptBatchId = batchId,
             PaidAtUtc = paidAtUtc
         }).ToList();
+        // The tender belongs to the whole receipt, not to each order within it.
+        payments[0].CashReceived = method == PaymentMethod.Cash ? cashReceived ?? visitTotal : null;
         _context.Payments.AddRange(payments);
         try
         {
@@ -261,10 +290,6 @@ public class BillingService : IBillingService
             decimal total = payments.Sum(payment => payment.Amount);
             string message = FormattableString.Invariant(
                 $"Payment of RM {total:F2} for {payments.Count} order(s) of your visit is recorded.");
-            if (method == PaymentMethod.SimulatedOnline)
-            {
-                message += " Demo only - no real payment processed.";
-            }
             await _notifications.NotifyUserAsync(unpaid[0].CustomerId, NotificationType.PaymentConfirmed,
                 "Payment confirmed", message, $"/Customer/Receipts/Details/{receiptId}");
         }
@@ -313,7 +338,7 @@ public class BillingService : IBillingService
     private async Task<ReceiptSummary?> ReadReceiptAsync(int paymentId, string? customerId)
     {
         IQueryable<Payment> query = _context.Payments.AsNoTracking()
-            .Where(payment => payment.Id == paymentId && payment.Status == PaymentStatus.Paid);
+            .Where(payment => payment.Id == paymentId && (payment.Status == PaymentStatus.Paid || payment.Status == PaymentStatus.Voided));
         if (customerId != null)
         {
             query = query.Where(payment => payment.Order!.CustomerId == customerId);
@@ -326,13 +351,16 @@ public class BillingService : IBillingService
         Order order = await OrdersWithDetails().SingleAsync(order => order.Id == payment.OrderId);
         BillSummary bill = MapBill(order);
         bill.PaidPaymentId = payment.Id;
+        bill.Breakdown = BillingCalculator.FromPayment(payment);
+        bill.TotalAmount = payment.Amount;
 
-        // A whole-visit payment saved one Payment per order with the same time, staff and method:
-        // collect them so the customer sees one receipt for the visit.
+        // Use the persisted receipt batch, with the original main(6) timestamp rule for legacy rows.
         List<Payment> together = await _context.Payments.AsNoTracking()
-            .Where(other => other.Status == PaymentStatus.Paid && other.PaidAtUtc == payment.PaidAtUtc
-                && other.StaffId == payment.StaffId && other.Method == payment.Method
-                && other.Order!.ReservationId == order.ReservationId)
+            .Where(other => other.Status == payment.Status && other.Order!.CustomerId == order.CustomerId
+                && other.Order.ReservationId == order.ReservationId
+                && (payment.ReceiptBatchId != null ? other.ReceiptBatchId == payment.ReceiptBatchId
+                    : other.ReceiptBatchId == null && other.PaidAtUtc == payment.PaidAtUtc
+                      && other.StaffId == payment.StaffId && other.Method == payment.Method))
             .OrderBy(other => other.OrderId)
             .ToListAsync();
         List<int> orderIds = together.Select(other => other.OrderId).ToList();
@@ -344,8 +372,21 @@ public class BillingService : IBillingService
             bills.Add(bill);
         }
 
+        foreach(var savedBill in bills) {
+            var savedPayment = together.First(p => p.OrderId == savedBill.OrderId);
+            savedBill.Breakdown = BillingCalculator.FromPayment(savedPayment);
+            savedBill.TotalAmount = savedPayment.Amount;
+        }
+        var paymentIds = together.Select(p => p.Id).ToList();
+        var refunds = await _context.Set<PaymentRefund>().AsNoTracking().Where(r => orderIds.Contains(r.Payment!.OrderId)
+            && paymentIds.Contains(r.PaymentId)).Include(r => r.Payment!).ThenInclude(p => p.Order!).ThenInclude(o => o.Customer).ToListAsync();
         return new ReceiptSummary
         {
+            Refund = refunds.Count == 0 ? null : MapRefund(refunds),
+            Status = payment.Status, VoidReason = payment.VoidReason, VoidedAtUtc = payment.VoidedAtUtc,
+            Profile = _restaurant == null ? new RestaurantProfile() : await _restaurant.GetProfileAsync(),
+            CustomerEmail = order.Customer!.Email ?? "",
+            CashReceived = together.Select(p => p.CashReceived).FirstOrDefault(c => c.HasValue),
             PaymentId = payment.Id,
             Amount = payment.Amount,
             Method = payment.Method,
@@ -372,7 +413,9 @@ public class BillingService : IBillingService
             ReservationId = order.ReservationId,
             CustomerName = order.Customer!.FullName,
             TableLabel = order.Reservation!.DiningTable!.Label,
+            Breakdown = BillingCalculator.FromOrder(order),
             TotalAmount = order.TotalAmount,
+
             Status = order.Status,
             PlacedAtUtc = order.PlacedAtUtc
         };
@@ -399,14 +442,21 @@ public class BillingService : IBillingService
                 select user.Id).AnyAsync();
     }
 
+    private const string CashError = "Cash received must cover the total, use at most two decimal places, and be below RM 100,000,000.";
+    // Older callers omit tender; that means exact cash. Explicit tender is always validated here.
+    private static bool ValidCash(PaymentMethod method, decimal? cash, decimal total) =>
+        method != PaymentMethod.Cash || cash == null || (cash >= total && cash < 100000000m && decimal.Round(cash.Value, 2) == cash);
+
+    // SQL Server exposes a numeric error code but no structured index name; match this index only.
+    // SQLite uses a different message. Do not turn unrelated database failures into "already paid".
+    private static bool IsPaidOrderSqlConstraint(int number, string message) =>
+        (number == 2601 || number == 2627) && message.Contains(PaymentConfiguration.PaidOrderIndex, StringComparison.Ordinal);
+
     private static bool IsDuplicatePaidOrder(DbUpdateException exception)
     {
         if (exception.InnerException is SqlException sqlException)
         {
-            const int DuplicateIndex = 2601;
-            const int DuplicateConstraint = 2627;
-            return (sqlException.Number == DuplicateIndex || sqlException.Number == DuplicateConstraint)
-                && sqlException.Message.Contains(PaymentConfiguration.PaidOrderIndex, StringComparison.Ordinal);
+            return IsPaidOrderSqlConstraint(sqlException.Number, sqlException.Message);
         }
         // The team's integration tests use SQLite; match only this unique constraint, not other DB failures.
         return exception.InnerException?.Message.Contains(

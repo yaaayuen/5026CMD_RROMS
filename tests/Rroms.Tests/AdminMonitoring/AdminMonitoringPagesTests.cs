@@ -96,7 +96,7 @@ public class AdminMonitoringPagesTests : IDisposable
             booking.StartUtc = when; booking.EndUtc = when.AddHours(2);
             var customer = (await db.Users.FindAsync(order.CustomerId))!;
             customer.FullName = "<script>guest</script>";
-            var payment = new Payment { OrderId = order.Id, Amount = 42.25m, Method = PaymentMethod.SimulatedOnline,
+            var payment = new Payment { OrderId = order.Id, Amount = 42.25m, Method = PaymentMethod.EWallet,
                 Status = PaymentStatus.Paid, StaffId = customer.Id, PaidAtUtc = when };
             db.Payments.Add(payment); await db.SaveChangesAsync();
             orderId = order.Id; bookingId = booking.Id; paymentId = payment.Id;
@@ -109,9 +109,9 @@ public class AdminMonitoringPagesTests : IDisposable
         string orders = await client.GetStringAsync("/Admin/Monitoring/Orders" + query + "&Filter.Status=Completed");
         Assert.Contains("42.25", orders);
         Assert.Contains($"/Staff/Billing/Details/{orderId}", orders);
-        string transactions = await client.GetStringAsync("/Admin/Monitoring/Transactions" + query + "&Filter.Method=SimulatedOnline&Filter.Status=Paid");
+        string transactions = await client.GetStringAsync("/Admin/Monitoring/Transactions" + query + "&Filter.Method=EWallet&Filter.Status=Paid");
         Assert.Contains("42.25", transactions);
-        Assert.Contains("no real payment processed", transactions);
+        Assert.DoesNotContain("Simulated online (demo)", transactions);
         Assert.Contains($"/Staff/Billing/Receipt/{paymentId}", transactions);
         foreach (string url in new[] { $"/Staff/Reservations?Date={date}", $"/Staff/Reservations/CustomerHistory/{bookingId}",
             $"/Staff/Billing/Details/{orderId}", $"/Staff/Billing/Receipt/{paymentId}" })
@@ -120,9 +120,9 @@ public class AdminMonitoringPagesTests : IDisposable
         }
         Assert.Contains("/Admin/Monitoring/Reservations", await client.GetStringAsync("/Admin"));
     }
-    /// <summary>Voided records keep their order link but never offer a Paid receipt or paid total.</summary>
+    /// <summary>Voided records retain a receipt audit link but never contribute to the paid total.</summary>
     [Fact]
-    public async Task VoidedTransaction_HasNoReceiptLink()
+    public async Task VoidedTransaction_HasAuditReceiptLink()
     {
         using var client = await LoginAsync(RoleNames.Administrator);
         int paymentId;
@@ -137,7 +137,7 @@ public class AdminMonitoringPagesTests : IDisposable
         }
         string html = await client.GetStringAsync("/Admin/Monitoring/Transactions?Filter.Status=Voided");
         Assert.Contains("99.00", html);
-        Assert.DoesNotContain($"/Staff/Billing/Receipt/{paymentId}", html);
+        Assert.Contains($"/Staff/Billing/Receipt/{paymentId}", html);
         Assert.Contains("RM 0.00", html);
     }
     private async Task<HttpClient> LoginAsync(string role)
