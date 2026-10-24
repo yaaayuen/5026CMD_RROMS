@@ -1,5 +1,6 @@
-﻿@page "{reservationId:int}"
+@page "{reservationId:int}"
 @model NewModel
+@inject Microsoft.Extensions.Options.IOptions<Rroms.Web.Options.BillingOptions> BillingRates
 @using System.Globalization
 @using Rroms.Web.Common
 @using Rroms.Web.Models.ViewModels
@@ -720,7 +721,7 @@ else
 					<button type="button" class="ox-bar-sum" id="openDrawer" aria-haspopup="dialog">
 						<span class="ox-bar-count"><span id="orderCount">0</span> items</span>
 						<span class="ox-bar-total ox-num">RM <span id="orderTotal">0.00</span></span>
-						<span class="ox-bar-view">View order</span>
+						<span class="ox-bar-view">View order · includes charges</span>
 					</button>
 					<a class="btn btn-link ox-bar-cancel" asp-page="/Reservations/Details" asp-route-id="@Model.Reservation.Id">Cancel</a>
 					<button type="submit" id="placeOrder" class="btn btn-primary">Place order</button>
@@ -742,11 +743,16 @@ else
 					<label asp-for="Notes" class="form-label fw-semibold small mb-1">Note for the kitchen (optional)</label>
 					<textarea asp-for="Notes" class="form-control mb-3" rows="2" maxlength="@Model.MaxOrderNoteLength" placeholder="e.g. allergic to peanuts"></textarea>
 
-					<div class="ox-total-row" aria-live="polite">
+					<div class="small mb-3" aria-live="polite" aria-atomic="true">
+                        <div class="d-flex justify-content-between gap-3 mb-2"><span>Subtotal</span><span class="ox-num">RM <span id="orderSubtotal">0.00</span></span></div>
+                        <div class="d-flex justify-content-between gap-3 mb-2"><span>Service charge (@BillingRates.Value.ServiceChargePercent.ToString("0.##")%)</span><span class="ox-num">RM <span id="orderServiceCharge">0.00</span></span></div>
+                        <div class="d-flex justify-content-between gap-3"><span>Service tax (@BillingRates.Value.ServiceTaxPercent.ToString("0.##")%)</span><span class="ox-num">RM <span id="orderServiceTax">0.00</span></span></div>
+                    </div>
+                    <div class="ox-total-row" aria-live="polite">
 						<span>Estimated total</span>
 						<strong class="ox-num">RM <span id="drawerTotal">0.00</span></strong>
 					</div>
-					<p class="text-secondary small">The restaurant works out the final total from today's prices when you place the order.</p>
+					<p class="text-secondary small">Includes service charge and tax. Tax applies to @(BillingRates.Value.TaxIncludesServiceCharge ? "subtotal plus service charge" : "subtotal"). The final total uses current prices when you place the order.</p>
 
 					<button type="submit" class="ox-place" id="placeOrderDrawer">Place order &rarr;</button>
 				</div>
@@ -788,6 +794,12 @@ else
 			var dishDialog = document.getElementById('dishDialog');
 			var buttons = [document.getElementById('placeOrder'), document.getElementById('placeOrderDrawer')];
 			var currentDishId = null;
+            var chargeRate = @BillingRates.Value.ServiceChargePercent.ToString(CultureInfo.InvariantCulture);
+            var taxRate = @BillingRates.Value.ServiceTaxPercent.ToString(CultureInfo.InvariantCulture);
+            var taxIncludesCharge = @BillingRates.Value.TaxIncludesServiceCharge.ToString().ToLowerInvariant();
+            // Percentages have at most two decimal places; use integer basis points and cents.
+            var chargeBasisPoints = Math.round(chargeRate * 100);
+            var taxBasisPoints = Math.round(taxRate * 100);
 
 			function byId(id) {
 				return document.getElementById(id);
@@ -837,7 +849,7 @@ else
 					}
 
 					if (q > 0) {
-						total += q * price;
+						total += q * Math.round(price * 100);
 						count += q;
 
 						var li = document.createElement('li');
@@ -909,8 +921,15 @@ else
 					}
 				});
 
-				totalElement.textContent = money(total);
-				drawerTotal.textContent = money(total);
+				var chargeCents = Math.floor((total * chargeBasisPoints + 5000) / 10000);
+                var taxBaseCents = total + (taxIncludesCharge ? chargeCents : 0);
+                var taxCents = Math.floor((taxBaseCents * taxBasisPoints + 5000) / 10000);
+                var finalTotal = (total + chargeCents + taxCents) / 100;
+                byId('orderSubtotal').textContent = money(total / 100);
+                byId('orderServiceCharge').textContent = money(chargeCents / 100);
+                byId('orderServiceTax').textContent = money(taxCents / 100);
+                totalElement.textContent = money(finalTotal);
+                drawerTotal.textContent = money(finalTotal);
 				countElement.textContent = count;
 				drawerEmpty.hidden = count > 0;
 			}
@@ -1050,13 +1069,20 @@ else
 			update();
 
 			// A second click on a slow connection must not place the order twice.
-			form.addEventListener('submit', function () {
+			form.addEventListener('submit', function (event) {
+                if (form.dataset.submitting === 'true') { event.preventDefault(); return; }
+                form.dataset.submitting = 'true';
 				buttons.forEach(function (b) {
 					if (b) {
 						b.disabled = true;
 					}
 				});
 			});
-		})();
+            window.addEventListener('pageshow', function () {
+                delete form.dataset.submitting;
+                buttons.forEach(function (button) { if (button) button.disabled = false; });
+                update();
+            });
+        })();
 	</script>
 }
