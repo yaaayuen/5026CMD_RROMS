@@ -1,8 +1,11 @@
-/* DA-1: preserve the receipt while removing navigation from printed copies. */
+@page { size: A4; margin: 15mm; }
 @media print {
-    header, footer, nav, .d-print-none { display: none !important; }
-    .tg-card { box-shadow: none !important; border: 0 !important; }
-    .container { max-width: 100% !important; }
+    body > header, body > footer, nav, .d-print-none { display: none !important; }
+    .receipt-heading { display: block !important; }
+    body, .receipt-sheet, .table { color: #111 !important; background: white !important; }
+    .tg-card { box-shadow: none !important; border: 0 !important; padding: 0 !important; }
+    .container, .receipt-sheet { max-width: 100% !important; }
     .table-responsive { overflow: visible !important; }
     tr { break-inside: avoid; }
+    .receipt-sheet { font-size: 10pt; }
 }

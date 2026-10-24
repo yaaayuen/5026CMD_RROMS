@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -159,7 +159,7 @@ public class OrderPagesTests : IClassFixture<TestWebApplicationFactory>
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.Contains($"{DetailsUrl}/", response.Headers.Location?.ToString());
         Assert.NotNull(saved);
-        Assert.Equal(2 * BurgerPrice, saved.TotalAmount);
+        Assert.Equal(46.64m, saved.TotalAmount);
         Assert.Equal(BurgerPrice, saved.Items.Single().UnitPrice);
     }
 

@@ -5,6 +5,12 @@ namespace Rroms.Web.Models.ViewModels;
 /// <summary>The saved order total and original order lines needed to display a bill.</summary>
 public class BillSummary
 {
+    public BillBreakdown Breakdown { get; set; } = new();
+    public bool IsRefunded { get; set; }
+    public string AreaName { get; set; } = "";
+    public int ItemCount { get; set; }
+    public PaymentMethod? PaidMethod { get; set; }
+    public DateTime? PaidAtUtc { get; set; }
     public int OrderId { get; set; }
     /// <summary>The visit the order belongs to; used to bill all of a visit's orders together.</summary>
     public int ReservationId { get; set; }

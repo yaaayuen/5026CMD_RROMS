@@ -33,7 +33,7 @@ public class ReportService : IReportService
             .Where(o => o.PlacedAtUtc >= fromUtc && o.PlacedAtUtc < untilUtc)
             .Select(o => new { o.CustomerId, Name = o.Customer!.FullName }).ToListAsync();
         IQueryable<Payment> paidQuery = _context.Payments.AsNoTracking()
-            .Where(p => p.Status == PaymentStatus.Paid && p.PaidAtUtc >= fromUtc && p.PaidAtUtc < untilUtc);
+            .Where(p => p.Status == PaymentStatus.Paid && p.Method != PaymentMethod.SimulatedOnline && p.PaidAtUtc >= fromUtc && p.PaidAtUtc < untilUtc);
         var payments = await paidQuery.Select(p => new
         {
             p.OrderId, p.Amount, p.Method, p.PaidAtUtc, p.Order!.CustomerId, Name = p.Order.Customer!.FullName
@@ -46,7 +46,18 @@ public class ReportService : IReportService
         var lines = await _context.OrderItems.AsNoTracking().Where(i => paidOrderIds.Contains(i.OrderId))
             .Select(i => new { i.OrderId, i.MenuItemId, Name = i.MenuItem!.Name, i.Quantity, i.UnitPrice }).ToListAsync();
 
-        var report = new ReportDashboard { Range = range };
+        var completedRefunds = await _context.Set<PaymentRefund>().AsNoTracking()
+            .Where(r => r.Status == RefundStatus.Completed && r.Payment!.Method != PaymentMethod.SimulatedOnline && r.ProcessedAtUtc >= fromUtc && r.ProcessedAtUtc < untilUtc)
+            .Select(r => new { r.PaymentId, r.BatchId, r.Amount, r.Reason, r.RequestedAtUtc, r.ProcessedAtUtc,
+                r.ProcessedById, r.DecisionReason, r.Payment!.Method, CustomerName = r.Payment.Order!.Customer!.FullName }).ToListAsync();
+        var report = new ReportDashboard { Range = range,
+            Refunds = completedRefunds.GroupBy(r => r.BatchId).Select(g => new RefundSummary {
+                PaymentId = g.Min(r => r.PaymentId), BatchId = g.Key, Amount = g.Sum(r => r.Amount),
+                Method = g.First().Method, CustomerName = g.First().CustomerName, Status = RefundStatus.Completed,
+                Reason = g.First().Reason, RequestedAtUtc = g.First().RequestedAtUtc, ProcessedAtUtc = g.First().ProcessedAtUtc,
+                ProcessedById = g.First().ProcessedById, DecisionReason = g.First().DecisionReason
+            }).OrderByDescending(r => r.ProcessedAtUtc).ToList()
+        };
         var statusRows = new List<ReservationStatusReportRow>();
         foreach (ReservationStatus status in Enum.GetValues<ReservationStatus>())
         {
@@ -58,7 +69,7 @@ public class ReportService : IReportService
         }
         report.Reservations = statusRows;
         var methodRows = new List<SalesMethodReportRow>();
-        foreach (PaymentMethod method in Enum.GetValues<PaymentMethod>())
+        foreach (PaymentMethod method in PaymentMethods.Supported)
         {
             var matching = payments.Where(p => p.Method == method).ToList();
             methodRows.Add(new SalesMethodReportRow

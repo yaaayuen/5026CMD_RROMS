@@ -3,10 +3,20 @@
 @{
     ViewData["Title"] = "Receipt #" + Model.Receipt.PaymentId;
 }
+<link rel="stylesheet" href="~/css/billing.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/billing-print.css" asp-append-version="true" />
 
 <partial name="~/Pages/Shared/_PaymentReceipt.cshtml" model="Model.Receipt" />
-<div class="d-flex gap-2 mt-3 d-print-none">
+<div class="receipt-actions d-print-none">
+    <a asp-page-handler="Pdf" asp-route-id="@Model.Receipt.PaymentId" class="btn btn-outline-primary">Download PDF</a>
     <button type="button" class="btn btn-primary" onclick="window.print()">Print receipt</button>
     <a asp-page="/Orders/Details" asp-route-id="@Model.Receipt.Bill.OrderId" class="btn btn-outline-primary">Back to my order</a>
 </div>
+
+@if(TempData["RefundMessage"] is string message) { <p class="alert alert-info receipt-sheet d-print-none" role="status">@message</p> }
+<section class="tg-card h-auto receipt-sheet mt-4 d-print-none"><h2 class="h5">Refunds</h2><a asp-page="/Refunds/Index">My refund records</a>
+@if(Model.Receipt.Status == Rroms.Web.Contracts.PaymentStatus.Paid && Model.Receipt.Method != Rroms.Web.Contracts.PaymentMethod.SimulatedOnline && Model.Receipt.Refund == null && Model.Receipt.TotalPaid > 0) {
+<p class="mt-3">Request a full refund of @Rroms.Web.Common.Money.Format(Model.Receipt.TotalPaid) for all orders on this receipt. Staff will review your request.</p>
+<form method="post" asp-page-handler="RequestRefund" asp-route-id="@Model.Receipt.PaymentId"><div asp-validation-summary="All" class="text-danger" role="alert"></div><label asp-for="RefundReason" class="form-label">Reason (5–200 characters)</label><textarea asp-for="RefundReason" required minlength="5" maxlength="200" class="form-control mb-3"></textarea><button class="btn btn-outline-primary">Request refund</button></form>
+}
+</section>

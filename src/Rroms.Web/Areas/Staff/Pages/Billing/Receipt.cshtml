@@ -3,13 +3,36 @@
 @{
     ViewData["Title"] = "Receipt #" + Model.Receipt.PaymentId;
 }
+<link rel="stylesheet" href="~/css/billing.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/billing-print.css" asp-append-version="true" />
 @if (TempData["BillingWarning"] is string warning)
 {
     <div class="alert alert-warning d-print-none" role="alert">@warning</div>
 }
+@if (TempData["ReceiptMessage"] is string message) { <p class="alert alert-info d-print-none" role="status">@message</p> }
 <partial name="~/Pages/Shared/_PaymentReceipt.cshtml" model="Model.Receipt" />
-<div class="d-flex gap-2 mt-3 d-print-none">
+<div class="receipt-actions d-print-none">
+    <a asp-page-handler="Pdf" asp-route-id="@Model.Receipt.PaymentId" class="btn btn-outline-primary">Download PDF</a>
     <button type="button" class="btn btn-primary" onclick="window.print()">Print receipt</button>
+    <form method="post" asp-page-handler="Email" asp-route-id="@Model.Receipt.PaymentId"><button class="btn btn-outline-primary">Email to customer</button></form>
     <a asp-page="Index" class="btn btn-outline-primary">Back to billing</a>
 </div>
+
+@if(User.IsInRole(Rroms.Web.Constants.RoleNames.Administrator) && Model.Receipt.Status == Rroms.Web.Contracts.PaymentStatus.Paid && Model.Receipt.Method != Rroms.Web.Contracts.PaymentMethod.SimulatedOnline && Model.Receipt.Refund == null) {
+<section class="tg-card h-auto receipt-sheet mt-4 d-print-none"><h2 class="h5">Correct a payment mistake</h2><p>Voiding keeps the record and marks every order on this receipt unpaid. It does not return money or reopen the reservation.</p><form method="post" asp-page-handler="Void" asp-route-id="@Model.Receipt.PaymentId"><div asp-validation-summary="All" class="text-danger" role="alert"></div><label asp-for="VoidReason" class="form-label">Reason (5–200 characters)</label><textarea asp-for="VoidReason" minlength="5" maxlength="200" required class="form-control mb-3"></textarea><button class="btn btn-outline-danger">Void this payment</button></form></section>
+}
+
+<section class="tg-card h-auto receipt-sheet mt-4 d-print-none">
+<h2 class="h5">Refund</h2><a asp-page="Refunds">View all refund records</a>
+@if(Model.Receipt.Status == Rroms.Web.Contracts.PaymentStatus.Paid && Model.Receipt.Method != Rroms.Web.Contracts.PaymentMethod.SimulatedOnline && (Model.Receipt.Refund == null || Model.Receipt.Refund.Status == Rroms.Web.Contracts.RefundStatus.Requested)) {
+<p class="mt-3">Full receipt amount: <strong>@Rroms.Web.Common.Money.Format(Model.Receipt.TotalPaid)</strong>. This covers every order on this receipt. Partial refunds are not supported.</p>
+<form method="post" asp-page-handler="Refund" asp-route-id="@Model.Receipt.PaymentId">
+<div asp-validation-summary="All" class="text-danger" role="alert"></div>
+<label asp-for="RefundReason" class="form-label">Staff reason (5–200 characters)</label><textarea asp-for="RefundReason" minlength="5" maxlength="200" required class="form-control mb-3"></textarea>
+<label class="form-check mb-3"><input asp-for="MoneyReturned" class="form-check-input" required /><span class="form-check-label">I confirm the full amount has already been returned using cash or the original card/e-wallet provider. This app does not transfer money.</span></label>
+<button class="btn btn-outline-danger">Record full refund</button></form>
+@if(Model.Receipt.Refund?.Status == Rroms.Web.Contracts.RefundStatus.Requested) {
+<details class="mt-3"><summary>Reject this request</summary><form method="post" asp-page-handler="RejectRefund" asp-route-id="@Model.Receipt.PaymentId"><label for="reject-reason" class="form-label">Reason for rejection</label><textarea id="reject-reason" name="RefundReason" minlength="5" maxlength="200" required class="form-control mb-2"></textarea><button class="btn btn-outline-secondary">Reject refund request</button></form></details>
+}
+}
+</section>

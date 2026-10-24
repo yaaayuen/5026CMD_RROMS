@@ -826,11 +826,34 @@ namespace Rroms.Web.Data.Migrations
                     b.Property<int>("ReservationId")
                         .HasColumnType("int");
 
+                    b.Property<decimal>("ServiceCharge")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("ServiceChargePercent")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("ServiceTax")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("ServiceTaxPercent")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
                     b.Property<string>("Status")
                         .IsConcurrencyToken()
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal?>("Subtotal")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<bool>("TaxIncludesServiceCharge")
+                        .HasColumnType("bit");
 
                     b.Property<decimal>("TotalAmount")
                         .HasPrecision(10, 2)
@@ -904,6 +927,10 @@ namespace Rroms.Web.Data.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");
 
+                    b.Property<decimal?>("CashReceived")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("Method")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -915,15 +942,57 @@ namespace Rroms.Web.Data.Migrations
                     b.Property<DateTime>("PaidAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid?>("ReceiptBatchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("RefundRevision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("ServiceCharge")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("ServiceChargePercent")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("ServiceTax")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("ServiceTaxPercent")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
                     b.Property<string>("StaffId")
                         .IsRequired()
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Status")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal?>("Subtotal")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<bool>("TaxIncludesServiceCharge")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("VoidReason")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("VoidedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("VoidedById")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
@@ -931,6 +1000,8 @@ namespace Rroms.Web.Data.Migrations
                         .IsUnique()
                         .HasDatabaseName("UX_Payments_OnePaidPerOrder")
                         .HasFilter("[Status] = 'Paid'");
+
+                    b.HasIndex("ReceiptBatchId");
 
                     b.HasIndex("StaffId");
 
@@ -943,6 +1014,67 @@ namespace Rroms.Web.Data.Migrations
                             t.HasCheckConstraint("CK_Payments_Method", "[Method] IN ('Cash', 'CardTerminal', 'EWallet', 'SimulatedOnline')");
 
                             t.HasCheckConstraint("CK_Payments_Status", "[Status] IN ('Unpaid', 'Paid', 'Voided')");
+                        });
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.PaymentRefund", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("BatchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DecisionReason")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("PaymentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ProcessedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ProcessedById")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("RequestedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RequestedById")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Status")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BatchId");
+
+                    b.HasIndex("PaymentId")
+                        .IsUnique();
+
+                    b.ToTable("PaymentRefunds", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PaymentRefund_Amount", "[Amount] >= 0");
                         });
                 });
 
@@ -1280,6 +1412,17 @@ namespace Rroms.Web.Data.Migrations
                     b.Navigation("Order");
 
                     b.Navigation("Staff");
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.PaymentRefund", b =>
+                {
+                    b.HasOne("Rroms.Web.Models.Payment", "Payment")
+                        .WithMany()
+                        .HasForeignKey("PaymentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Payment");
                 });
 
             modelBuilder.Entity("Rroms.Web.Models.Reservation", b =>

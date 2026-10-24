@@ -43,7 +43,7 @@ public class ReportServiceTests
             db.Payments.Add(new Payment
             {
                 OrderId = orders[i].Id, StaffId = orders[0].CustomerId, Amount = 20m,
-                Method = i == 1 ? PaymentMethod.SimulatedOnline : PaymentMethod.Cash,
+                Method = i == 1 ? PaymentMethod.EWallet : PaymentMethod.Cash,
                 Status = i == 2 ? PaymentStatus.Voided : i == 3 ? PaymentStatus.Unpaid : PaymentStatus.Paid,
                 PaidAtUtc = i == 1 ? start.AddDays(1).AddTicks(-1) : i == 4 ? start.AddTicks(-1) : i == 5 ? start.AddDays(1) : start
             });
@@ -56,13 +56,13 @@ public class ReportServiceTests
         Assert.Equal(2, r.ReservationCount); Assert.Equal(4, r.GuestCount);
         Assert.Equal(1, r.Reservations.Single(x => x.Status == ReservationStatus.Cancelled).Count);
         Assert.Equal(2, r.PaidCount); Assert.Equal(40m, r.PaidTotal);
-        Assert.Equal(20m, r.DemoPaidTotal); Assert.Equal(20m, r.NonDemoPaidTotal);
+        Assert.Equal(0m, r.DemoPaidTotal); Assert.Equal(40m, r.NonDemoPaidTotal);
         Assert.Equal(40m, Assert.Single(r.DailySales).PaidAmount);
         Assert.Equal(2, r.PopularItems.Count);
         Assert.Equal(dish.Id, r.PopularItems[0].MenuItemId);
         Assert.Equal(1, r.PopularItems[0].Rank); Assert.Equal(2, r.PopularItems[1].Rank);
         Assert.All(r.PopularItems, x => Assert.Equal(20m, x.LineValue));
-        Assert.Equal(2, r.PopularItems[1].DemoQuantity);
+        Assert.Equal(0, r.PopularItems[1].DemoQuantity);
         Assert.Equal(2, r.Customers.Count);
         var first = r.Customers.Single(x => x.CustomerId == orders[0].CustomerId);
         Assert.Equal(2, first.ReservationCount); Assert.Equal(1, first.OrderCount); Assert.Equal(1, first.PaidCount);

@@ -13,6 +13,10 @@ public static class PaymentConfiguration
     {
         builder.Entity<Payment>(payment =>
         {
+            payment.Property(p => p.RefundRevision).IsConcurrencyToken();
+            payment.Property(p => p.Status).IsConcurrencyToken();
+            payment.Property(p => p.CashReceived).HasPrecision(18, 2);
+            payment.HasIndex(p => p.ReceiptBatchId);
             payment.HasOne(p => p.Order).WithMany().HasForeignKey(p => p.OrderId)
                 .OnDelete(DeleteBehavior.Restrict);
             payment.HasOne(p => p.Staff).WithMany().HasForeignKey(p => p.StaffId)

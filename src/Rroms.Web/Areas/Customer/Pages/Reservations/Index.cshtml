@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model IndexModel
 @{
     ViewData["Title"] = "My reservations";
@@ -23,7 +23,7 @@
     }
     else
     {
-        <partial name="_ReservationList" model="Model.Upcoming" />
+        <partial name="_ReservationList" model="@(new ReservationReceiptList(Model.Upcoming, Model.Receipts))" />
     }
 </section>
 
@@ -35,6 +35,6 @@
     }
     else
     {
-        <partial name="_ReservationList" model="Model.Past" />
+        <partial name="_ReservationList" model="@(new ReservationReceiptList(Model.Past, Model.Receipts))" />
     }
 </section>

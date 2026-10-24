@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 using Rroms.Web.Contracts;
 
@@ -17,6 +17,14 @@ namespace Rroms.Web.Models;
 /// </remarks>
 public class Order
 {
+    // Null subtotal identifies a legacy record: never retroactively add charges.
+    public decimal? Subtotal { get; set; }
+    public decimal ServiceChargePercent { get; set; }
+    public decimal ServiceCharge { get; set; }
+    public decimal ServiceTaxPercent { get; set; }
+    public decimal ServiceTax { get; set; }
+    public bool TaxIncludesServiceCharge { get; set; }
+
     /// <summary>Longest note a customer can add to the whole order, e.g. "Allergic to peanuts".</summary>
     public const int NotesMaxLength = 300;
 

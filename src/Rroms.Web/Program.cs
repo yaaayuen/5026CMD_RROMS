@@ -22,6 +22,9 @@ using Rroms.Web.Hubs;
 using Rroms.Web.Services.Email;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+builder.Services.AddOptions<Rroms.Web.Options.BillingOptions>().BindConfiguration("Billing")
+    .ValidateDataAnnotations().Validate(o => o.HasValidPrecision, "Billing percentages need at most two decimal places.").ValidateOnStart();
+builder.Services.AddSingleton<Rroms.Web.Services.BillingCalculator>();
 
 // -----------------------------------------------------------------------------
 // 1. SERVICES (dependency injection container)
@@ -184,6 +187,7 @@ builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 
 // ----- Sprint 5 (Darren): billing and receipts (DA-1) -----
 builder.Services.AddScoped<IBillingService, BillingService>();
+builder.Services.AddScoped<ReceiptDocumentService>();
 
 // ----- Sprint 5 (Darren): reservation history and filters (DA-7) -----
 builder.Services.AddScoped<IMonitoringService, MonitoringService>();

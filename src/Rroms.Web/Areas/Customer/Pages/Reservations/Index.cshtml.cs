@@ -16,13 +16,17 @@ namespace Rroms.Web.Areas.Customer.Pages.Reservations;
 /// </remarks>
 public class IndexModel : PageModel
 {
+    private readonly IBillingService _billing;
+    public ILookup<int, CustomerReceiptLink> Receipts { get; private set; } = Array.Empty<CustomerReceiptLink>().ToLookup(r => r.ReservationId);
     private readonly IReservationService _reservationService;
 
     /// <summary>Receives the booking service from dependency injection.</summary>
+    /// <param name="billing">Reads owned receipt links.</param>
     /// <param name="reservationService">Availability search and booking.</param>
-    public IndexModel(IReservationService reservationService)
+    public IndexModel(IReservationService reservationService, IBillingService billing)
     {
         _reservationService = reservationService;
+        _billing = billing;
     }
 
     /// <summary>Visits that have not finished yet, soonest first.</summary>
@@ -35,6 +39,7 @@ public class IndexModel : PageModel
     public async Task OnGetAsync()
     {
         IReadOnlyList<ReservationSummary> all = await _reservationService.GetCustomerReservationsAsync(User.GetUserId());
+        Receipts = (await _billing.GetCustomerReceiptLinksAsync(User.GetUserId())).ToLookup(r => r.ReservationId);
         DateTime nowUtc = DateTime.UtcNow;
 
         Upcoming = all.Where(r => r.EndUtc > nowUtc).OrderBy(r => r.StartUtc).ToList();

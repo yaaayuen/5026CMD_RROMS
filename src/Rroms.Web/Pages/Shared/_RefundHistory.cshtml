@@ -1,0 +1,11 @@
+@model Rroms.Web.Models.ViewModels.RefundList
+@using Rroms.Web.Common
+@{ bool customer = (bool)(ViewData["CustomerRefunds"] ?? false); }
+<div class="table-responsive"><table class="table align-middle"><thead><tr><th>Receipt</th><th>Customer</th><th>Amount</th><th>Method</th><th>Status</th><th>Requested (Malaysia)</th><th>Decision (Malaysia)</th><th>Reason</th></tr></thead><tbody>
+@foreach(var row in Model.Rows) {
+<tr><td><a asp-area="@(customer ? "Customer" : "Staff")" asp-page="@(customer ? "/Receipts/Details" : "/Billing/Receipt")" asp-route-id="@row.PaymentId">R-@row.PaymentId.ToString("D4")</a></td><td>@row.CustomerName</td><td>@Money.Format(row.Amount)</td><td>@Money.Method(row.Method)</td><td>@row.Status</td><td>@MalaysiaTime.FromUtc(row.RequestedAtUtc).ToString("dd MMM yyyy, h:mm tt")</td><td>@(row.ProcessedAtUtc.HasValue ? MalaysiaTime.FromUtc(row.ProcessedAtUtc.Value).ToString("dd MMM yyyy, h:mm tt") : "Awaiting review")@if(!customer && row.ProcessedById != null) { <small class="d-block">Staff ID: @row.ProcessedById</small> }</td><td>@row.Reason@if(row.DecisionReason != null) { <small class="d-block">Decision: @row.DecisionReason</small> }</td></tr>
+}
+</tbody></table></div>
+@if(Model.Total == 0) { <p>No refund records match this view.</p> }
+<p>Showing @Model.Rows.Count of @Model.Total · Page @Model.Page</p>
+<nav aria-label="Refund pages">@if(Model.Page > 1) { <a class="btn btn-outline-primary btn-sm" asp-route-pageNumber="@(Model.Page - 1)" asp-route-status="@Context.Request.Query["status"]">Previous</a> } @if(Model.Page * 20 < Model.Total) { <a class="btn btn-outline-primary btn-sm" asp-route-pageNumber="@(Model.Page + 1)" asp-route-status="@Context.Request.Query["status"]">Next</a> }</nav>

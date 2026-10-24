@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model Rroms.Web.Areas.Customer.Pages.History.IndexModel
 @using Rroms.Web.Areas.Customer.Pages.Orders
 @using Rroms.Web.Common
@@ -8,8 +8,8 @@
 	ViewData["Title"] = "My history";
 
 	CustomerHistory history = Model.History;
-	decimal totalPaid = history.Payments.Sum(p => p.Amount);
-	HistoryPaymentRow? latestPayment = history.Payments.OrderByDescending(p => p.PaidAtUtc).FirstOrDefault();
+	decimal totalPaid = history.Payments.Where(p => p.Method != PaymentMethod.SimulatedOnline).Sum(p => p.Amount);
+	HistoryPaymentRow? latestPayment = history.Payments.Where(p => p.Method != PaymentMethod.SimulatedOnline).OrderByDescending(p => p.PaidAtUtc).FirstOrDefault();
 	bool paymentsCapped = history.Payments.Count >= Model.RowLimit;
 }
 
@@ -185,7 +185,11 @@
 		</div>
 	</section>
 
-	<div class="hx-stats" aria-label="Summary">
+	<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <p class="small text-secondary mb-0">Payment totals are before refunds. Open a receipt for its refund status and final net amount.</p>
+        <a class="hx-btn" asp-area="Customer" asp-page="/Refunds/Index">My refund records</a>
+    </div>
+    <div class="hx-stats" aria-label="Summary">
 		<div class="hx-stat">
 			<span class="hx-ico" aria-hidden="true">📅</span>
 			<div>
@@ -204,7 +208,7 @@
 			<span class="hx-ico" aria-hidden="true">💳</span>
 			<div>
 				<div class="hx-num">RM @totalPaid.ToString("N2")</div>
-				<div class="hx-lab">@(paymentsCapped ? "Total paid (latest " + Model.RowLimit + ")" : "Total paid")</div>
+				<div class="hx-lab">@(paymentsCapped ? "Gross paid (latest " + Model.RowLimit + ")" : "Gross paid")</div>
 			</div>
 		</div>
 	</div>
@@ -249,7 +253,7 @@
 							<td data-label="Date">
 								<div class="hx-tile">
 									<span class="hx-cal" aria-hidden="true">@start.ToString("MMM").ToUpperInvariant()<b>@start.Day</b></span>
-									<span class="hx-two"><b>@start.ToString("dddd")</b><span>@ClockText(row.StartUtc)</span></span>
+									<span class="hx-two"><b>@start.ToString("ddd d MMM yyyy")</b><span>@ClockText(row.StartUtc)</span></span>
 								</div>
 							</td>
 							<td data-label="Table">@row.TableLabel · @row.AreaName</td>
@@ -307,8 +311,9 @@
 							<td data-label="Payment">
 								@if (paid != null)
 								{
-									<span class="hx-badge">Paid</span>
-									<span class="hx-sub">@IndexModel.MethodText(paid.Method) · Receipt #@paid.ReceiptNumber</span>
+									<span class="hx-badge">Payment recorded</span>
+                                    <a class="hx-btn mt-2" asp-area="Customer" asp-page="/Receipts/Details" asp-route-id="@paid.ReceiptNumber">View receipt</a>
+									<span class="hx-sub">@(paid.Method == PaymentMethod.SimulatedOnline ? "Archived test payment" : IndexModel.MethodText(paid.Method)) · Receipt #@paid.ReceiptNumber</span>
 								}
 								else if (cancelled)
 								{
@@ -316,7 +321,7 @@
 								}
 								else
 								{
-									<span class="hx-badge warn">Unpaid</span>
+									<span class="hx-badge warn">@(paymentsCapped ? "Check order" : "Unpaid")</span>
 								}
 							</td>
 							<td class="hx-action"><a class="hx-btn" asp-page="/Orders/Details" asp-route-id="@row.Id">View order <span aria-hidden="true">→</span></a></td>
@@ -357,18 +362,21 @@
 						<th scope="col">Paid</th>
 						<th scope="col">Amount (RM)</th>
 						<th scope="col">Method</th>
-						<th scope="col">For</th>
+						<th scope="col">Actions</th>
 					</tr>
 				</thead>
 				<tbody>
 					@foreach (HistoryPaymentRow row in history.Payments)
 					{
 						<tr>
-							<td data-label="Receipt"><span class="hx-chip receipt">#@row.ReceiptNumber</span></td>
+							<td data-label="Receipt"><a class="hx-chip receipt text-decoration-none" asp-area="Customer" asp-page="/Receipts/Details" asp-route-id="@row.ReceiptNumber">R-@row.ReceiptNumber.ToString("D4")</a></td>
 							<td data-label="Paid" class="hx-two"><b>@DateText(row.PaidAtUtc)</b><span>@ClockText(row.PaidAtUtc)</span></td>
 							<td data-label="Amount" class="hx-amt">@row.Amount.ToString("N2")</td>
-							<td data-label="Method"><span class="hx-mi" aria-hidden="true">@MethodIcon(row.Method)</span>@IndexModel.MethodText(row.Method)</td>
-							<td class="hx-action"><a class="hx-btn" asp-page="/Orders/Details" asp-route-id="@row.OrderId">Order #@row.OrderId <span aria-hidden="true">→</span></a></td>
+							<td data-label="Method"><span class="hx-mi" aria-hidden="true">@MethodIcon(row.Method)</span>@(row.Method == PaymentMethod.SimulatedOnline ? "Archived test payment" : IndexModel.MethodText(row.Method))</td>
+							<td class="hx-action"><div class="d-flex flex-wrap gap-2">
+                                <a class="hx-btn" asp-area="Customer" asp-page="/Receipts/Details" asp-route-id="@row.ReceiptNumber">View receipt</a>
+                                <a class="hx-btn" asp-page="/Orders/Details" asp-route-id="@row.OrderId">Order #@row.OrderId <span aria-hidden="true">→</span></a>
+                            </div></td>
 						</tr>
 					}
 				</tbody>

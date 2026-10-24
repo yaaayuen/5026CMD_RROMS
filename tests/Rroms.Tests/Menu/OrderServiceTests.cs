@@ -1,4 +1,4 @@
-﻿using Microsoft.Data.Sqlite;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 using Rroms.Web.Common;
@@ -118,7 +118,8 @@ public class OrderServiceTests : IDisposable
         Assert.Equal(OrderStatus.Placed, saved.Status);
         Assert.Equal(reservation.Id, saved.ReservationId);
         Assert.Equal(reservation.CustomerId, saved.CustomerId);
-        Assert.Equal(2 * BurgerPrice + DrinkPrice, saved.TotalAmount);
+        Assert.Equal(61.22m, saved.TotalAmount);
+        Assert.Equal(52.50m, saved.Subtotal); Assert.Equal(5.25m, saved.ServiceCharge); Assert.Equal(3.47m, saved.ServiceTax);
         Assert.Equal(2, saved.Items.Count);
     }
 
@@ -160,7 +161,7 @@ public class OrderServiceTests : IDisposable
         Assert.True(result.Succeeded);
         Order saved = await _context.Orders.Include(o => o.Items).SingleAsync(o => o.Id == result.Value);
         Assert.Equal(ChangedPrice, saved.Items.Single().UnitPrice);
-        Assert.Equal(2 * ChangedPrice, saved.TotalAmount);
+        Assert.Equal(58.30m, saved.TotalAmount);
     }
 
     [Fact]
@@ -436,7 +437,8 @@ public class OrderServiceTests : IDisposable
 
         // Assert
         Assert.NotNull(summary);
-        Assert.Equal(2 * BurgerPrice, summary.TotalAmount);
+        Assert.Equal(46.64m, summary.TotalAmount);
+        Assert.Equal(2.64m, summary.Breakdown.ServiceTax);
         Assert.Equal(OrderTestData.SeededTableLabel, summary.TableLabel);
         OrderSummaryLine line = Assert.Single(summary.Lines);
         Assert.Equal("Burger", line.DishName);

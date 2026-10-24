@@ -1,10 +1,11 @@
-﻿using Rroms.Web.Contracts;
+using Rroms.Web.Contracts;
 
 namespace Rroms.Web.Models.ViewModels;
 
 /// <summary>An order as shown on the customer's confirmation page (YJ-3).</summary>
 public class OrderSummary
 {
+    public BillBreakdown Breakdown { get; set; } = new();
     /// <summary>Order ID.</summary>
     public int Id { get; set; }
 
