@@ -79,7 +79,7 @@ test('answer text is assigned as text and AI answers are labelled', async () => 
     const chat = load();
     await chat.ask('hello', { answer: '<img src=x onerror=alert(1)>', source: 'AI' });
     const bubble = chat.bubbles()[1];
-    assert.equal(bubble.children[0].textContent, 'AI answer');
+    assert.equal(bubble.children[0].textContent, 'Three Grills AI');
     assert.equal(bubble.children[1].textContent, '<img src=x onerror=alert(1)>');
 });
 test('the history survives a page change and is kept per user', async () => {

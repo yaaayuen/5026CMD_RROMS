@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using Rroms.Web.Common;
+using Rroms.Web.Contracts;
 using Rroms.Web.Models.ViewModels;
 using Rroms.Web.Options;
 namespace Rroms.Web.Services;
@@ -15,22 +16,27 @@ public class ChatbotService : IChatbotService
     private readonly IMenuService _menu;
     private readonly IRestaurantService _restaurant;
     private readonly IReservationService _reservations;
+    private readonly IAnnouncementService _announcements;
+    private readonly IOrderProcessingService _orders;
     private readonly HttpClient _http;
     private readonly ChatbotOptions _options;
     private readonly ILogger<ChatbotService> _logger;
 
-    public ChatbotService(IMenuService menu, IRestaurantService restaurant, IReservationService reservations, HttpClient http,
+    public ChatbotService(IMenuService menu, IRestaurantService restaurant, IReservationService reservations,
+        IAnnouncementService announcements, IOrderProcessingService orders, HttpClient http,
         IOptions<ChatbotOptions> options, ILogger<ChatbotService> logger)
     {
         _menu = menu;
         _restaurant = restaurant;
         _reservations = reservations;
+        _announcements = announcements;
+        _orders = orders;
         _http = http;
         _options = options.Value;
         _logger = logger;
     }
 
-    public async Task<ChatReply> AskAsync(string question, bool isCustomer, CancellationToken cancellationToken = default)
+    public async Task<ChatReply> AskAsync(string question, bool isCustomer, CancellationToken cancellationToken = default, string? customerId = null)
     {
         question = question.Trim();
         if (question.Length == 0 || question.Length > ChatbotOptions.MaxQuestionLength)
@@ -39,14 +45,23 @@ public class ChatbotService : IChatbotService
         }
         string text = question.ToLowerInvariant();
         // Personal records remain on authenticated pages; they are never sent to the AI service.
-        if (Has(text, "order", "orders", "tracking", "status", "ready"))
+        if (Has(text, "thanks", "thank you", "thx"))
         {
+            return Reply("You're welcome! Ask me any time about the menu, bookings or your order.");
+        }
+        if (Has(text, "order", "tracking", "status", "ready"))
+        {
+            // "Where is my order?" is answered from the customer's own orders; "how do I order?" gets the steps.
+            if (isCustomer && customerId != null && Has(text, "my order", "my food", "where is", "status", "ready", "tracking"))
+            {
+                return await OrderStatusAsync(customerId);
+            }
             return CustomerPage(isCustomer, "Pre-orders reach the kitchen only after you are seated. You can check your current order and reservation status on Track my visit.", "/Customer/Tracking", "Track my visit",
                 "Open My reservations and choose a confirmed booking.",
                 "Press Order food, add the dishes you want, then press Place order.",
                 "The kitchen starts cooking once staff seat you. Follow each step on Track my visit.");
         }
-        if (Has(text, "book", "booking", "reservation", "reserve", "table", "availability", "available tables"))
+        if (Has(text, "book", "booking", "reservation", "reserve", "table", "availability", "available table"))
         {
             Match request = Regex.Match(text, @"(?<date>\d{4}-\d{2}-\d{2})\s+(?<time>\d{2}:\d{2})\s+for\s+(?<party>\d{1,2})\b");
             if (request.Success && DateOnly.TryParseExact(request.Groups["date"].Value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
@@ -84,9 +99,9 @@ public class ChatbotService : IChatbotService
                 "Open My profile from your email address at the top of the page.",
                 "Update your details there, or press Change password to choose a new password.");
         }
-        if (Has(text, "promotion", "promotions", "campaign", "announcement", "offers"))
+        if (Has(text, "promotion", "campaign", "announcement", "offers", "special offer", "deal", "discount", "promo"))
         {
-            return Reply("Current campaigns appear on News and offers. Individual dish offers appear on the menu.", "/Announcements", "News and offers");
+            return await PromotionsAsync();
         }
         if (Has(text, "hours", "open", "opening", "close", "closing"))
         {
@@ -97,7 +112,7 @@ public class ChatbotService : IChatbotService
                 (h.IsClosed ? "closed" : h.OpensAt.ToString("HH:mm") + " to " + h.ClosesAt.ToString("HH:mm"))));
             return Reply(todayText + "Usual hours (Malaysia time): " + week + ". Special closures are listed on Opening hours.", "/Visit", "Opening hours");
         }
-        if (Has(text, "address", "location", "contact", "phone", "email"))
+        if (Has(text, "address", "location", "located", "where are you", "directions", "contact", "phone", "email"))
         {
             var profile = await _restaurant.GetProfileAsync();
             return Reply(profile.Name + ": " + profile.Address + ". Phone: " + profile.Phone + ". Email: " + profile.Email, "/Visit", "Opening hours and contact");
@@ -157,9 +172,39 @@ public class ChatbotService : IChatbotService
         }
     }
 
+    /// <summary>Whole-word match that also accepts a plural ending, so "bookings" and "reviews" match "booking" and "review".</summary>
     private static bool Has(string text, params string[] phrases)
     {
-        return phrases.Any(p => Regex.IsMatch(text, @"\b" + Regex.Escape(p) + @"\b"));
+        return phrases.Any(p => Regex.IsMatch(text, @"\b" + Regex.Escape(p) + @"(?:s|es)?\b"));
+    }
+
+    /// <summary>The customer's unfinished orders, read locally. Personal data never reaches the AI service.</summary>
+    private async Task<ChatReply> OrderStatusAsync(string customerId)
+    {
+        var active = (await _orders.GetCustomerOrdersAsync(customerId))
+            .Where(o => o.Status is not (OrderStatus.Completed or OrderStatus.Cancelled)).Take(3).ToList();
+        if (active.Count == 0)
+        {
+            return Reply("You have no orders in progress right now. To order, open a confirmed booking in My reservations and press Order food.",
+                "/Customer/Tracking", "Track my visit");
+        }
+        var lines = active.Select(o => $"Order #{o.Id}: {OrderStatusRules.Label(o.Status)}"
+            + (o.Status == OrderStatus.Placed && o.Reservation?.Status != ReservationStatus.Seated
+                ? " (saved; the kitchen receives it after you are seated)" : ""));
+        return Reply(string.Join(". ", lines) + ".", "/Customer/Tracking", "Track my visit");
+    }
+
+    /// <summary>Names the promotions running today, newest first, from the same list as News and offers.</summary>
+    private async Task<ChatReply> PromotionsAsync()
+    {
+        var offers = (await _announcements.GetAsync(true)).Where(a => a.IsPromotion).ToList();
+        if (offers.Count == 0)
+        {
+            return Reply("There are no offers running right now. News and dish offers appear on News and offers and the menu.", "/Announcements", "News and offers");
+        }
+        string list = string.Join("; ", offers.Take(3).Select(a => $"{a.Title} (until {MalaysiaTime.FromUtc(a.EndUtc):d MMM})"));
+        string more = offers.Count > 3 ? $" and {offers.Count - 3} more" : "";
+        return Reply($"Current offers: {list}{more}.", "/Announcements", "News and offers");
     }
     private static ChatReply Reply(string answer, string? url = null, string? label = null)
     {

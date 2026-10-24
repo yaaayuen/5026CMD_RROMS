@@ -34,7 +34,7 @@
     function render(message) {
         const mine = message.from === "you";
         const bubble = element("div", "chat-msg " + (mine ? "from-you" : "from-bot"));
-        if (!mine) { bubble.append(element("span", "chat-who", message.source === "AI" ? "AI answer" : "Three Grills")); }
+        if (!mine) { bubble.append(element("span", "chat-who", message.source === "AI" ? "Three Grills AI" : "Three Grills")); }
         bubble.append(element("p", "mb-0", String(message.text || "")));
         if (Array.isArray(message.steps) && message.steps.length > 0) {
             const list = element("ol", "chat-steps");
