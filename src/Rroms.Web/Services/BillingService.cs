@@ -19,6 +19,7 @@ public partial class BillingService : IBillingService
     public const string InvalidStaffMessage = "An active staff or administrator account is required.";
     public const string NothingToPayMessage = "Every order of this visit is already paid.";
     public const string VisitNotReadyMessage = "Every order of this visit must be completed by the kitchen before the visit can be paid.";
+    public const string TerminalDeclinedMessage = "The terminal declined this payment, so nothing was charged or saved. Ask the customer for another card or payment method.";
     public const string NotificationWarning = "Payment was saved, but its confirmation notification could not be sent. Do not record the payment again.";
 
     private readonly ApplicationDbContext _context;
@@ -26,6 +27,7 @@ public partial class BillingService : IBillingService
     private readonly ILogger<BillingService> _logger;
     private readonly IRestaurantService? _restaurant;
     private readonly IReservationService? _reservations;
+    private readonly IPaymentTerminal _terminal;
 
     /// <summary>Receives the shared database, notification publisher and logger.</summary>
     /// <param name="context">Shared database.</param>
@@ -35,14 +37,16 @@ public partial class BillingService : IBillingService
     /// <param name="reservations">
     /// WL-3: completes the visit once its last order is paid. Optional so existing tests can build the service without it.
     /// </param>
+    /// <param name="terminal">Card / e-wallet terminal; defaults to the simulated demo terminal.</param>
     public BillingService(ApplicationDbContext context, INotificationService notifications, ILogger<BillingService> logger,
-        IReservationService? reservations = null, IRestaurantService? restaurant = null)
+        IReservationService? reservations = null, IRestaurantService? restaurant = null, IPaymentTerminal? terminal = null)
     {
         _context = context;
         _notifications = notifications;
         _logger = logger;
         _reservations = reservations;
         _restaurant = restaurant;
+        _terminal = terminal ?? new SimulatedPaymentTerminal();
     }
 
     /// <inheritdoc />
@@ -89,7 +93,7 @@ public partial class BillingService : IBillingService
     }
 
     /// <inheritdoc />
-    public async Task<ServiceResult<PaymentRecordingResult>> RecordPaymentAsync(int orderId, PaymentMethod method, string staffId, decimal? cashReceived = null)
+    public async Task<ServiceResult<PaymentRecordingResult>> RecordPaymentAsync(int orderId, PaymentMethod method, string staffId, decimal? cashReceived = null, bool simulateDecline = false)
     {
         if (!PaymentMethods.IsSupported(method))
         {
@@ -120,6 +124,10 @@ public partial class BillingService : IBillingService
         }
         if (!ValidCash(method, cashReceived, order.TotalAmount))
             return ServiceResult<PaymentRecordingResult>.Failure(CashError);
+        // Card / e-wallet: the terminal is charged only after every check above has passed.
+        TerminalResult? slip = ChargeTerminal(method, order.TotalAmount, simulateDecline);
+        if (slip is { Approved: false })
+            return ServiceResult<PaymentRecordingResult>.Failure(TerminalDeclinedMessage);
         // Completed is terminal in Alex's workflow, and YJ fixes TotalAmount when placing the order.
         // One SaveChanges is atomic; no manual transaction (or retry wrapper) is needed here.
         var payment = new Payment
@@ -140,6 +148,7 @@ public partial class BillingService : IBillingService
             ReceiptBatchId = Guid.NewGuid(),
             PaidAtUtc = DateTime.UtcNow
         };
+        CopySlip(payment, slip);
         _context.Payments.Add(payment);
         try
         {
@@ -218,7 +227,7 @@ public partial class BillingService : IBillingService
     }
 
     /// <inheritdoc />
-    public async Task<ServiceResult<PaymentRecordingResult>> RecordVisitPaymentAsync(int reservationId, PaymentMethod method, string staffId, decimal? cashReceived = null)
+    public async Task<ServiceResult<PaymentRecordingResult>> RecordVisitPaymentAsync(int reservationId, PaymentMethod method, string staffId, decimal? cashReceived = null, bool simulateDecline = false)
     {
         if (!PaymentMethods.IsSupported(method))
         {
@@ -247,6 +256,10 @@ public partial class BillingService : IBillingService
         decimal visitTotal = unpaid.Sum(o => o.TotalAmount);
         if (!ValidCash(method, cashReceived, visitTotal))
             return ServiceResult<PaymentRecordingResult>.Failure(CashError);
+        // One terminal transaction for the whole visit total.
+        TerminalResult? slip = ChargeTerminal(method, visitTotal, simulateDecline);
+        if (slip is { Approved: false })
+            return ServiceResult<PaymentRecordingResult>.Failure(TerminalDeclinedMessage);
         Guid batchId = Guid.NewGuid();
         DateTime paidAtUtc = DateTime.UtcNow;
         List<Payment> payments = unpaid.Select(order => new Payment
@@ -268,6 +281,7 @@ public partial class BillingService : IBillingService
         }).ToList();
         // The tender belongs to the whole receipt, not to each order within it.
         payments[0].CashReceived = method == PaymentMethod.Cash ? cashReceived ?? visitTotal : null;
+        CopySlip(payments[0], slip);
         _context.Payments.AddRange(payments);
         try
         {
@@ -387,6 +401,8 @@ public partial class BillingService : IBillingService
             Profile = _restaurant == null ? new RestaurantProfile() : await _restaurant.GetProfileAsync(),
             CustomerEmail = order.Customer!.Email ?? "",
             CashReceived = together.Select(p => p.CashReceived).FirstOrDefault(c => c.HasValue),
+            Terminal = TerminalSlip.From(together.FirstOrDefault(p => p.TerminalReference != null)
+                ?? (payment.TerminalReference != null ? payment : null)),
             PaymentId = payment.Id,
             Amount = payment.Amount,
             Method = payment.Method,
@@ -440,6 +456,28 @@ public partial class BillingService : IBillingService
                 where user.Id == staffId && user.IsActive
                     && (role.Name == RoleNames.Staff || role.Name == RoleNames.Administrator)
                 select user.Id).AnyAsync();
+    }
+
+    /// <summary>Cash needs no terminal; card and e-wallet are charged on the terminal for the exact total.</summary>
+    private TerminalResult? ChargeTerminal(PaymentMethod method, decimal amount, bool simulateDecline) =>
+        method is PaymentMethod.CardTerminal or PaymentMethod.EWallet
+            ? _terminal.Charge(new TerminalRequest { Amount = amount, Method = method, SimulateDecline = simulateDecline })
+            : null;
+
+    /// <summary>Copies the slip's reference data onto the payment row (masked card data only).</summary>
+    private static void CopySlip(Payment payment, TerminalResult? slip)
+    {
+        if (slip is not { Approved: true })
+        {
+            return;
+        }
+        payment.ApprovalCode = slip.ApprovalCode;
+        payment.TerminalReference = slip.Reference;
+        payment.Acquirer = slip.Acquirer;
+        payment.CardBrand = slip.CardBrand;
+        payment.CardType = slip.CardType;
+        payment.CardLast4 = slip.CardLast4;
+        payment.TerminalId = slip.TerminalId;
     }
 
     private const string CashError = "Cash received must cover the total, use at most two decimal places, and be below RM 100,000,000.";

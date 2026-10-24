@@ -39,4 +39,21 @@ public class Payment
     public ApplicationUser? Staff { get; set; }
     /// <summary>When payment was recorded, in UTC.</summary>
     public DateTime PaidAtUtc { get; set; }
+
+    // Terminal slip details (card / e-wallet only). Kept on the first payment of a receipt, like CashReceived.
+    // Only masked and reference data is stored: never a full card number or CVC.
+    /// <summary>Card approval code printed by the terminal.</summary>
+    [StringLength(10)] public string? ApprovalCode { get; set; }
+    /// <summary>Card RRN or e-wallet transaction ID printed by the terminal.</summary>
+    [StringLength(30)] public string? TerminalReference { get; set; }
+    /// <summary>Bank or network that processed the payment.</summary>
+    [StringLength(50)] public string? Acquirer { get; set; }
+    /// <summary>Visa or Mastercard.</summary>
+    [StringLength(20)] public string? CardBrand { get; set; }
+    /// <summary>Credit or Debit.</summary>
+    [StringLength(10)] public string? CardType { get; set; }
+    /// <summary>Last four card digits shown on the slip.</summary>
+    [StringLength(4)] public string? CardLast4 { get; set; }
+    /// <summary>The terminal that took the payment.</summary>
+    [StringLength(20)] public string? TerminalId { get; set; }
 }

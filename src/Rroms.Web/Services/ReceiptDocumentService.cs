@@ -81,5 +81,10 @@ public class ReceiptDocumentService(IEmailQueue emails)
         yield return $"Recorded (Malaysia): {MalaysiaTime.FromUtc(r.PaidAtUtc):dd MMM yyyy, h:mm tt}";
         yield return $"Served by: {r.StaffName} · Method: {Money.Method(r.Method)}";
         if(r.Method == Contracts.PaymentMethod.SimulatedOnline) yield return "DEMO ONLY - no real payment processed.";
+        if(r.Terminal is { } slip) {
+            yield return "Bank / network: " + slip.Acquirer;
+            if(slip.IsCard) yield return $"Card: {slip.CardText} · Approval code: {slip.ApprovalCode}";
+            yield return $"{slip.ReferenceLabel}: {slip.Reference} · Terminal ID: {slip.TerminalId}";
+        }
     }
 }

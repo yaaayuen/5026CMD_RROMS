@@ -32,6 +32,17 @@
                 case PaymentMethod.SimulatedOnline: <text>Simulated online (demo)</text> break;
             }
         </dd>
+        @if (Model.Terminal is { } slip)
+        {
+            <dt class="col-sm-3">Bank / network</dt><dd class="col-sm-9">@slip.Acquirer</dd>
+            if (slip.IsCard)
+            {
+                <dt class="col-sm-3">Card</dt><dd class="col-sm-9">@slip.CardText</dd>
+                <dt class="col-sm-3">Approval code</dt><dd class="col-sm-9"><strong>@slip.ApprovalCode</strong></dd>
+            }
+            <dt class="col-sm-3">@slip.ReferenceLabel</dt><dd class="col-sm-9">@slip.Reference</dd>
+            <dt class="col-sm-3">Terminal ID</dt><dd class="col-sm-9">@slip.TerminalId</dd>
+        }
         <dt class="col-sm-3">Status</dt><dd class="col-sm-9"><span class="badge @(Model.Status == PaymentStatus.Paid ? "text-bg-success" : "text-bg-danger")">@Model.Status</span></dd>
     </dl>
     @* A whole-visit receipt lists every order paid together; a single-order receipt lists just one. *@

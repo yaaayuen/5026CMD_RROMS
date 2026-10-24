@@ -1,4 +1,5 @@
 @model decimal
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
 @using Rroms.Web.Contracts
 @using Rroms.Web.Common
 @using System.Globalization
@@ -12,7 +13,26 @@
 }
 </div></fieldset>
 <div class="cash-fields mb-3"><label for="cash-received" class="form-label">Cash received (RM)</label><input type="number" id="cash-received" name="Input.CashReceived" value="@cash" min="0" max="99999999.99" step="0.01" class="form-control" inputmode="decimal" /><div class="d-flex flex-wrap gap-2 my-2"><button type="button" class="btn btn-outline-primary btn-sm" data-cash="0">Exact</button><button type="button" class="btn btn-outline-primary btn-sm" data-cash="10">Next RM 10</button><button type="button" class="btn btn-outline-primary btn-sm" data-cash="50">Next RM 50</button></div><p class="alert alert-success mb-0" aria-live="polite">Change to give: <strong class="cash-change">—</strong></p></div>
+<div class="terminal-fields mb-3" hidden>
+<p class="alert alert-info mb-2">The button sends <strong>@Money.Format(Model)</strong> to the payment terminal. The payment is saved only if the terminal approves it, and its approval code and reference number are printed on the receipt.</p>
+@if (!Env.IsProduction())
+{
+<label class="form-check small"><input type="checkbox" name="Input.SimulateDecline" value="true" class="form-check-input" /> <span class="form-check-label">Test mode: make the terminal decline this payment</span></label>
+}
+</div>
 <button type="submit" class="btn btn-primary w-100 payment-submit">Confirm @Money.Format(Model) paid</button>
 <p class="small text-secondary mt-3 mb-0">The receipt opens after saving. Only an administrator can void a payment.</p>
+<dialog class="terminal-screen" aria-labelledby="terminal-prompt">
+<div class="terminal-device">
+<div class="terminal-brand">@Rroms.Web.Services.SimulatedPaymentTerminal.CardAcquirer</div>
+<div class="terminal-display">
+<p class="terminal-amount">@Money.Format(Model)</p>
+<p id="terminal-prompt" class="terminal-prompt">Tap, insert or swipe card</p>
+<canvas class="terminal-qr" width="140" height="140" hidden role="img" aria-label="Payment QR code"></canvas>
+<p class="terminal-status" aria-live="polite">Waiting for the customer…</p>
+</div>
+<div class="terminal-keys" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+</div>
+</dialog>
 <noscript><p>Select a method and enter cash received for cash payments. Change is checked and shown on the saved receipt.</p></noscript>
 </form>
