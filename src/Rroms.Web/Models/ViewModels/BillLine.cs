@@ -3,6 +3,8 @@ namespace Rroms.Web.Models.ViewModels;
 /// <summary>One bill line using the unit price saved when the order was placed.</summary>
 public class BillLine
 {
+    /// <summary>The order item, so staff can choose it for a dish refund.</summary>
+    public int OrderItemId { get; set; }
     public string DishName { get; set; } = string.Empty;
     public int Quantity { get; set; }
     public decimal UnitPrice { get; set; }

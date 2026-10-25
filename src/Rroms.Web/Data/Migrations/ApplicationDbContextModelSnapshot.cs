@@ -1154,6 +1154,46 @@ namespace Rroms.Web.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Rroms.Web.Models.PaymentRefundLine", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("DishName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("OrderItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PaymentRefundId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderItemId");
+
+                    b.HasIndex("PaymentRefundId");
+
+                    b.ToTable("PaymentRefundLines", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PaymentRefundLines_Amount", "[Amount] >= 0");
+
+                            t.HasCheckConstraint("CK_PaymentRefundLines_Quantity", "[Quantity] > 0");
+                        });
+                });
+
             modelBuilder.Entity("Rroms.Web.Models.Reservation", b =>
                 {
                     b.Property<int>("Id")
@@ -1511,6 +1551,25 @@ namespace Rroms.Web.Data.Migrations
                     b.Navigation("Payment");
                 });
 
+            modelBuilder.Entity("Rroms.Web.Models.PaymentRefundLine", b =>
+                {
+                    b.HasOne("Rroms.Web.Models.OrderItem", "OrderItem")
+                        .WithMany()
+                        .HasForeignKey("OrderItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Rroms.Web.Models.PaymentRefund", "PaymentRefund")
+                        .WithMany("Lines")
+                        .HasForeignKey("PaymentRefundId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("OrderItem");
+
+                    b.Navigation("PaymentRefund");
+                });
+
             modelBuilder.Entity("Rroms.Web.Models.Reservation", b =>
                 {
                     b.HasOne("Rroms.Web.Models.ApplicationUser", "Customer")
@@ -1555,6 +1614,11 @@ namespace Rroms.Web.Data.Migrations
             modelBuilder.Entity("Rroms.Web.Models.Order", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.PaymentRefund", b =>
+                {
+                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("Rroms.Web.Models.Reservation", b =>

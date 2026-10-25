@@ -6,14 +6,19 @@ using Rroms.Web.Models.ViewModels;
 namespace Rroms.Web.Services;
 public partial class BillingService
 {
-    public Task<ServiceResult<PaymentRecordingResult>> RequestRefundAsync(int paymentId, string? reason, string customerId) =>
-        ChangeRefundAsync(paymentId, reason, customerId, RefundStatus.Requested, false);
-    public Task<ServiceResult<PaymentRecordingResult>> RecordRefundAsync(int paymentId, string? reason, string staffId, bool moneyReturned) =>
-        ChangeRefundAsync(paymentId, reason, staffId, RefundStatus.Completed, moneyReturned);
-    public Task<ServiceResult<PaymentRecordingResult>> RejectRefundAsync(int paymentId, string? reason, string staffId) =>
-        ChangeRefundAsync(paymentId, reason, staffId, RefundStatus.Rejected, false);
+    public const string NoRefundLinesMessage = "Choose at least one dish and how many to refund.";
+    public const string InvalidRefundLineMessage = "A chosen dish is not on this receipt, or its refund quantity is more than was ordered.";
 
-    private async Task<ServiceResult<PaymentRecordingResult>> ChangeRefundAsync(int paymentId, string? reason, string actorId, RefundStatus target, bool returned)
+    public Task<ServiceResult<PaymentRecordingResult>> RequestRefundAsync(int paymentId, string? reason, string customerId) =>
+        ChangeRefundAsync(paymentId, reason, customerId, RefundStatus.Requested, false, null);
+    public Task<ServiceResult<PaymentRecordingResult>> RecordRefundAsync(int paymentId, string? reason, string staffId, bool moneyReturned,
+        IReadOnlyCollection<RefundLineInput>? lines = null) =>
+        ChangeRefundAsync(paymentId, reason, staffId, RefundStatus.Completed, moneyReturned, lines);
+    public Task<ServiceResult<PaymentRecordingResult>> RejectRefundAsync(int paymentId, string? reason, string staffId) =>
+        ChangeRefundAsync(paymentId, reason, staffId, RefundStatus.Rejected, false, null);
+
+    private async Task<ServiceResult<PaymentRecordingResult>> ChangeRefundAsync(int paymentId, string? reason, string actorId, RefundStatus target, bool returned,
+        IReadOnlyCollection<RefundLineInput>? lines)
     {
         bool customer = target == RefundStatus.Requested;
         if(customer) {
@@ -29,7 +34,7 @@ public partial class BillingService
         if(payment == null || payment.Status != PaymentStatus.Paid || !PaymentMethods.IsSupported(payment.Method))
             return ServiceResult<PaymentRecordingResult>.Failure("Only an available paid receipt can be refunded.");
         if(target == RefundStatus.Completed && !returned)
-            return ServiceResult<PaymentRecordingResult>.Failure("Confirm that the full amount has been returned.");
+            return ServiceResult<PaymentRecordingResult>.Failure("Confirm that the refund amount has been returned.");
         var group = await _context.Payments.Include(p => p.Order!).ThenInclude(o => o.Customer)
             .Where(p => p.Status == PaymentStatus.Paid && p.Order!.CustomerId == payment.Order!.CustomerId
                 && p.Order.ReservationId == payment.Order.ReservationId
@@ -44,12 +49,26 @@ public partial class BillingService
             return ServiceResult<PaymentRecordingResult>.Failure("This receipt already has a refund decision or request. Refresh to see its status.");
         if(rows.Count == 0 && target == RefundStatus.Rejected)
             return ServiceResult<PaymentRecordingResult>.Failure("There is no pending request to reject.");
+        // Dish refund: work out each payment's share before anything is saved.
+        Dictionary<int, (decimal Amount, List<PaymentRefundLine> Lines)>? chosen = null;
+        if(target == RefundStatus.Completed && lines != null) {
+            var picked = await RefundLinesAsync(group, lines);
+            if(!picked.Succeeded) return ServiceResult<PaymentRecordingResult>.Failure(picked.Errors.ToArray());
+            chosen = picked.Value;
+        }
         DateTime now = DateTime.UtcNow;
         if(rows.Count == 0) {
             Guid batch = Guid.NewGuid();
             rows = group.Select(p => new PaymentRefund { PaymentId = p.Id, Payment = p, BatchId = batch,
                 Amount = p.Amount, Reason = reason, RequestedById = actorId, RequestedAtUtc = now }).ToList();
             _context.Set<PaymentRefund>().AddRange(rows);
+        }
+        if(chosen != null) {
+            foreach(var row in rows) {
+                (decimal Amount, List<PaymentRefundLine> Lines) share = chosen.TryGetValue(row.PaymentId, out var found) ? found : (0m, new List<PaymentRefundLine>());
+                row.Amount = share.Amount;
+                row.Lines.AddRange(share.Lines);
+            }
         }
         foreach(var row in rows) {
             row.Status = target;
@@ -70,14 +89,59 @@ public partial class BillingService
         bool notified = true;
         try {
             string state = target == RefundStatus.Completed ? "recorded" : target == RefundStatus.Rejected ? "rejected" : "requested";
+            string what = target == RefundStatus.Completed
+                ? (chosen != null ? "Refund of " : "Full refund of ") + Money.Format(rows.Sum(r => r.Amount))
+                : "Refund request";
             await _notifications.NotifyUserAsync(payment.Order!.CustomerId, NotificationType.General, "Refund " + state,
-                $"Full refund of {Money.Format(group.Sum(p => p.Amount))} for receipt R-{group[0].Id:D4} {state}.",
+                $"{what} for receipt R-{group[0].Id:D4} {state}.",
                 $"/Customer/Receipts/Details/{group[0].Id}");
         } catch(Exception ex) {
             notified = false;
             _logger.LogError(ex, "Refund for payment {PaymentId} saved but notification failed.", paymentId);
         }
         return ServiceResult<PaymentRecordingResult>.Success(new() { PaymentId = group[0].Id, NotificationSent = notified });
+    }
+
+    /// <summary>
+    /// Turns the chosen dishes into refund amounts per payment. Each dish gets its share of that order's paid total,
+    /// so service charge and tax are refunded with it; a fully refunded order gets back exactly what was paid.
+    /// </summary>
+    private async Task<ServiceResult<Dictionary<int, (decimal Amount, List<PaymentRefundLine> Lines)>>> RefundLinesAsync(
+        List<Payment> group, IReadOnlyCollection<RefundLineInput> lines)
+    {
+        var wanted = lines.Where(l => l.Quantity != 0).ToList();
+        if(wanted.Count == 0)
+            return ServiceResult<Dictionary<int, (decimal, List<PaymentRefundLine>)>>.Failure(NoRefundLinesMessage);
+        var orderIds = group.Select(p => p.OrderId).ToList();
+        var items = await _context.OrderItems.AsNoTracking().Include(i => i.MenuItem)
+            .Where(i => orderIds.Contains(i.OrderId)).ToListAsync();
+        if(wanted.Any(l => l.Quantity < 0) || wanted.GroupBy(l => l.OrderItemId).Any(g => g.Count() > 1)
+            || wanted.Any(l => items.SingleOrDefault(i => i.Id == l.OrderItemId) is not { } item || l.Quantity > item.Quantity))
+            return ServiceResult<Dictionary<int, (decimal, List<PaymentRefundLine>)>>.Failure(InvalidRefundLineMessage);
+
+        var result = new Dictionary<int, (decimal Amount, List<PaymentRefundLine> Lines)>();
+        foreach(Payment p in group) {
+            var orderItems = items.Where(i => i.OrderId == p.OrderId).ToList();
+            decimal itemsTotal = orderItems.Sum(i => i.UnitPrice * i.Quantity);
+            var mine = wanted.Where(l => orderItems.Any(i => i.Id == l.OrderItemId)).ToList();
+            var refundLines = mine.Select(l => {
+                OrderItem item = orderItems.Single(i => i.Id == l.OrderItemId);
+                decimal share = itemsTotal <= 0 ? 0m
+                    : decimal.Round(item.UnitPrice * l.Quantity * p.Amount / itemsTotal, 2, MidpointRounding.AwayFromZero);
+                return new PaymentRefundLine { OrderItemId = item.Id, DishName = item.MenuItem?.Name ?? "Dish",
+                    Quantity = l.Quantity, Amount = share };
+            }).ToList();
+            bool wholeOrder = orderItems.Count > 0 && orderItems.All(i => mine.Any(l => l.OrderItemId == i.Id && l.Quantity == i.Quantity));
+            decimal amount = wholeOrder ? p.Amount : Math.Min(p.Amount, refundLines.Sum(l => l.Amount));
+            if(wholeOrder && refundLines.Count > 0) {
+                // Put any rounding cent on the last line so the lines add up to exactly what was paid.
+                refundLines[^1].Amount += p.Amount - refundLines.Sum(l => l.Amount);
+            }
+            result[p.Id] = (amount, refundLines);
+        }
+        if(result.Values.Sum(v => v.Amount) <= 0)
+            return ServiceResult<Dictionary<int, (decimal, List<PaymentRefundLine>)>>.Failure(NoRefundLinesMessage);
+        return ServiceResult<Dictionary<int, (decimal, List<PaymentRefundLine>)>>.Success(result);
     }
 
     public async Task<RefundList> GetRefundsAsync(string? customerId = null, int page = 1, RefundStatus? status = null)
@@ -89,7 +153,7 @@ public partial class BillingService
         int count = await batches.CountAsync();
         int current = Math.Clamp(page, 1, Math.Max(1, (count + 19) / 20));
         var keys = await batches.OrderByDescending(g => g.Date).ThenBy(g => g.BatchId).Skip((current - 1) * 20).Take(20).Select(g => g.BatchId).ToListAsync();
-        var rows = await query.Where(r => keys.Contains(r.BatchId)).Include(r => r.Payment!).ThenInclude(p => p.Order!).ThenInclude(o => o.Customer).ToListAsync();
+        var rows = await query.Where(r => keys.Contains(r.BatchId)).Include(r => r.Lines).Include(r => r.Payment!).ThenInclude(p => p.Order!).ThenInclude(o => o.Customer).ToListAsync();
         return new RefundList { Total = count, Page = current,
             Rows = rows.GroupBy(r => r.BatchId).Select(g => MapRefund(g.ToList())).OrderByDescending(r => r.RequestedAtUtc).ThenBy(r => r.BatchId).ToList() };
     }
@@ -99,6 +163,8 @@ public partial class BillingService
         return new RefundSummary { BatchId = first.BatchId, PaymentId = first.PaymentId, Amount = rows.Sum(r => r.Amount),
             CustomerName = first.Payment!.Order!.Customer!.FullName, Method = first.Payment.Method, Status = first.Status,
             Reason = first.Reason, RequestedAtUtc = first.RequestedAtUtc, ProcessedAtUtc = first.ProcessedAtUtc,
-            ProcessedById = first.ProcessedById, DecisionReason = first.DecisionReason };
+            ProcessedById = first.ProcessedById, DecisionReason = first.DecisionReason,
+            Lines = rows.SelectMany(r => r.Lines).OrderBy(l => l.OrderItemId)
+                .Select(l => new RefundLineSummary { DishName = l.DishName, Quantity = l.Quantity, Amount = l.Amount }).ToList() };
     }
 }

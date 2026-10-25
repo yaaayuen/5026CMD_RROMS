@@ -7,39 +7,46 @@
     ViewData["Title"] = "Bill for visit #" + Model.Visit.ReservationId;
 }
 <section class="hero hero-compact mb-4">
-    <span class="eyebrow">Three Grills · Bill for the whole visit</span>
-    <h1>Visit #@Model.Visit.ReservationId</h1>
-    <p class="lead mb-0">@Model.Visit.CustomerName · Table @Model.Visit.TableLabel · @Model.Visit.UnpaidOrders.Count unpaid order(s)</p>
+    <span class="eyebrow">Three Grills · Bill</span>
+    <h1>Table @Model.Visit.TableLabel</h1>
+    <p class="lead mb-0">@Model.Visit.CustomerName · Visit #@Model.Visit.ReservationId · @Model.Visit.UnpaidOrders.Count unpaid order(s)</p>
 </section>
 <link rel="stylesheet" href="~/css/billing.css" asp-append-version="true" />
-<section class="tg-card h-auto mb-4">
-    <div asp-validation-summary="All" class="text-danger" role="alert"></div>
-    @if (Model.Visit.UnpaidOrders.Count == 0)
-    {
+@if (Model.Visit.UnpaidOrders.Count == 0)
+{
+    <section class="tg-card h-auto mb-4">
+        <div asp-validation-summary="All" class="text-danger" role="alert"></div>
         <div class="alert alert-success">@BillingService.NothingToPayMessage</div>
-    }
-    else
-    {
-        foreach (var bill in Model.Visit.UnpaidOrders)
-        {
-            <partial name="~/Pages/Shared/_BillingLines.cshtml" model="bill" />
-            if (bill.Status != OrderStatus.Completed)
+    </section>
+}
+else
+{
+    @* Like a restaurant till: the table's bill on the left, taking payment on the right (stacks on small screens). *@
+    <div class="billing-columns mb-4">
+        <section class="tg-card h-auto" aria-label="Bill">
+            @foreach (var bill in Model.Visit.UnpaidOrders)
             {
-                <p class="text-warning small">Order #@bill.OrderId is still @bill.Status in the kitchen.</p>
+                <partial name="~/Pages/Shared/_BillingLines.cshtml" model="bill" />
+                if (bill.Status != OrderStatus.Completed)
+                {
+                    <p class="text-warning small">Order #@bill.OrderId is still @bill.Status in the kitchen.</p>
+                }
             }
-        }
-        <p class="h4 text-end">Visit total: @Money.Format(Model.Visit.Total)</p>
-
-        if (!Model.Visit.ReadyToPay)
-        {
-            <div class="alert alert-warning">@BillingService.VisitNotReadyMessage</div><a asp-area="Staff" asp-page="/Orders/Index">Kitchen orders</a>
-        }
-        else
-        {
-            <partial name="~/Pages/Shared/_TakePayment.cshtml" model="Model.Visit.Total" />
-        }
-    }
-</section>
+            <p class="h4 text-end">@(Model.Visit.UnpaidOrders.Count > 1 ? "Visit total" : "Bill total"): @Money.Format(Model.Visit.Total)</p>
+        </section>
+        <section class="tg-card h-auto billing-pay-panel">
+            <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+            @if (!Model.Visit.ReadyToPay)
+            {
+                <div class="alert alert-warning">@BillingService.VisitNotReadyMessage</div><a asp-area="Staff" asp-page="/Orders/Index" class="btn btn-outline-primary">Kitchen orders</a>
+            }
+            else
+            {
+                <partial name="~/Pages/Shared/_TakePayment.cshtml" model="Model.Visit.Total" />
+            }
+        </section>
+    </div>
+}
 <a asp-page="Index">Back to billing</a>
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

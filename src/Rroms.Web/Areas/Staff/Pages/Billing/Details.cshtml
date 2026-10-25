@@ -26,6 +26,11 @@
     {
         <div class="alert alert-warning">@BillingService.NotCompletedMessage Current status: @Model.Bill.Status.</div><a asp-area="Staff" asp-page="/Orders/Index" class="btn btn-outline-primary">Kitchen orders</a>
     }
+    else if (Model.UnpaidOrdersOnVisit > 1)
+    {
+        <div class="alert alert-info">This table has @Model.UnpaidOrdersOnVisit unpaid orders. They are paid together on one bill.</div>
+        <a asp-page="Visit" asp-route-id="@Model.Bill.ReservationId" class="btn btn-primary w-100">Take payment for the table</a>
+    }
     else
     {
             <partial name="~/Pages/Shared/_TakePayment.cshtml" model="Model.Bill.TotalAmount" />

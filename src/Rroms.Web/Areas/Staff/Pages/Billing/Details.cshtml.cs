@@ -17,6 +17,8 @@ public class DetailsModel : PageModel
         _billing = billing;
     }
     public BillSummary Bill { get; private set; } = new BillSummary();
+    /// <summary>Unpaid orders on this order's visit; with more than one, staff bill the whole table instead.</summary>
+    public int UnpaidOrdersOnVisit { get; private set; }
     [BindProperty]
     public RecordPaymentInput Input { get; set; } = new RecordPaymentInput();
     /// <summary>Generates the bill view; displaying it never creates a payment.</summary>
@@ -28,6 +30,7 @@ public class DetailsModel : PageModel
             return NotFound();
         }
         Bill = bill;
+        UnpaidOrdersOnVisit = (await _billing.GetVisitBillAsync(bill.ReservationId))?.UnpaidOrders.Count ?? 0;
         return Page();
     }
     /// <summary>Validates the form and records payment; Razor Pages checks its antiforgery token.</summary>

@@ -71,9 +71,10 @@ public class ReceiptDocumentService(IEmailQueue emails)
             if(r.VoidedAtUtc.HasValue) yield return $"Voided (Malaysia): {MalaysiaTime.FromUtc(r.VoidedAtUtc.Value):dd MMM yyyy, h:mm tt}";
         }
         if(r.Refund is { } refund) {
-            yield return "REFUND " + refund.Status.ToString().ToUpperInvariant() + ": " + Money.Format(refund.Amount);
+            yield return "REFUND " + refund.Status.ToString().ToUpperInvariant() + (refund.Status == Contracts.RefundStatus.Requested ? "" : ": " + Money.Format(refund.Amount));
             yield return "Request reason: " + refund.Reason;
             if(refund.ProcessedAtUtc.HasValue) yield return $"Decision (Malaysia): {MalaysiaTime.FromUtc(refund.ProcessedAtUtc.Value):dd MMM yyyy, h:mm tt} — {refund.DecisionReason}";
+            foreach(var line in refund.Lines) yield return $"Refunded: {line.DishName} x {line.Quantity} -{Money.Format(line.Amount)}";
             if(refund.Status == Contracts.RefundStatus.Completed) yield return "Net paid after refund: " + Money.Format(r.NetPaid);
         }
         yield return $"Database ID: {r.PaymentId}";

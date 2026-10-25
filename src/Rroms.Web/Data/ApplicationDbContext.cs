@@ -164,5 +164,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             refund.Property(r => r.Status).HasConversion<string>().HasMaxLength(20).IsConcurrencyToken();
             refund.ToTable("PaymentRefunds", t => t.HasCheckConstraint("CK_PaymentRefund_Amount", "[Amount] >= 0"));
         });
+        builder.Entity<PaymentRefundLine>(line => {
+            line.HasOne(l => l.PaymentRefund).WithMany(r => r.Lines).HasForeignKey(l => l.PaymentRefundId).OnDelete(DeleteBehavior.Cascade);
+            // Restrict: an order item that has been refunded can never be deleted.
+            line.HasOne(l => l.OrderItem).WithMany().HasForeignKey(l => l.OrderItemId).OnDelete(DeleteBehavior.Restrict);
+            line.Property(l => l.Amount).HasPrecision(18, 2);
+            line.ToTable("PaymentRefundLines", t => {
+                t.HasCheckConstraint("CK_PaymentRefundLines_Quantity", "[Quantity] > 0");
+                t.HasCheckConstraint("CK_PaymentRefundLines_Amount", "[Amount] >= 0");
+            });
+        });
     }
 }
