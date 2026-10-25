@@ -1,25 +1,51 @@
 ﻿@page
 @model IndexModel
+@using Rroms.Web.Common
 @using Rroms.Web.Models
+@using Rroms.Web.Services
 @{
 	ViewData["Title"] = "Menu items";
 }
+
+<style>
+	.am-tile { width: 56px; height: 56px; border-radius: 12px; display: grid; place-items: center; color: #fff;
+		font: 800 1.4rem Georgia, serif; background: linear-gradient(135deg, #d81159, #ff8c42); }
+	.am-was { text-decoration: line-through; color: #6c757d; margin-right: .25rem; }
+	.am-switch { display: inline-flex; align-items: center; gap: .5rem; border: 0; background: none; padding: 0; font-weight: 600; cursor: pointer; }
+	.am-track { width: 40px; height: 22px; border-radius: 99px; background: #adb5bd; position: relative; display: inline-block; transition: background .15s; }
+	.am-track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .15s; }
+	.am-switch[aria-checked="true"] .am-track { background: #0f7b6c; }
+	.am-switch[aria-checked="true"] .am-track::after { left: 21px; }
+	.am-bin { width: 36px; height: 36px; padding: 0; border-radius: 50%; line-height: 1; }
+	.am-dialog { border: 0; border-radius: 18px; padding: 1.5rem; max-width: 440px; width: 92vw; box-shadow: 0 10px 40px rgba(0,0,0,.3); }
+	.am-dialog::backdrop { background: rgba(30, 15, 30, .45); }
+</style>
 
 <section class="hero hero-compact mb-4" aria-labelledby="menu-heading">
 	<span class="hero-bubble one" aria-hidden="true"></span>
 	<div class="position-relative">
 		<span class="eyebrow">Menu</span>
 		<h1 id="menu-heading" class="mb-1">Menu items</h1>
-		<p class="lead mb-0">Dishes, prices, availability, and photos.</p>
+		<p class="lead mb-0">Dishes, prices, availability and photos.</p>
 	</div>
 </section>
 
 <section class="tg-card h-auto" aria-labelledby="list-heading">
 	<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
-		<h2 id="list-heading" class="h4 mb-0">All dishes</h2>
+		<h2 id="list-heading" class="h4 mb-0">
+			All dishes (@Model.Items.Count)
+			@if (Model.IsFiltered)
+			{
+				<small class="text-secondary fs-6 fw-normal">of @Model.TotalCount</small>
+			}
+		</h2>
 
 		<div class="d-flex flex-wrap align-items-end gap-3">
-			<form method="get" class="d-flex align-items-end gap-2">
+			<form method="get" class="d-flex flex-wrap align-items-end gap-2">
+				<div>
+					<label for="searchBox" class="form-label fw-semibold mb-1">Search</label>
+					<input id="searchBox" name="q" type="search" class="form-control" placeholder="Name or code" value="@Model.Search" />
+				</div>
 				<div>
 					<label for="categoryFilter" class="form-label fw-semibold mb-1">Category</label>
 					<select id="categoryFilter" name="categoryId" class="form-select">
@@ -30,6 +56,14 @@
 						}
 					</select>
 				</div>
+				<div>
+					<label for="statusFilter" class="form-label fw-semibold mb-1">Status</label>
+					<select id="statusFilter" name="status" class="form-select">
+						<option value="">Any status</option>
+						<option value="available" selected="@(Model.Status == IndexModel.StatusAvailable)">Available</option>
+						<option value="unavailable" selected="@(Model.Status == IndexModel.StatusUnavailable)">Unavailable</option>
+					</select>
+				</div>
 				<button type="submit" class="btn btn-outline-primary">Filter</button>
 			</form>
 
@@ -37,9 +71,13 @@
 		</div>
 	</div>
 
-	@if (Model.Items.Count == 0)
+	@if (Model.TotalCount == 0)
 	{
 		<p class="text-secondary mb-0">No dishes yet. Use "Add a dish" to create the first one.</p>
+	}
+	else if (Model.Items.Count == 0)
+	{
+		<p class="text-secondary mb-0">No dishes match your search. <a asp-page="/Menu/Index">Clear the filters</a>.</p>
 	}
 	else
 	{
@@ -51,7 +89,7 @@
 						<th scope="col">Code</th>
 						<th scope="col">Dish</th>
 						<th scope="col">Category</th>
-						<th scope="col">Price (RM)</th>
+						<th scope="col">Price now (RM)</th>
 						<th scope="col">Status</th>
 						<th scope="col"><span class="visually-hidden">Actions</span></th>
 					</tr>
@@ -60,24 +98,28 @@
 					@foreach (MenuItem item in Model.Items)
 					{
 						string? photoUrl = Model.GetPhotoUrl(item);
-						bool offerActive = Model.IsOfferActive(item);
+						PriceQuote quote = Model.GetQuote(item);
 
 						<tr>
 							<td>
 								@if (photoUrl != null)
 								{
-									<img src="@photoUrl" alt="Photo of @item.Name" width="64" height="64" class="rounded" style="object-fit: cover;" />
+									<img src="@photoUrl" alt="Photo of @item.Name" width="56" height="56" class="rounded" style="object-fit: cover;" />
+								}
+								else
+								{
+									<div class="am-tile" aria-hidden="true">@Model.GetLetter(item)</div>
 								}
 							</td>
 							<td>@item.Code</td>
 							<th scope="row">@item.Name</th>
 							<td>@item.MenuCategory?.Name</td>
 							<td>
-								@if (offerActive)
+								@if (quote.IsOffer)
 								{
-									<span class="text-decoration-line-through text-secondary">@item.Price.ToString("N2")</span>
-									<strong>@Model.GetCurrentPrice(item).ToString("N2")</strong>
-									<span class="badge text-bg-warning">Offer</span>
+									<span class="am-was">@item.Price.ToString("N2")</span>
+									<strong>@quote.Price.ToString("N2")</strong>
+									<span class="badge text-bg-warning" title="@(quote.Label ?? quote.Note)">@quote.Badge</span>
 								}
 								else
 								{
@@ -85,26 +127,21 @@
 								}
 							</td>
 							<td>
-								@if (item.IsAvailable)
-								{
-									<span class="badge text-bg-success">Available</span>
-								}
-								else
-								{
-									<span class="badge text-bg-secondary">Unavailable</span>
-								}
+								<form method="post" asp-page-handler="Toggle" asp-route-id="@item.Id" asp-route-categoryId="@Model.CategoryId" asp-route-q="@Model.Search" asp-route-status="@Model.Status" class="d-inline">
+									<input type="hidden" name="makeAvailable" value="@(item.IsAvailable ? "false" : "true")" />
+									<button type="submit" class="am-switch" role="switch" aria-checked="@(item.IsAvailable ? "true" : "false")"
+											title="@(item.IsAvailable ? "Click to stop ordering this dish" : "Click to allow ordering this dish")">
+										<span class="am-track" aria-hidden="true"></span>
+										<span>@(item.IsAvailable ? "Available" : "Unavailable")</span>
+									</button>
+								</form>
 							</td>
 							<td class="text-end text-nowrap">
 								<a class="btn btn-sm btn-outline-primary" asp-page="/Menu/Edit" asp-route-id="@item.Id">Edit</a>
 
-								<form method="post" asp-page-handler="Toggle" asp-route-id="@item.Id" asp-route-categoryId="@Model.CategoryId" class="d-inline">
-									<input type="hidden" name="makeAvailable" value="@(item.IsAvailable ? "false" : "true")" />
-									<button type="submit" class="btn btn-sm btn-outline-secondary">@(item.IsAvailable ? "Mark unavailable" : "Mark available")</button>
-								</form>
-
-								<form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" asp-route-categoryId="@Model.CategoryId" class="d-inline"
-									  onsubmit="return confirm('Delete this dish? This cannot be undone.');">
-									<button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+								<form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" asp-route-categoryId="@Model.CategoryId" asp-route-q="@Model.Search" asp-route-status="@Model.Status"
+									  class="d-inline js-delete-form" data-dish="@item.Name">
+									<button type="submit" class="btn btn-outline-danger am-bin" title="Delete" aria-label="Delete @item.Name">&#128465;</button>
 								</form>
 							</td>
 						</tr>
@@ -112,5 +149,52 @@
 				</tbody>
 			</table>
 		</div>
+
+		<p class="text-secondary small mb-0">The price column shows what customers pay now. The tag says whether a promotion or an offer is applied. Discounts are set on the Promotions page.</p>
 	}
 </section>
+
+<dialog id="deleteDialog" class="am-dialog" aria-labelledby="deleteTitle">
+	<h2 id="deleteTitle" class="h4 mb-2">Delete this dish?</h2>
+	<p class="text-secondary mb-3">
+		This removes <strong id="deleteName"></strong> from the menu, with its photo. This cannot be undone.
+		A dish that customers have already ordered cannot be deleted: mark it unavailable instead.
+	</p>
+	<div class="text-end">
+		<button type="button" id="deleteCancel" class="btn btn-outline-primary">Keep it</button>
+		<button type="button" id="deleteConfirm" class="btn btn-danger">Yes, delete</button>
+	</div>
+</dialog>
+
+<script>
+	(function () {
+		var dialog = document.getElementById('deleteDialog');
+		if (!dialog || typeof dialog.showModal !== 'function') { return; }
+
+		var pending = null;
+		var forms = document.querySelectorAll('.js-delete-form');
+
+		forms.forEach(function (form) {
+			form.addEventListener('submit', function (event) {
+				if (form.dataset.confirmed === 'yes') { return; }
+				event.preventDefault();
+				pending = form;
+				document.getElementById('deleteName').textContent = form.dataset.dish || 'this dish';
+				dialog.showModal();
+			});
+		});
+
+		document.getElementById('deleteCancel').addEventListener('click', function () {
+			pending = null;
+			dialog.close();
+		});
+
+		document.getElementById('deleteConfirm').addEventListener('click', function () {
+			if (pending) {
+				pending.dataset.confirmed = 'yes';
+				pending.requestSubmit();
+			}
+			dialog.close();
+		});
+	})();
+</script>
