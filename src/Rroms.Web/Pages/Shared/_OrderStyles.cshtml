@@ -1,0 +1,503 @@
+<style>
+	.ox-page {
+		padding-bottom: 6.5rem;
+	}
+
+	.ox-num {
+		font-variant-numeric: lining-nums tabular-nums;
+	}
+
+	.ox-pills {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.ox-pill {
+		background: rgba(255, 255, 255, 0.22);
+		border-radius: var(--tg-radius-pill);
+		padding: 0.3rem 0.85rem;
+		font-weight: 700;
+	}
+
+	.ox-diet-banner {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem 1rem;
+		align-items: center;
+		background: var(--tg-peach);
+		border-left: 5px solid var(--tg-coral);
+		border-radius: 0.75rem;
+		padding: 0.75rem 1rem;
+		margin-bottom: 1.5rem;
+	}
+
+		.ox-diet-banner a {
+			font-weight: 700;
+		}
+
+	.ox-chips {
+		position: sticky;
+		top: 0;
+		z-index: 1020;
+		display: flex;
+		gap: 0.5rem;
+		overflow-x: auto;
+		padding: 0.6rem 0;
+		margin-bottom: 1rem;
+		background: var(--tg-cream);
+	}
+
+	.ox-chip {
+		white-space: nowrap;
+		border: 1px solid var(--bs-border-color);
+		border-radius: var(--tg-radius-pill);
+		padding: 0.35rem 1rem;
+		font-weight: 700;
+		text-decoration: none;
+		color: var(--tg-ink);
+		background: var(--tg-surface);
+	}
+
+		.ox-chip:hover {
+			border-color: var(--tg-raspberry);
+			color: var(--tg-link);
+		}
+
+		.ox-chip.is-active {
+			background: var(--tg-raspberry);
+			border-color: var(--tg-raspberry);
+			color: var(--tg-on-brand);
+		}
+
+	.ox-cat {
+		scroll-margin-top: 4.5rem;
+	}
+
+	.ox-rec .ox-add {
+		border: 2px solid var(--tg-link);
+		background: transparent;
+		color: var(--tg-link);
+		border-radius: var(--tg-radius-pill);
+		font-weight: 700;
+		padding: 0.2rem 0.9rem;
+	}
+
+		.ox-rec .ox-add:hover {
+			background: var(--tg-blush);
+		}
+
+	.ox-dish {
+		display: flex;
+		flex-direction: column;
+	}
+
+		.ox-dish.has-warning {
+			border: 2px solid var(--tg-coral);
+		}
+
+		.ox-dish.is-in {
+			box-shadow: 0 0 0 3px var(--tg-raspberry), var(--tg-shadow);
+		}
+
+	.ox-photo {
+		position: relative;
+		height: 12rem;
+		margin-bottom: 1rem;
+		border-radius: var(--bs-border-radius);
+		overflow: hidden;
+		background: var(--tg-gradient);
+		display: grid;
+		place-items: center;
+	}
+
+		.ox-photo img {
+			position: absolute;
+			inset: 0;
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+			display: block;
+		}
+
+	.ox-ph {
+		font-family: var(--tg-font-heading);
+		font-size: 3rem;
+		font-weight: 800;
+		color: rgba(255, 255, 255, 0.85);
+	}
+
+	.ox-offer {
+		position: absolute;
+		top: 0.6rem;
+		left: 0.6rem;
+		background: var(--tg-gold);
+		color: var(--tg-on-gold);
+		font-size: 0.75rem;
+		font-weight: 800;
+		border-radius: var(--tg-radius-pill);
+		padding: 0.2rem 0.65rem;
+	}
+
+	.ox-body {
+		flex: 1 1 auto;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.ox-desc {
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+
+	.ox-tag-avoid {
+		border-color: var(--tg-coral) !important;
+	}
+
+	.ox-warn {
+		color: #9a4a10;
+		font-weight: 700;
+		font-size: 0.9rem;
+	}
+
+	[data-bs-theme="dark"] .ox-warn {
+		color: #ffb27a;
+	}
+
+	.ox-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		flex-wrap: wrap;
+		margin-top: auto;
+		padding-top: 0.5rem;
+	}
+
+	.ox-step {
+		display: inline-flex;
+		align-items: center;
+		border: 1px solid var(--bs-border-color);
+		border-radius: var(--tg-radius-pill);
+		overflow: hidden;
+		background: var(--tg-surface);
+	}
+
+	.ox-stepbtn {
+		width: 2.4rem;
+		height: 2.4rem;
+		border: 0;
+		background: var(--tg-blush);
+		color: var(--tg-link);
+		font-size: 1.25rem;
+		font-weight: 800;
+		line-height: 1;
+	}
+
+		.ox-stepbtn:hover {
+			background: var(--tg-raspberry);
+			color: var(--tg-on-brand);
+		}
+
+	.ox-qty {
+		width: 3rem;
+		border: 0;
+		text-align: center;
+		font-weight: 800;
+		background: transparent;
+		color: var(--tg-ink);
+		-moz-appearance: textfield;
+		font-variant-numeric: lining-nums tabular-nums;
+	}
+
+		.ox-qty::-webkit-outer-spin-button, .ox-qty::-webkit-inner-spin-button {
+			-webkit-appearance: none;
+			margin: 0;
+		}
+
+	.ox-link {
+		border: 0;
+		background: transparent;
+		padding: 0;
+		color: var(--tg-link);
+		font-weight: 700;
+		text-decoration: underline;
+	}
+
+	.ox-step-sm .ox-stepbtn {
+		width: 1.9rem;
+		height: 1.9rem;
+	}
+
+	.ox-line-qty {
+		min-width: 1.6rem;
+		text-align: center;
+		font-weight: 800;
+	}
+
+	/* Lift the "Ask Three Grills" chat button above the order bar so the two never overlap on this page. */
+	.chat-launcher {
+		bottom: 4.75rem !important;
+	}
+
+	.ox-bar {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 1030;
+		background: var(--tg-surface);
+		box-shadow: 0 -8px 24px rgba(43, 45, 66, 0.15);
+		border-top: 3px solid var(--tg-raspberry);
+	}
+
+	.ox-bar-in {
+		max-width: 1140px;
+		margin: 0 auto;
+		padding: 0.7rem 1rem;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.ox-bar-sum {
+		flex: 1 1 auto;
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		border: 0;
+		background: transparent;
+		color: var(--tg-ink);
+		text-align: left;
+		font-weight: 700;
+	}
+
+	.ox-bar-total {
+		font-size: 1.25rem;
+		font-weight: 800;
+	}
+
+	.ox-bar-view {
+		color: var(--tg-link);
+		text-decoration: underline;
+	}
+
+	.ox-drawer, .ox-modal {
+		border: 0;
+		padding: 0;
+		color: var(--tg-ink);
+		background: var(--tg-surface);
+		box-shadow: var(--tg-shadow-hover);
+	}
+
+		.ox-drawer::backdrop, .ox-modal::backdrop {
+			background: rgba(20, 20, 31, 0.55);
+		}
+
+	.ox-drawer {
+		margin: 0 0 0 auto;
+		height: 100vh;
+		max-height: 100vh;
+		width: min(26rem, 100vw);
+		border-radius: var(--tg-radius) 0 0 var(--tg-radius);
+	}
+
+		.ox-drawer[open] {
+			display: flex;
+			flex-direction: column;
+		}
+
+	.ox-drawer-head {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 1.25rem 1.5rem;
+		border-bottom: 1px solid var(--bs-border-color);
+	}
+
+	.ox-drawer-scroll {
+		flex: 1 1 auto;
+		overflow-y: auto;
+		padding: 0 1.5rem;
+	}
+
+	.ox-drawer-foot {
+		padding: 1.25rem 1.5rem 1.5rem;
+		background: var(--tg-cream);
+		border-top: 1px solid var(--bs-border-color);
+	}
+
+	.ox-total-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+	}
+
+		.ox-total-row strong {
+			font-family: var(--tg-font-heading);
+			font-size: 1.75rem;
+		}
+
+	.ox-place {
+		width: 100%;
+		border: 0;
+		border-radius: var(--tg-radius-pill);
+		padding: 0.8rem 1.4rem;
+		font-weight: 700;
+		color: var(--tg-on-brand);
+		background: linear-gradient(120deg, var(--tg-raspberry), var(--tg-coral));
+		box-shadow: 0 6px 16px rgba(216, 17, 89, 0.25);
+	}
+
+		.ox-place:disabled {
+			opacity: 0.7;
+		}
+
+	.ox-modal {
+		width: min(30rem, 92vw);
+		border-radius: var(--tg-radius);
+	}
+
+	.ox-modal-in {
+		position: relative;
+		padding: 1.5rem;
+	}
+
+	.ox-modal-photo {
+		margin: -1.5rem -1.5rem 1rem;
+		height: 12rem;
+		overflow: hidden;
+	}
+
+		.ox-modal-photo img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+			display: block;
+		}
+
+	.ox-close {
+		border: 0;
+		background: var(--tg-blush);
+		color: var(--tg-link);
+		width: 2.2rem;
+		height: 2.2rem;
+		border-radius: 50%;
+		font-size: 1.3rem;
+		line-height: 1;
+	}
+
+	.ox-modal-x {
+		position: absolute;
+		top: 0.75rem;
+		right: 0.75rem;
+		z-index: 1;
+	}
+
+	.ox-lines {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+	}
+
+	.ox-line {
+		display: grid;
+		grid-template-columns: 3.25rem 1fr auto;
+		column-gap: 0.75rem;
+		row-gap: 0.25rem;
+		align-items: start;
+		padding: 0.85rem 0;
+		border-bottom: 1px solid var(--bs-border-color);
+	}
+
+	.ox-line-thumb {
+		grid-row: 1 / span 2;
+		width: 3.25rem;
+		height: 3.25rem;
+		border-radius: 0.75rem;
+		overflow: hidden;
+		background: var(--tg-gradient);
+		color: rgba(255, 255, 255, 0.9);
+		display: grid;
+		place-items: center;
+		font-family: var(--tg-font-heading);
+		font-size: 1.4rem;
+		font-weight: 800;
+	}
+
+		.ox-line-thumb img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+			display: block;
+		}
+
+	.ox-line-info {
+		grid-row: 1 / span 2;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.1rem;
+	}
+
+	.ox-line-name {
+		font-weight: 700;
+	}
+
+	.ox-line-meta {
+		font-size: 0.85rem;
+		color: var(--tg-muted);
+	}
+
+		.ox-line-meta s {
+			margin-left: 0.2rem;
+		}
+
+	.ox-line-note {
+		font-size: 0.85rem;
+		font-weight: 700;
+		color: var(--tg-link);
+	}
+
+	.ox-line-amt {
+		grid-column: 3;
+		grid-row: 1;
+		text-align: right;
+		font-weight: 800;
+	}
+
+	.ox-line .ox-step {
+		grid-column: 3;
+		grid-row: 2;
+		justify-self: end;
+	}
+
+	@@media (max-width: 575.98px) {
+		.ox-bar-view {
+			display: none;
+		}
+
+		.ox-bar-cancel {
+			display: none;
+		}
+
+		.ox-drawer {
+			width: 100vw;
+			border-radius: 0;
+		}
+	}
+
+	@@media (prefers-reduced-motion: reduce) {
+		.ox-dish {
+			transition: none;
+		}
+	}
+
+	/* Menu ordering view (YJ-3): the "Adding to" line above the order bar, the badge and the ordering strip. */
+	.ox-bar-in { flex-wrap: wrap; }
+	.ox-adding { flex: 1 0 100%; margin: 0; }
+	.ox-ordered { display: inline-block; margin: 0 0 0.35rem; padding: 0.15rem 0.6rem; border-radius: var(--tg-radius-pill); background: var(--tg-peach); font-weight: 700; font-size: 0.85rem; }
+	.ox-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; }
+	.ox-offer-note { font-size: 0.8rem; margin: 0 0 0.35rem; }
+</style>

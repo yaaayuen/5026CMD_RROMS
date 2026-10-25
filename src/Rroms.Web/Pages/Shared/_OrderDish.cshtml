@@ -1,0 +1,119 @@
+﻿@model Rroms.Web.Models.ViewModels.OrderDishView
+@using System.Globalization
+@using Rroms.Web.Models.ViewModels
+@{
+    var dish = Model.Dish;
+    var avoided = Model.Avoided;
+    var row = Model.Row;
+    var initial = string.IsNullOrEmpty(dish.Name) ? "?" : dish.Name.Substring(0, 1).ToUpperInvariant();
+}
+<article class="tg-card ox-dish h-100 @(dish.CanOrder ? "" : "opacity-75") @(avoided.Count > 0 ? "has-warning" : "")"
+		 data-dish="@dish.Id"
+		 data-name="@dish.Name"
+		 data-code="@dish.Code"
+		 data-desc="@dish.Description"
+		 data-photo="@dish.PhotoUrl"
+		 data-price-text="RM @dish.CurrentPrice.ToString("N2")"
+		 data-was="@(dish.IsOfferActive ? "RM " + dish.NormalPrice.ToString("N2") : "")"
+		 data-tags="@string.Join("|", dish.DietaryTags)"
+		 data-avoid="@string.Join("|", avoided)"
+		 data-can-order="@(dish.CanOrder ? "1" : "0")">
+	<div class="ox-photo">
+		@if (!string.IsNullOrEmpty(dish.PhotoUrl))
+		{
+			<img src="@dish.PhotoUrl" alt="" loading="lazy" />
+		}
+		else
+		{
+			<span class="ox-ph" aria-hidden="true">@initial</span>
+		}
+		@if (dish.IsOfferActive)
+		{
+			<span class="ox-offer">@dish.OfferBadge</span>
+		}
+	</div>
+
+	<div class="ox-body">
+		<h3 class="h5 mb-1">
+			@if (!string.IsNullOrEmpty(dish.Code))
+			{
+				<span class="small fw-semibold text-secondary me-2">@dish.Code</span>
+			}
+			@dish.Name
+		</h3>
+		<p class="text-secondary small mb-2 ox-desc">@dish.Description</p>
+
+		@* The badge is only written when some reservation of this customer has ordered the dish; the Menu page script
+		   switches its number when the customer changes reservation. *@
+		@if (Model.ShowAlreadyOrdered && !string.IsNullOrEmpty(Model.OrderedByReservation))
+		{
+			<p class="mb-1">
+				<span class="ox-ordered" data-ordered-badge="@Model.OrderedByReservation" data-label="Already ordered: " @(Model.AlreadyOrdered > 0 ? "" : "hidden")>@(Model.AlreadyOrdered > 0 ? "Already ordered: " + Model.AlreadyOrdered : "")</span>
+			</p>
+		}
+
+		<p class="mb-1 ox-num">
+			@if (dish.IsOfferActive)
+			{
+				<span class="text-decoration-line-through text-secondary">RM @dish.NormalPrice.ToString("N2")</span>
+				<strong>RM @dish.CurrentPrice.ToString("N2")</strong>
+			}
+			else
+			{
+				<strong>RM @dish.CurrentPrice.ToString("N2")</strong>
+			}
+		</p>
+
+			@if (!string.IsNullOrEmpty(dish.OfferNote))
+			{
+				<p class="text-secondary ox-offer-note">@dish.OfferNote</p>
+			}
+
+		@if (dish.DietaryTags.Count > 0)
+		{
+			<p class="mb-1">
+				@foreach (string tagName in dish.DietaryTags)
+				{
+					<span class="badge text-bg-light border @(avoided.Contains(tagName) ? "ox-tag-avoid" : "")">@tagName</span>
+				}
+			</p>
+		}
+
+		@if (avoided.Count > 0)
+		{
+			<p class="ox-warn mb-1">&#9888; Contains @string.Join(", ", avoided) (on your avoid list)</p>
+		}
+
+		<div class="ox-actions">
+			@if (dish.CanOrder)
+			{
+				<input type="hidden" name="Lines[@row].MenuItemId" value="@dish.Id" />
+				<label for="quantity-@dish.Id" class="visually-hidden">Quantity of @dish.Name</label>
+				<div class="ox-step" role="group" aria-label="Quantity of @dish.Name">
+					<button type="button" class="ox-stepbtn" data-step="-1" data-target="quantity-@dish.Id" aria-label="One less @dish.Name">&minus;</button>
+					<input id="quantity-@dish.Id" type="number" name="Lines[@row].Quantity" class="ox-qty"
+						   min="0" max="@Model.MaxQuantity" value="@Model.Quantity" inputmode="numeric"
+						   data-price="@dish.CurrentPrice.ToString(CultureInfo.InvariantCulture)" data-name="@dish.Name" />
+					<button type="button" class="ox-stepbtn" data-step="1" data-target="quantity-@dish.Id" aria-label="One more @dish.Name">+</button>
+				</div>
+				<button type="button" class="ox-link" data-note-toggle="note-@dish.Id">Add a note</button>
+			}
+			else
+			{
+				<span class="badge text-bg-secondary">Unavailable</span>
+			}
+			<button type="button" class="ox-link ms-auto" data-detail="@dish.Id">Details</button>
+		</div>
+
+		@if (dish.CanOrder)
+		{
+			string existingNote = Model.Note;
+
+			<div class="ox-note" id="note-wrap-@dish.Id" @(string.IsNullOrEmpty(existingNote) ? "hidden" : "")>
+				<label for="note-@dish.Id" class="visually-hidden">Note for @dish.Name</label>
+				<input id="note-@dish.Id" type="text" name="Lines[@row].Notes" class="form-control form-control-sm mt-2"
+					   maxlength="@Model.MaxLineNoteLength" placeholder="Note for this dish (optional)" value="@existingNote" />
+			</div>
+		}
+	</div>
+</article>

@@ -1,12 +1,29 @@
-﻿@page
+@page
 @model Rroms.Web.Pages.Menu.IndexModel
 @using Rroms.Web.Models
 @using Rroms.Web.Models.ViewModels
 @{
 	ViewData["Title"] = "Our menu";
+
+	// Only dishes that can be ordered get a quantity box. Their rows must be numbered 0, 1, 2, ... with no gaps,
+	// because ASP.NET Core stops reading a list at the first missing number.
+	List<MenuItemCard> orderable = Model.Dishes.Where(dish => dish.CanOrder).ToList();
+
+	OrderBarView barView = new OrderBarView
+	{
+		AddingTo = Model.Selected == null ? null : Model.Describe(Model.Selected),
+		MaxOrderNoteLength = Model.MaxOrderNoteLength,
+		Notes = Model.Notes
+	};
+}
+
+@if (Model.OrderingOn)
+{
+	<partial name="_OrderStyles" />
 }
 
 <style>
+	.mn-ph { height: 12rem; margin-bottom: 1rem; border-radius: var(--bs-border-radius); background: var(--tg-gradient); display: grid; place-items: center; font-family: var(--tg-font-heading); font-size: 3rem; font-weight: 800; color: rgba(255, 255, 255, 0.85); }
 	.promo-banner { background: linear-gradient(135deg, #d81159, #ff8c42); color: #fff; border-radius: 14px; padding: .85rem 1.25rem; font-weight: 700; }
 </style>
 
@@ -21,13 +38,63 @@
 
 @foreach (string promotion in Model.Promotions)
 {
-	<div class="promo-banner mb-3" role="status">🎉 @promotion</div>
+	<div class="promo-banner mb-3" role="status">&#127881; @promotion</div>
+}
+
+@if (!Model.IsSignedIn)
+{
+	<section class="tg-card h-auto mb-4" aria-label="Order from the menu">
+		<p class="mb-0">
+			Hungry? <a class="btn btn-primary ms-2" href="/Account/Login?returnUrl=%2FMenu">Sign in to order</a>
+		</p>
+	</section>
+}
+else if (Model.IsCustomer && Model.Selected == null)
+{
+	<section class="tg-card h-auto mb-4" aria-label="Order from the menu">
+		<p class="mb-0">
+			You can order once you have a confirmed reservation.
+			<a class="btn btn-primary ms-2" asp-area="Customer" asp-page="/Reservations/Index">Book a table to order</a>
+		</p>
+	</section>
+}
+else if (Model.IsCustomer && !Model.OrderingOn)
+{
+	<section class="tg-card h-auto mb-4" aria-label="Order from the menu">
+		<p class="mb-0">
+			You have a reservation, so you can order from this page.
+			<a class="btn btn-primary ms-2" asp-page="/Menu/Index" asp-route-order="1" asp-route-reservationId="@Model.Selected!.Id">Start ordering</a>
+		</p>
+	</section>
+}
+else if (Model.OrderingOn)
+{
+	<section class="tg-card h-auto mb-4" aria-label="Ordering">
+		<div class="ox-strip">
+			<label for="orderingFor" class="fw-semibold mb-0">Ordering for</label>
+			<select id="orderingFor" class="form-select" style="max-width: 24rem;">
+				@foreach (OrderableReservation reservation in Model.OrderableReservations)
+				{
+					<option value="@reservation.Id" selected="@(reservation.Id == Model.Selected!.Id)">@Model.Describe(reservation)</option>
+				}
+			</select>
+			<a class="btn btn-outline-secondary ms-auto" asp-page="/Menu/Index">Stop ordering</a>
+		</div>
+		<p class="small text-secondary mt-2 mb-0" id="switchNote" hidden>
+			Your picks stay in your order when you change reservation. They will be added to the one chosen above.
+		</p>
+	</section>
 }
 
 <section class="tg-card h-auto mb-4" aria-labelledby="filter-heading">
 	<h2 id="filter-heading" class="h5 mb-3">Find a dish</h2>
 
 	<form method="get" class="row g-3 align-items-end">
+		@if (Model.OrderingOn)
+		{
+			<input type="hidden" name="order" value="1" />
+			<input type="hidden" name="reservationId" id="filterReservationId" value="@Model.Selected!.Id" />
+		}
 		<div class="col-md-4">
 			<label for="menuSearch" class="form-label fw-semibold">Search</label>
 			<input id="menuSearch" name="q" type="search" class="form-control" value="@Model.SearchText" placeholder="e.g. burger or PO1" />
@@ -79,6 +146,56 @@
 {
 	<p class="text-secondary" role="status">No dishes match. Try a different search or filter.</p>
 }
+else if (Model.OrderingOn)
+{
+	<div class="ox-page">
+		<form method="post" asp-page-handler="PlaceOrder" id="orderForm" novalidate>
+			<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+			<input type="hidden" name="reservationId" id="orderReservationId" value="@Model.Selected!.Id" />
+
+			@if (Model.AvoidedTagNames.Count > 0)
+			{
+				<div class="ox-diet-banner" role="note">
+					<strong>Your profile avoids: @string.Join(", ", Model.AvoidedTagNames.OrderBy(name => name))</strong>
+					<span>Dishes that contain these are marked with a warning. This is a guide only, so please tell our staff about any allergy.</span>
+					<a href="/Account/Profile">Change my dietary preferences</a>
+				</div>
+			}
+
+			@foreach (IGrouping<string, MenuItemCard> group in Model.Dishes.GroupBy(dish => dish.CategoryName))
+			{
+				<section class="mb-4" aria-label="@group.Key">
+					<h2 class="section-title h3 mb-3">@group.Key</h2>
+
+					<div class="row g-3">
+						@foreach (MenuItemCard dish in group)
+						{
+							OrderDishView dishView = new OrderDishView
+							{
+								Dish = dish,
+								Row = orderable.IndexOf(dish),
+								Avoided = Model.AvoidedIn(dish),
+								Quantity = Model.QuantityFor(dish.Id),
+								Note = Model.NoteFor(dish.Id),
+								MaxQuantity = Model.MaxQuantity,
+								MaxLineNoteLength = Model.MaxLineNoteLength,
+								ShowAlreadyOrdered = true,
+								AlreadyOrdered = Model.AlreadyOrdered(Model.Selected!.Id, dish.Id),
+								OrderedByReservation = Model.AlreadyOrderedText(dish.Id)
+							};
+
+							<div class="col-sm-6 col-lg-4">
+								<partial name="_OrderDish" model="dishView" />
+							</div>
+						}
+					</div>
+				</section>
+			}
+
+			<partial name="_OrderBar" model="barView" />
+		</form>
+	</div>
+}
 else
 {
 	@foreach (IGrouping<string, MenuItemCard> group in Model.Dishes.GroupBy(dish => dish.CategoryName))
@@ -94,6 +211,10 @@ else
 							@if (dish.PhotoUrl != null)
 							{
 								<img src="@dish.PhotoUrl" alt="Photo of @dish.Name" class="rounded mb-3 w-100" style="object-fit: cover; height: 12rem;" />
+							}
+							else
+							{
+								<div class="mn-ph" aria-hidden="true">@(string.IsNullOrEmpty(dish.Name) ? "?" : dish.Name.Substring(0, 1).ToUpperInvariant())</div>
 							}
 
 							<h3 class="h5">
@@ -146,5 +267,76 @@ else
 				}
 			</div>
 		</section>
+	}
+}
+
+@section Scripts {
+	@if (Model.OrderingOn)
+	{
+		<partial name="_OrderScripts" />
+		<script>
+			(function () {
+				var select = document.getElementById('orderingFor');
+
+				if (!select) {
+					return;
+				}
+
+				var hidden = document.getElementById('orderReservationId');
+				var filter = document.getElementById('filterReservationId');
+				var adding = document.getElementById('addingToText');
+				var note = document.getElementById('switchNote');
+
+				function countFor(text, reservationId) {
+					var parts = (text || '').split('|');
+
+					for (var i = 0; i < parts.length; i++) {
+						var pair = parts[i].split(':');
+
+						if (pair[0] === String(reservationId)) {
+							return parseInt(pair[1], 10) || 0;
+						}
+					}
+
+					return 0;
+				}
+
+				// Switching reservation keeps what the customer has picked; only the target and the badges change.
+				select.addEventListener('change', function () {
+					var id = select.value;
+					if (hidden) {
+						hidden.value = id;
+					}
+
+					if (filter) {
+						filter.value = id;
+					}
+
+					if (adding) {
+						adding.textContent = select.options[select.selectedIndex].text;
+					}
+
+					[].slice.call(document.querySelectorAll('[data-ordered-badge]')).forEach(function (badge) {
+						var n = countFor(badge.dataset.orderedBadge, id);
+						badge.hidden = n === 0;
+						badge.textContent = n > 0 ? badge.dataset.label + n : '';
+					});
+
+					var picked = [].slice.call(document.querySelectorAll('input[data-price]')).some(function (input) {
+						return (parseInt(input.value, 10) || 0) > 0;
+					});
+
+					if (note) {
+						note.hidden = !picked;
+					}
+
+					try {
+						var url = new URL(window.location.href);
+						url.searchParams.set('reservationId', id);
+						window.history.replaceState(null, '', url);
+					} catch (e) { }
+				});
+			})();
+		</script>
 	}
 }

@@ -1,0 +1,65 @@
+@model Rroms.Web.Models.ViewModels.OrderBarView
+@inject Microsoft.Extensions.Options.IOptions<Rroms.Web.Options.BillingOptions> BillingRates
+@* The bottom order bar, the "Your order" drawer and the dish details dialog. Put it INSIDE the order form. Owner: YJ (YJ-3). *@
+			<div class="ox-bar" id="orderBar" role="region" aria-label="Your order">
+				<div class="ox-bar-in">
+					@if (!string.IsNullOrEmpty(Model.AddingTo))
+					{
+						<span class="small fw-semibold text-secondary ox-adding" id="addingTo">Adding to: <span id="addingToText">@Model.AddingTo</span></span>
+					}
+					<button type="button" class="ox-bar-sum" id="openDrawer" aria-haspopup="dialog">
+						<span class="ox-bar-count"><span id="orderCount">0</span> items</span>
+						<span class="ox-bar-total ox-num">RM <span id="orderTotal">0.00</span></span>
+						<span class="ox-bar-view">View order · includes charges</span>
+					</button>
+					@if (!string.IsNullOrEmpty(Model.CancelUrl))
+					{
+						<a class="btn btn-link ox-bar-cancel" href="@Model.CancelUrl">Cancel</a>
+					}
+					<button type="submit" id="placeOrder" class="btn btn-primary">Place order</button>
+				</div>
+			</div>
+
+			<dialog id="orderDrawer" class="ox-drawer" aria-labelledby="summary-heading">
+				<div class="ox-drawer-head">
+					<h2 id="summary-heading" class="h4 mb-0">Your order</h2>
+					<button type="button" class="ox-close" data-close-drawer aria-label="Close your order">&times;</button>
+				</div>
+
+				<div class="ox-drawer-scroll">
+					<ul class="ox-lines" id="drawerLines" aria-live="polite"></ul>
+					<p class="text-secondary" id="drawerEmpty">Nothing yet. Use + on a dish to add it.</p>
+				</div>
+
+				<div class="ox-drawer-foot">
+					<label for="Notes" class="form-label fw-semibold small mb-1">Note for the kitchen (optional)</label>
+					<textarea id="Notes" name="Notes" class="form-control mb-3" rows="2" maxlength="@Model.MaxOrderNoteLength" placeholder="e.g. allergic to peanuts">@Model.Notes</textarea>
+
+					<div class="small mb-3" aria-live="polite" aria-atomic="true">
+                        <div class="d-flex justify-content-between gap-3 mb-2"><span>Subtotal</span><span class="ox-num">RM <span id="orderSubtotal">0.00</span></span></div>
+                        <div class="d-flex justify-content-between gap-3 mb-2"><span>Service charge (@BillingRates.Value.ServiceChargePercent.ToString("0.##")%)</span><span class="ox-num">RM <span id="orderServiceCharge">0.00</span></span></div>
+                        <div class="d-flex justify-content-between gap-3"><span>Service tax (@BillingRates.Value.ServiceTaxPercent.ToString("0.##")%)</span><span class="ox-num">RM <span id="orderServiceTax">0.00</span></span></div>
+                    </div>
+                    <div class="ox-total-row" aria-live="polite">
+						<span>Estimated total</span>
+						<strong class="ox-num">RM <span id="drawerTotal">0.00</span></strong>
+					</div>
+					<p class="text-secondary small">Includes service charge and tax. Tax applies to @(BillingRates.Value.TaxIncludesServiceCharge ? "subtotal plus service charge" : "subtotal"). The final total uses current prices when you place the order.</p>
+
+					<button type="submit" class="ox-place" id="placeOrderDrawer">Place order &rarr;</button>
+				</div>
+			</dialog>
+
+		<dialog id="dishDialog" class="ox-modal" aria-labelledby="dishDialogTitle">
+			<div class="ox-modal-in">
+				<button type="button" class="ox-close ox-modal-x" data-close-dish aria-label="Close dish details">&times;</button>
+				<div class="ox-modal-photo" id="dishDialogPhoto"></div>
+				<h2 id="dishDialogTitle" class="h4 mb-1"></h2>
+				<p class="small fw-semibold text-secondary mb-2" id="dishDialogCode"></p>
+				<p class="mb-2" id="dishDialogDesc"></p>
+				<p class="mb-2 ox-num"><span class="text-decoration-line-through text-secondary" id="dishDialogWas"></span> <strong id="dishDialogPrice"></strong></p>
+				<p class="mb-2" id="dishDialogTags"></p>
+				<p class="ox-warn mb-3" id="dishDialogWarn" hidden></p>
+				<button type="button" class="btn btn-primary" id="dishDialogAdd">+ Add to order</button>
+			</div>
+		</dialog>
