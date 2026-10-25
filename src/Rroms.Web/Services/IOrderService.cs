@@ -40,4 +40,18 @@ public interface IOrderService
     /// <param name="customerId">The signed-in customer's user ID.</param>
     /// <param name="orderId">The order to show.</param>
     Task<OrderSummary?> GetOrderForCustomerAsync(string customerId, int orderId);
+
+    /// <summary>
+    /// Returns ALL of the customer's own reservations that can take an order right now (Confirmed or Seated: the same rule
+    /// as <see cref="GetOrderableReservationAsync"/>), seated ones first, then by date. Used by the Menu page's ordering view.
+    /// </summary>
+    /// <param name="customerId">The signed-in customer's user ID.</param>
+    Task<IReadOnlyList<OrderableReservation>> GetOrderableReservationsAsync(string customerId);
+
+    /// <summary>
+    /// For each of the customer's reservations, how many of each dish has been ordered so far: reservation Id, then dish Id, then
+    /// quantity. Cancelled orders do not count. Used for the "Already ordered" badges on the Menu page.
+    /// </summary>
+    /// <param name="customerId">The signed-in customer's user ID.</param>
+    Task<IReadOnlyDictionary<int, IReadOnlyDictionary<int, int>>> GetOrderedQuantitiesAsync(string customerId);
 }

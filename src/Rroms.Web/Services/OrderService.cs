@@ -39,6 +39,9 @@ public class OrderService : IOrderService
 
     private const string NoteSeparator = "; ";
 
+    /// <summary>The reservation statuses that can take an order. ONE rule, used by every method below.</summary>
+    private static readonly ReservationStatus[] OrderableStatuses = { ReservationStatus.Confirmed, ReservationStatus.Seated };
+
     private readonly ApplicationDbContext _context;
     private readonly INotificationService _notificationService;
     private readonly OrderRulesOptions _rules;
@@ -86,8 +89,7 @@ public class OrderService : IOrderService
         }
 
         // TODO(YJ): when WL's CanOrderForReservationAsync is on main, this one rule can move there.
-        bool canOrder = reservation.Status == ReservationStatus.Confirmed
-            || reservation.Status == ReservationStatus.Seated;
+        bool canOrder = OrderableStatuses.Contains(reservation.Status);
 
         if (!canOrder)
         {
@@ -105,6 +107,51 @@ public class OrderService : IOrderService
         };
 
         return ServiceResult<OrderableReservation>.Success(orderable);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<OrderableReservation>> GetOrderableReservationsAsync(string customerId)
+    {
+        List<Reservation> reservations = await _context.Set<Reservation>()
+            .Include(r => r.DiningTable)
+                .ThenInclude(table => table!.DiningArea)
+            .Where(r => r.CustomerId == customerId && OrderableStatuses.Contains(r.Status))
+            .ToListAsync();
+
+        // Seated first (they are eating now), then by visit date.
+        return reservations
+            .OrderBy(r => r.Status == ReservationStatus.Seated ? 0 : 1)
+            .ThenBy(r => r.StartUtc)
+            .Select(r => new OrderableReservation
+            {
+                Id = r.Id,
+                TableLabel = r.DiningTable?.Label ?? string.Empty,
+                AreaName = r.DiningTable?.DiningArea?.Name ?? string.Empty,
+                StartUtc = r.StartUtc,
+                PartySize = r.PartySize,
+                Status = r.Status
+            })
+            .ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyDictionary<int, IReadOnlyDictionary<int, int>>> GetOrderedQuantitiesAsync(string customerId)
+    {
+        var rows = await _context.Orders
+            .Where(o => o.CustomerId == customerId && o.Status != OrderStatus.Cancelled)
+            .SelectMany(o => o.Items.Select(i => new { o.ReservationId, i.MenuItemId, i.Quantity }))
+            .ToListAsync();
+
+        Dictionary<int, IReadOnlyDictionary<int, int>> result = new Dictionary<int, IReadOnlyDictionary<int, int>>();
+
+        foreach (var reservationRows in rows.GroupBy(row => row.ReservationId))
+        {
+            result[reservationRows.Key] = reservationRows
+                .GroupBy(row => row.MenuItemId)
+                .ToDictionary(group => group.Key, group => group.Sum(row => row.Quantity));
+        }
+
+        return result;
     }
 
     /// <inheritdoc />
