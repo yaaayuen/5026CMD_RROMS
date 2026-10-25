@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 using Rroms.Web.Common;
+using Rroms.Web.Contracts;
 using Rroms.Web.Models;
 using Rroms.Web.Models.ViewModels;
 using Rroms.Web.Security;
@@ -31,22 +32,26 @@ public class IndexModel : PageModel
     private readonly IRestaurantService _restaurantService;
     private readonly IProfileService _profileService;
     private readonly IRecommendationService _recommendationService;
+    private readonly IDiscountService _discountService;
 
     /// <summary>Receives the services from dependency injection.</summary>
     /// <param name="menuService">Searches the menu.</param>
     /// <param name="restaurantService">Gives the active categories for the filter drop-down.</param>
     /// <param name="profileService">Gives the shared dietary tags (YY's table) for the "hide dishes that contain" boxes.</param>
     /// <param name="recommendationService">Gives the popular dishes strip.</param>
+    /// <param name="discountService">Gives the promotion banner (a sentence for each discount running now).</param>
     public IndexModel(
         IMenuService menuService,
         IRestaurantService restaurantService,
         IProfileService profileService,
-        IRecommendationService recommendationService)
+        IRecommendationService recommendationService,
+        IDiscountService discountService)
     {
         _menuService = menuService;
         _restaurantService = restaurantService;
         _profileService = profileService;
         _recommendationService = recommendationService;
+        _discountService = discountService;
     }
 
     /// <summary>Words to look for in dish names and descriptions (address part ?q=).</summary>
@@ -72,6 +77,9 @@ public class IndexModel : PageModel
     /// <summary>The dishes to show, in category then name order.</summary>
     public IReadOnlyList<MenuItemCard> Dishes { get; private set; } = new List<MenuItemCard>();
 
+    /// <summary>One sentence for each promotion running right now (the banner above the dishes).</summary>
+    public IReadOnlyList<string> Promotions { get; private set; } = new List<string>();
+
     /// <summary>The categories customers can pick in the filter.</summary>
     public IReadOnlyList<MenuCategory> Categories { get; private set; } = new List<MenuCategory>();
 
@@ -96,6 +104,7 @@ public class IndexModel : PageModel
     public async Task OnGetAsync()
     {
         Categories = await _restaurantService.GetMenuCategoriesAsync(includeInactive: false);
+        Promotions = await _discountService.GetRunningBannersAsync();
         TagChoices = await _profileService.GetDietaryTagsAsync();
 
         var criteria = new MenuSearchCriteria

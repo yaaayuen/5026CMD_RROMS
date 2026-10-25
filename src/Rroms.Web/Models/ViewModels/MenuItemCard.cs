@@ -33,6 +33,15 @@ public class MenuItemCard
     /// <summary>True while an offer is running right now.</summary>
     public bool IsOfferActive { get; set; }
 
+    /// <summary>Text for the small badge next to the price: "Offer", or "15% off" for a discount.</summary>
+    public string OfferBadge { get; set; } = "Offer";
+
+    /// <summary>A line under the price: the discount name and end date, or why the dish's own offer won; null when empty.</summary>
+    public string? OfferNote { get; set; }
+
+    /// <summary>Badge text when a discount set the price, for example "Weekday lunch · 15% off"; null otherwise.</summary>
+    public string? OfferLabel { get; set; }
+
     /// <summary>When the running offer ends (UTC), or null when no offer is running.</summary>
     public DateTime? OfferEndsAtUtc { get; set; }
 

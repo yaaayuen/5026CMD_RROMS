@@ -150,13 +150,15 @@ public class MenuService : IMenuService
             .ToList();
 
         DateTime now = DateTime.UtcNow;
+        DiscountSet discounts = await DiscountSet.LoadAsync(_context);
         List<MenuItemCard> cards = new List<MenuItemCard>();
 
         foreach (MenuItem item in items)
         {
             // The price filter uses the price the customer would really pay today, so a dish on offer
             // matches its offer price. Done in C# after loading because the menu is small.
-            decimal currentPrice = MenuItemPricing.GetCurrentPrice(item, now);
+            PriceQuote quote = MenuItemPricing.Quote(item, now, discounts);
+            decimal currentPrice = quote.Price;
 
             if (criteria.MinPrice.HasValue && currentPrice < criteria.MinPrice.Value)
             {
@@ -168,7 +170,7 @@ public class MenuService : IMenuService
                 continue;
             }
 
-            cards.Add(BuildCard(item, currentPrice, now));
+            cards.Add(BuildCard(item, quote));
         }
 
         return cards;
@@ -352,9 +354,8 @@ public class MenuService : IMenuService
     }
 
     /// <summary>Turns a dish into the ready-to-display card the customer menu shows.</summary>
-    private MenuItemCard BuildCard(MenuItem item, decimal currentPrice, DateTime now)
+    private MenuItemCard BuildCard(MenuItem item, PriceQuote quote)
     {
-        bool offerActive = MenuItemPricing.IsPromoActive(item, now);
 
         string? photoUrl = null;
 
@@ -365,9 +366,9 @@ public class MenuService : IMenuService
 
         DateTime? offerEndsAtUtc = null;
 
-        if (offerActive)
+        if (quote.IsOffer)
         {
-            offerEndsAtUtc = item.PromoEndUtc;
+            offerEndsAtUtc = quote.EndsAtUtc;
         }
 
         MenuItemCard card = new MenuItemCard
@@ -379,8 +380,11 @@ public class MenuService : IMenuService
             CategoryName = item.MenuCategory?.Name ?? string.Empty,
             PhotoUrl = photoUrl,
             NormalPrice = item.Price,
-            CurrentPrice = currentPrice,
-            IsOfferActive = offerActive,
+            CurrentPrice = quote.Price,
+            IsOfferActive = quote.IsOffer,
+            OfferLabel = quote.Label,
+            OfferBadge = quote.Badge ?? "Offer",
+            OfferNote = quote.Note,
             OfferEndsAtUtc = offerEndsAtUtc,
             IsAvailable = item.IsAvailable,
             DietaryTags = item.DietaryTags

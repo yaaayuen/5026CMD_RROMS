@@ -1,4 +1,5 @@
-﻿using Rroms.Web.Models;
+﻿using Rroms.Web.Common;
+using Rroms.Web.Models;
 
 namespace Rroms.Web.Services;
 
@@ -56,5 +57,85 @@ public static class MenuItemPricing
 
         return item.Price;
     }
-}
 
+    /// <summary>
+    /// Works out the price right now from the dish's own Offer AND the administrator's discounts.
+    /// The customer always pays the CHEAPEST price; offers never stack. Owner: YJ.
+    /// </summary>
+    /// <param name="item">The dish.</param>
+    /// <param name="nowUtc">The current time in UTC.</param>
+    /// <param name="discounts">The loaded discounts.</param>
+    public static PriceQuote Quote(MenuItem item, DateTime nowUtc, DiscountSet discounts)
+    {
+        decimal best = item.Price;
+        bool isOffer = false;
+        string? badge = null;
+        DateTime? endsAtUtc = null;
+
+        // The dish's own Offer first, exactly as before.
+        if (item.PromoPrice.HasValue && IsPromoActive(item, nowUtc))
+        {
+            best = item.PromoPrice.Value;
+            isOffer = true;
+            badge = "Offer";
+            endsAtUtc = item.PromoEndUtc;
+        }
+
+        // The cheapest discount that is running now and covers this dish.
+        MenuDiscount? cheapest = null;
+        decimal cheapestPrice = item.Price;
+
+        foreach (MenuDiscount discount in discounts.Discounts)
+        {
+            if (!DiscountRules.IsRunning(discount, nowUtc) || !DiscountRules.Covers(discount, item))
+            {
+                continue;
+            }
+
+            decimal discounted = DiscountRules.Apply(item.Price, discount.Percent);
+
+            if (cheapest == null || discounted < cheapestPrice)
+            {
+                cheapest = discount;
+                cheapestPrice = discounted;
+            }
+        }
+
+        string? label = null;
+        string? note = null;
+
+        if (cheapest != null && cheapestPrice < best)
+        {
+            string percent = DiscountRules.FormatPercent(cheapest.Percent);
+
+            best = cheapestPrice;
+            isOffer = true;
+            label = cheapest.Name + " · " + percent + "% off";
+            badge = percent + "% off";
+            endsAtUtc = null;
+            note = cheapest.Name;
+
+            if (cheapest.EndUtc.HasValue)
+            {
+                DateTime lastDay = MalaysiaTime.FromUtc(cheapest.EndUtc.Value).AddDays(-1);
+                note += " until " + lastDay.ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+            }
+        }
+        else if (cheapest != null && isOffer && cheapestPrice > best)
+        {
+            note = "Own offer is cheaper than the " + cheapest.Name + " promotion (RM "
+                + cheapestPrice.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) + "), so it wins.";
+        }
+
+        return new PriceQuote
+        {
+            NormalPrice = item.Price,
+            Price = best,
+            IsOffer = isOffer,
+            Label = label,
+            Badge = badge,
+            Note = note,
+            EndsAtUtc = endsAtUtc
+        };
+    }
+}

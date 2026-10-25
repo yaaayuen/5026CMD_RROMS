@@ -66,6 +66,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     /// <summary>The lines of an order: which dish, how many, at what price.</summary>
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
 
+    /// <summary>Percentage discounts set by the administrator (YJ).</summary>
+    public DbSet<MenuDiscount> MenuDiscounts => Set<MenuDiscount>();
+
     // ----- Sprint 4 (Alex): announcements and feedback -----
     public DbSet<Announcement> Announcements => Set<Announcement>();
     public DbSet<Feedback> Feedback => Set<Feedback>();
@@ -149,6 +152,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         // YJ (Sprint 3): menu rules
         MenuConfiguration.Configure(builder);
+        DiscountConfiguration.Configure(builder);
 
         // YJ (Sprint 3): order rules
         OrderConfiguration.Configure(builder);

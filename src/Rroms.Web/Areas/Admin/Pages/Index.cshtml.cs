@@ -35,6 +35,12 @@ public class IndexModel : PageModel
                 "Sprint 3 · YJ",
                 "/Admin/Menu"),
             new ModuleTileViewModel(
+                "Promotions",
+                "Percentage discounts by date, day and time.",
+                "megaphone",
+                "Sprint 3 · YJ",
+                "/Admin/Discounts"),
+            new ModuleTileViewModel(
                 "Accounts and roles",
                 "Create staff accounts, assign roles and deactivate users.",
                 "users",

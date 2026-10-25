@@ -1,0 +1,180 @@
+﻿@page
+@model EditModel
+@using Rroms.Web.Models
+@{
+	ViewData["Title"] = Model.Input.Id == 0 ? "New promotion" : "Edit promotion";
+	var scopes = new[]
+	{
+		("WholeMenu", "Whole menu"),
+		("Category", "One or more categories"),
+		("Dishes", "Chosen dishes")
+	};
+}
+
+<style>
+	.pill-input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+	.pill { display: inline-block; border: 1px solid var(--bs-border-color); border-radius: 999px; padding: .2rem .85rem; margin: .15rem .3rem .15rem 0; cursor: pointer; font-size: .9rem; background: var(--bs-body-bg); }
+	.pill-input:checked + .pill { background: var(--bs-primary-bg-subtle, #ffe9ef); border-color: var(--bs-primary); color: var(--bs-primary); font-weight: 700; }
+	.pill-input:focus-visible + .pill { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+	.promo-sec { border-top: 1px dashed var(--bs-border-color); margin-top: 1.1rem; padding-top: 1.1rem; }
+	.promo-scope:not(:has(#scope-Category:checked)) .cat-row { display: none; }
+	.promo-scope:not(:has(#scope-Dishes:checked)) .dish-row { display: none; }
+	.dish-row { max-height: 14rem; overflow-y: auto; }
+</style>
+
+<section class="hero hero-compact mb-4" aria-labelledby="edit-heading">
+	<span class="hero-bubble one" aria-hidden="true"></span>
+	<div class="position-relative">
+		<span class="eyebrow">Promotions</span>
+		<h1 id="edit-heading" class="mb-1">@ViewData["Title"]</h1>
+	</div>
+</section>
+
+<form id="promoForm" method="post" class="tg-card h-auto" novalidate>
+	<div asp-validation-summary="All" class="alert alert-danger"></div>
+	<input type="hidden" asp-for="Input.Id" />
+
+	<div class="row g-3">
+		<div class="col-md-6">
+			<label asp-for="Input.Name" class="form-label fw-semibold">Name</label>
+			<input asp-for="Input.Name" class="form-control" maxlength="80" placeholder="Weekday Lunch" />
+		</div>
+		<div class="col-md-6">
+			<label asp-for="Input.Percent" class="form-label fw-semibold">Discount (%)</label>
+			<input asp-for="Input.Percent" class="form-control" type="number" step="0.01" min="1" max="90" />
+			<div class="form-text">1 to 90. Applied to the dish's normal price.</div>
+		</div>
+	</div>
+
+	<div class="promo-sec promo-scope">
+		<span class="form-label fw-semibold d-block">Applies to</span>
+		<div role="radiogroup" aria-label="Applies to">
+			@foreach (var (value, text) in scopes)
+			{
+				<input class="pill-input" type="radio" name="Input.Scope" id="scope-@value" value="@value" checked="@(Model.Input.Scope.ToString() == value)" />
+				<label class="pill" for="scope-@value">@text</label>
+			}
+		</div>
+		<div class="cat-row mt-2">
+			@foreach (MenuCategory category in Model.Categories)
+			{
+				<input class="pill-input" type="checkbox" name="Input.CategoryIds" id="cat-@category.Id" value="@category.Id" checked="@Model.Input.CategoryIds.Contains(category.Id)" />
+				<label class="pill" for="cat-@category.Id">@category.Name</label>
+			}
+		</div>
+		<div class="dish-row mt-2">
+			@foreach (MenuItem dish in Model.Dishes)
+			{
+				<input class="pill-input" type="checkbox" name="Input.DishIds" id="dish-@dish.Id" value="@dish.Id" checked="@Model.Input.DishIds.Contains(dish.Id)" />
+				<label class="pill" for="dish-@dish.Id">@(string.IsNullOrEmpty(dish.Code) ? "" : dish.Code + " · ")@dish.Name</label>
+			}
+		</div>
+	</div>
+
+	<div class="promo-sec">
+		<span class="form-label fw-semibold d-block">Dates</span>
+		<div class="row g-3">
+			<div class="col-md-6">
+				<label asp-for="Input.StartDate" class="form-text">From (empty = from now)</label>
+				<input asp-for="Input.StartDate" class="form-control" type="date" />
+			</div>
+			<div class="col-md-6">
+				<label asp-for="Input.EndDate" class="form-text">To (last day included, empty = until switched off)</label>
+				<input asp-for="Input.EndDate" class="form-control" type="date" />
+			</div>
+		</div>
+	</div>
+
+	<div class="promo-sec">
+		<span class="form-label fw-semibold d-block">Days and hours <span class="fw-normal text-secondary small">(optional, leave empty for every day, all day)</span></span>
+		<div>
+			@foreach (DayOfWeek day in Model.DayChoices)
+			{
+				<input class="pill-input" type="checkbox" name="Input.SelectedDays" id="day-@((int)day)" value="@(1 << (int)day)" checked="@Model.IsDayTicked(day)" />
+				<label class="pill" for="day-@((int)day)">@day.ToString().Substring(0, 3)</label>
+			}
+		</div>
+		<div class="row g-3 mt-1">
+			<div class="col-md-6">
+				<label asp-for="Input.FromTime" class="form-text">From time</label>
+				<input asp-for="Input.FromTime" class="form-control" type="time" />
+			</div>
+			<div class="col-md-6">
+				<label asp-for="Input.ToTime" class="form-text">To time</label>
+				<input asp-for="Input.ToTime" class="form-control" type="time" />
+			</div>
+		</div>
+	</div>
+
+	<div class="promo-sec">
+		<div class="form-check form-switch mb-3">
+			<input asp-for="Input.IsActive" class="form-check-input" type="checkbox" role="switch" />
+			<label asp-for="Input.IsActive" class="form-check-label">Switched on</label>
+		</div>
+
+		@if (Model.SampleDish != null)
+		{
+			<p class="small text-secondary mb-3" id="previewLine" aria-live="polite">
+				Preview: <span id="previewText" data-dish="@Model.SampleDish.Name" data-price="@Model.SampleDish.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)"></span>
+			</p>
+		}
+
+		<div class="d-flex gap-2">
+			<button type="submit" class="btn btn-primary">Save promotion</button>
+			<a class="btn btn-outline-primary" asp-page="/Discounts/Index">Cancel</a>
+		</div>
+	</div>
+</form>
+
+@section Scripts {
+	<script>
+		(function () {
+			var form = document.getElementById('promoForm');
+			var out = document.getElementById('previewText');
+			if (!form || !out) { return; }
+
+			var dish = out.getAttribute('data-dish');
+			var price = parseFloat(out.getAttribute('data-price'));
+			var order = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+			var bitNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+			function clock(value) {
+				if (!value) { return ''; }
+				var parts = value.split(':');
+				var hour = parseInt(parts[0], 10);
+				var suffix = hour >= 12 ? 'PM' : 'AM';
+				hour = hour % 12;
+				if (hour === 0) { hour = 12; }
+				return hour + ':' + parts[1] + ' ' + suffix;
+			}
+
+			function update() {
+				var percent = parseFloat(form.querySelector('[name="Input.Percent"]').value);
+				if (isNaN(percent) || percent < 1 || percent > 90) {
+					out.textContent = 'enter a discount between 1 and 90 to see the new price.';
+					return;
+				}
+
+				var discounted = (Math.round(price * (100 - percent) + 1e-9) / 100).toFixed(2);
+				var days = [].slice.call(form.querySelectorAll('[name="Input.SelectedDays"]:checked')).map(function (box) {
+					return bitNames[Math.round(Math.log(parseInt(box.value, 10)) / Math.log(2))];
+				});
+				days.sort(function (a, b) { return order.indexOf(a) - order.indexOf(b); });
+
+				var when = 'every day';
+				if (days.join() === 'Mon,Tue,Wed,Thu,Fri') { when = 'weekdays'; }
+				else if (days.length > 0 && days.length < 7) { when = days.join(', '); }
+
+				var from = clock(form.querySelector('[name="Input.FromTime"]').value);
+				var to = clock(form.querySelector('[name="Input.ToTime"]').value);
+				if (from && to) { when += ' ' + from + '–' + to; }
+
+				out.textContent = dish + ' RM ' + price.toFixed(2) + ' → RM ' + discounted + ' on ' + when + '.';
+			}
+
+			form.addEventListener('input', update);
+			form.addEventListener('change', update);
+			update();
+		})();
+	</script>
+}
