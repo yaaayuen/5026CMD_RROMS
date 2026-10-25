@@ -202,6 +202,32 @@ public class ChatbotTests
         Assert.Equal("/Announcements", reply.PageUrl);
     }
 
+    [Fact]
+    public async Task OfferQuestionsAlsoNameRunningMenuDiscounts()
+    {
+        using var factory = new TestWebApplicationFactory();
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        db.MenuDiscounts.AddRange(
+            new MenuDiscount { Name = "Chat lunch", Percent = 15m, Scope = DiscountScope.WholeMenu, IsActive = true },
+            new MenuDiscount { Name = "Chat paused", Percent = 30m, Scope = DiscountScope.WholeMenu, IsActive = false });
+        await db.SaveChangesAsync();
+        var service = Service(scope.ServiceProvider, new Provider());
+        var onlyDiscount = await service.AskAsync("any discounts?", true);
+        Assert.Contains("Menu discounts now: Chat lunch: 15% off the whole menu", onlyDiscount.Answer);
+        Assert.DoesNotContain("Chat paused", onlyDiscount.Answer);
+        Assert.DoesNotContain("no offers", onlyDiscount.Answer);
+        Assert.Equal("/Menu", onlyDiscount.PageUrl);
+        DateTime now = DateTime.UtcNow;
+        db.Announcements.Add(new Announcement { Title = "Chat birthday treat", Message = "m", IsPromotion = true, IsPublished = true,
+            StartUtc = now.AddDays(-1), EndUtc = now.AddDays(3), UpdatedAtUtc = now });
+        await db.SaveChangesAsync();
+        var both = await service.AskAsync("any deals?", true);
+        Assert.Contains("Chat lunch: 15% off", both.Answer);
+        Assert.Contains("Current offers: Chat birthday treat (until ", both.Answer);
+        Assert.Equal("/Announcements", both.PageUrl);
+    }
+
     /// <summary>Questions whose words could fit more than one topic, and the page each must reach without the AI.</summary>
     [Theory]
     [InlineData("Do you offer vegetarian food?", "/Menu")]
@@ -247,7 +273,8 @@ public class ChatbotTests
     private static ChatbotService Service(IServiceProvider services, Provider handler, string key = "test-placeholder")
     {
         return new ChatbotService(services.GetRequiredService<IMenuService>(), services.GetRequiredService<IRestaurantService>(), services.GetRequiredService<IReservationService>(),
-            services.GetRequiredService<IAnnouncementService>(), services.GetRequiredService<IOrderProcessingService>(), new HttpClient(handler), Microsoft.Extensions.Options.Options.Create(new ChatbotOptions { ApiKey = key }), NullLogger<ChatbotService>.Instance);
+            services.GetRequiredService<IAnnouncementService>(), services.GetRequiredService<IOrderProcessingService>(),
+            services.GetRequiredService<IDiscountService>(), new HttpClient(handler), Microsoft.Extensions.Options.Options.Create(new ChatbotOptions { ApiKey = key }), NullLogger<ChatbotService>.Instance);
     }
     private class Provider : HttpMessageHandler
     {
