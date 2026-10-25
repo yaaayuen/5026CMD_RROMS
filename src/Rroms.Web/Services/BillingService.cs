@@ -393,7 +393,7 @@ public partial class BillingService : IBillingService
         }
         var paymentIds = together.Select(p => p.Id).ToList();
         var refunds = await _context.Set<PaymentRefund>().AsNoTracking().Where(r => orderIds.Contains(r.Payment!.OrderId)
-            && paymentIds.Contains(r.PaymentId)).Include(r => r.Payment!).ThenInclude(p => p.Order!).ThenInclude(o => o.Customer).ToListAsync();
+            && paymentIds.Contains(r.PaymentId)).Include(r => r.Lines).Include(r => r.Payment!).ThenInclude(p => p.Order!).ThenInclude(o => o.Customer).ToListAsync();
         return new ReceiptSummary
         {
             Refund = refunds.Count == 0 ? null : MapRefund(refunds),
@@ -439,6 +439,7 @@ public partial class BillingService : IBillingService
         {
             bill.Lines.Add(new BillLine
             {
+                OrderItemId = line.Id,
                 DishName = line.MenuItem!.Name,
                 Quantity = line.Quantity,
                 UnitPrice = line.UnitPrice

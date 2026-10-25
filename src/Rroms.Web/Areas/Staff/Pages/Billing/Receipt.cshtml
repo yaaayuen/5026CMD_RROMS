@@ -22,6 +22,9 @@
     <form method="post" asp-page-handler="Email" asp-route-id="@Model.Receipt.PaymentId"><button class="btn btn-outline-primary">Email to customer</button></form>
     <a asp-page="Index" class="btn btn-outline-primary">Back to billing</a>
 </div>
+@section Scripts {
+    <script src="~/js/refund.js" asp-append-version="true"></script>
+}
 
 @if(User.IsInRole(Rroms.Web.Constants.RoleNames.Administrator) && Model.Receipt.Status == Rroms.Web.Contracts.PaymentStatus.Paid && Model.Receipt.Method != Rroms.Web.Contracts.PaymentMethod.SimulatedOnline && Model.Receipt.Refund == null) {
 <section class="tg-card h-auto receipt-sheet mt-4 d-print-none"><h2 class="h5">Correct a payment mistake</h2><p>Voiding keeps the record and marks every order on this receipt unpaid. It does not return money or reopen the reservation.</p><form method="post" asp-page-handler="Void" asp-route-id="@Model.Receipt.PaymentId"><div asp-validation-summary="All" class="text-danger" role="alert"></div><label asp-for="VoidReason" class="form-label">Reason (5–200 characters)</label><textarea asp-for="VoidReason" minlength="5" maxlength="200" required class="form-control mb-3"></textarea><button class="btn btn-outline-danger">Void this payment</button></form></section>
@@ -30,12 +33,42 @@
 <section class="tg-card h-auto receipt-sheet mt-4 d-print-none">
 <h2 class="h5">Refund</h2><a asp-page="Refunds">View all refund records</a>
 @if(Model.Receipt.Status == Rroms.Web.Contracts.PaymentStatus.Paid && Model.Receipt.Method != Rroms.Web.Contracts.PaymentMethod.SimulatedOnline && (Model.Receipt.Refund == null || Model.Receipt.Refund.Status == Rroms.Web.Contracts.RefundStatus.Requested)) {
-<p class="mt-3">Full receipt amount: <strong>@Rroms.Web.Common.Money.Format(Model.Receipt.TotalPaid)</strong>. This covers every order on this receipt. Partial refunds are not supported.</p>
-<form method="post" asp-page-handler="Refund" asp-route-id="@Model.Receipt.PaymentId">
+<p class="mt-3">Choose the dishes to refund and how many. Each dish is refunded with its share of service charge and tax. A receipt can be refunded once.</p>
+<form method="post" asp-page-handler="Refund" asp-route-id="@Model.Receipt.PaymentId" class="refund-form" data-paid="@Model.Receipt.TotalPaid.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)">
 <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+<div class="table-responsive"><table class="table align-middle refund-lines">
+<thead><tr><th scope="col">Dish</th><th scope="col" class="text-end">Ordered</th><th scope="col">Refund quantity</th><th scope="col" class="text-end">Refund</th></tr></thead>
+<tbody>
+@{ int lineIndex = 0; }
+@foreach (var refundBill in (Model.Receipt.Bills.Count > 0 ? Model.Receipt.Bills : new List<Rroms.Web.Models.ViewModels.BillSummary> { Model.Receipt.Bill }))
+{
+    decimal itemsTotal = refundBill.Lines.Sum(l => l.LineTotal);
+    foreach (var line in refundBill.Lines)
+    {
+        // Same share as the server: the dish price scaled by what this order actually paid.
+        decimal share = itemsTotal > 0 ? line.UnitPrice * refundBill.TotalAmount / itemsTotal : 0m;
+        <tr data-order="@refundBill.OrderId" data-order-paid="@refundBill.TotalAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)">
+            <th scope="row">@line.DishName <small class="text-secondary d-block">Order #@refundBill.OrderId</small></th>
+            <td class="text-end">@line.Quantity</td>
+            <td><input type="hidden" name="RefundLines[@lineIndex].OrderItemId" value="@line.OrderItemId" />
+                <label class="visually-hidden" for="refund-qty-@lineIndex">Refund quantity for @line.DishName</label>
+                <input type="number" id="refund-qty-@lineIndex" name="RefundLines[@lineIndex].Quantity" value="0" min="0" max="@line.Quantity" step="1"
+                       class="form-control form-control-sm refund-qty" style="max-width:6rem" data-max="@line.Quantity"
+                       data-share="@share.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture)" /></td>
+            <td class="text-end refund-line-amount">RM 0.00</td>
+        </tr>
+        lineIndex++;
+    }
+}
+</tbody>
+</table></div>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+<button type="button" class="btn btn-outline-secondary btn-sm refund-all">Refund everything</button>
+<p class="mb-0">Refund total: <strong class="refund-total">RM 0.00</strong> · Net paid after refund: <strong class="refund-net">@Rroms.Web.Common.Money.Format(Model.Receipt.TotalPaid)</strong></p>
+</div>
 <label asp-for="RefundReason" class="form-label">Staff reason (5–200 characters)</label><textarea asp-for="RefundReason" minlength="5" maxlength="200" required class="form-control mb-3"></textarea>
-<label class="form-check mb-3"><input asp-for="MoneyReturned" class="form-check-input" required /><span class="form-check-label">I confirm the full amount has already been returned using cash or the original card/e-wallet provider. This app does not transfer money.</span></label>
-<button class="btn btn-outline-danger">Record full refund</button></form>
+<label class="form-check mb-3"><input asp-for="MoneyReturned" class="form-check-input" required /><span class="form-check-label">I confirm the refund total above has already been returned using cash or the original card/e-wallet provider. This app does not transfer money.</span></label>
+<button class="btn btn-outline-danger">Record refund</button></form>
 @if(Model.Receipt.Refund?.Status == Rroms.Web.Contracts.RefundStatus.Requested) {
 <details class="mt-3"><summary>Reject this request</summary><form method="post" asp-page-handler="RejectRefund" asp-route-id="@Model.Receipt.PaymentId"><label for="reject-reason" class="form-label">Reason for rejection</label><textarea id="reject-reason" name="RefundReason" minlength="5" maxlength="200" required class="form-control mb-2"></textarea><button class="btn btn-outline-secondary">Reject refund request</button></form></details>
 }

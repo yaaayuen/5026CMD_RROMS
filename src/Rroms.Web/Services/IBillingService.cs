@@ -8,7 +8,12 @@ namespace Rroms.Web.Services;
 public interface IBillingService
 {
     Task<ServiceResult<PaymentRecordingResult>> RequestRefundAsync(int paymentId, string? reason, string customerId);
-    Task<ServiceResult<PaymentRecordingResult>> RecordRefundAsync(int paymentId, string? reason, string staffId, bool moneyReturned);
+    /// <summary>
+    /// Records a refund. With no <paramref name="lines"/> the whole receipt is refunded; otherwise only the chosen
+    /// dishes (each with its share of service charge and tax). A receipt can be refunded once.
+    /// </summary>
+    Task<ServiceResult<PaymentRecordingResult>> RecordRefundAsync(int paymentId, string? reason, string staffId, bool moneyReturned,
+        IReadOnlyCollection<RefundLineInput>? lines = null);
     Task<ServiceResult<PaymentRecordingResult>> RejectRefundAsync(int paymentId, string? reason, string staffId);
     Task<RefundList> GetRefundsAsync(string? customerId = null, int page = 1, RefundStatus? status = null);
     Task<ServiceResult<PaymentRecordingResult>> VoidPaymentAsync(int paymentId, string? reason, string adminId);

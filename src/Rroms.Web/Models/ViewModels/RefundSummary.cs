@@ -13,6 +13,8 @@ public class RefundSummary
     public DateTime? ProcessedAtUtc { get; set; }
     public string? ProcessedById { get; set; }
     public string? DecisionReason { get; set; }
+    /// <summary>The refunded dishes; empty means the whole receipt was refunded.</summary>
+    public List<RefundLineSummary> Lines { get; set; } = new();
 }
 public class RefundList
 {

@@ -20,17 +20,20 @@ public class ReceiptModel : PageModel
     }
     [BindProperty] public string? RefundReason { get; set; }
     [BindProperty] public bool MoneyReturned { get; set; }
+    /// <summary>The dishes and quantities chosen for a dish refund. Amounts are calculated by the billing service.</summary>
+    [BindProperty] public List<RefundLineInput> RefundLines { get; set; } = new();
     public async Task<IActionResult> OnPostRefundAsync(int id) => await FinishRefundAsync(id, false);
     public async Task<IActionResult> OnPostRejectRefundAsync(int id) => await FinishRefundAsync(id, true);
     private async Task<IActionResult> FinishRefundAsync(int id, bool reject)
     {
         var result = reject ? await _billing.RejectRefundAsync(id, RefundReason, User.GetUserId())
-            : await _billing.RecordRefundAsync(id, RefundReason, User.GetUserId(), MoneyReturned);
+            : await _billing.RecordRefundAsync(id, RefundReason, User.GetUserId(), MoneyReturned,
+                RefundLines.Count == 0 ? null : RefundLines);
         if(!result.Succeeded) {
             foreach(var error in result.Errors) ModelState.AddModelError(string.Empty, error);
             return await OnGetAsync(id);
         }
-        TempData["ReceiptMessage"] = (reject ? "Refund request rejected." : "Full refund recorded. Do not return the money again.")
+        TempData["ReceiptMessage"] = (reject ? "Refund request rejected." : "Refund recorded. Do not return the money again.")
             + (result.Value!.NotificationSent ? "" : " Customer notification failed.");
         return RedirectToPage(new { id });
     }
