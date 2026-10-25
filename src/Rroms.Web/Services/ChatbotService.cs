@@ -18,12 +18,13 @@ public class ChatbotService : IChatbotService
     private readonly IReservationService _reservations;
     private readonly IAnnouncementService _announcements;
     private readonly IOrderProcessingService _orders;
+    private readonly IDiscountService _discounts;
     private readonly HttpClient _http;
     private readonly ChatbotOptions _options;
     private readonly ILogger<ChatbotService> _logger;
 
     public ChatbotService(IMenuService menu, IRestaurantService restaurant, IReservationService reservations,
-        IAnnouncementService announcements, IOrderProcessingService orders, HttpClient http,
+        IAnnouncementService announcements, IOrderProcessingService orders, IDiscountService discounts, HttpClient http,
         IOptions<ChatbotOptions> options, ILogger<ChatbotService> logger)
     {
         _menu = menu;
@@ -31,6 +32,7 @@ public class ChatbotService : IChatbotService
         _reservations = reservations;
         _announcements = announcements;
         _orders = orders;
+        _discounts = discounts;
         _http = http;
         _options = options.Value;
         _logger = logger;
@@ -194,17 +196,34 @@ public class ChatbotService : IChatbotService
         return Reply(string.Join(". ", lines) + ".", "/Customer/Tracking", "Track my visit");
     }
 
-    /// <summary>Names the promotions running today, newest first, from the same list as News and offers.</summary>
+    /// <summary>
+    /// Names the menu discounts running now (YJ's banners on the menu) and the promotions on News and offers,
+    /// so the chatbot never says "no offers" while the menu shows a discount.
+    /// </summary>
     private async Task<ChatReply> PromotionsAsync()
     {
+        IReadOnlyList<string> discounts = await _discounts.GetRunningBannersAsync();
         var offers = (await _announcements.GetAsync(true)).Where(a => a.IsPromotion).ToList();
-        if (offers.Count == 0)
+        if (discounts.Count == 0 && offers.Count == 0)
         {
             return Reply("There are no offers running right now. News and dish offers appear on News and offers and the menu.", "/Announcements", "News and offers");
         }
-        string list = string.Join("; ", offers.Take(3).Select(a => $"{a.Title} (until {MalaysiaTime.FromUtc(a.EndUtc):d MMM})"));
-        string more = offers.Count > 3 ? $" and {offers.Count - 3} more" : "";
-        return Reply($"Current offers: {list}{more}.", "/Announcements", "News and offers");
+        var parts = new List<string>();
+        if (discounts.Count > 0) { parts.Add("Menu discounts now: " + Listed(discounts) + "."); }
+        if (offers.Count > 0)
+        {
+            parts.Add("Current offers: " + Listed(offers.Select(a => $"{a.Title} (until {MalaysiaTime.FromUtc(a.EndUtc):d MMM})").ToList()) + ".");
+        }
+        // Discounts change prices on the menu; announcement offers are explained on News and offers.
+        return offers.Count > 0
+            ? Reply(string.Join(" ", parts), "/Announcements", "News and offers")
+            : Reply(string.Join(" ", parts), "/Menu", "Menu");
+    }
+
+    /// <summary>Up to three items, then "and N more".</summary>
+    private static string Listed(IReadOnlyList<string> items)
+    {
+        return string.Join("; ", items.Take(3)) + (items.Count > 3 ? $" and {items.Count - 3} more" : "");
     }
     private static ChatReply Reply(string answer, string? url = null, string? label = null)
     {
