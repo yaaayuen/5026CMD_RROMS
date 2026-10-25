@@ -75,6 +75,10 @@
 							<td><span class="badge @ReservationStatusDisplay.BadgeClass(booking.Status)">@ReservationStatusDisplay.Label(booking.Status)</span></td>
 							<td>
 								<div class="d-flex flex-wrap gap-1">
+									@if (ReservationStatusRules.IsChangeable(booking.Status))
+									{
+										<a asp-page="Edit" asp-route-id="@booking.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+									}
 									@foreach (ReservationStatus next in ReservationStatusRules.NextStatuses(booking.Status))
 									{
 										if (next == ReservationStatus.Completed && booking.HasUnpaidOrders)

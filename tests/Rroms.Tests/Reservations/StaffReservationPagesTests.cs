@@ -22,7 +22,7 @@ namespace Rroms.Tests.Reservations;
 /// Integration tests on the running app. All tests share one database, so each test books its own table and time.
 /// The date shown is one week ahead, the same day the bookings are made for.
 /// </remarks>
-public class StaffReservationPagesTests : IClassFixture<TestWebApplicationFactory>
+public partial class StaffReservationPagesTests : IClassFixture<TestWebApplicationFactory>
 {
     private const string Password = "Grill!Test2026";
     private const string PageUrl = "/Staff/Reservations";
