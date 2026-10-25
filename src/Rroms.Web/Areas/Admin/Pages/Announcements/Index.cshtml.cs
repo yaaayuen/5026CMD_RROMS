@@ -6,7 +6,7 @@ using Rroms.Web.Models;
 using Rroms.Web.Services;
 namespace Rroms.Web.Areas.Admin.Pages.Announcements;
 
-/// <summary>Creates, edits, schedules and unpublishes announcements, grouped by Upcoming, Live, Drafts and Ended.</summary>
+/// <summary>Creates, edits, schedules, repeats and unpublishes announcements, grouped by Upcoming, Live, Drafts and Ended.</summary>
 public class IndexModel : PageModel
 {
     private readonly IAnnouncementService _service;
@@ -14,18 +14,24 @@ public class IndexModel : PageModel
     [BindProperty] public Announcement Input { get; set; } = new Announcement();
     [BindProperty] public DateTime StartLocal { get; set; } = MalaysiaTime.FromUtc(DateTime.UtcNow);
     [BindProperty] public DateTime EndLocal { get; set; } = MalaysiaTime.FromUtc(DateTime.UtcNow).AddDays(7);
+    /// <summary>Days a recurring post shows on. None ticked means a one-off post.</summary>
+    [BindProperty] public List<DayOfWeek> RepeatOn { get; set; } = new List<DayOfWeek>();
+    /// <summary>Monday first, as the week is shown in Malaysia.</summary>
+    public static readonly DayOfWeek[] WeekOrder = { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday,
+        DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday };
     /// <summary>The tab from the query string: "upcoming", "live", "drafts", "ended", or anything else for all.</summary>
     [BindProperty(SupportsGet = true)] public string? Show { get; set; }
     public List<Announcement> Items { get; set; } = new List<Announcement>();
     public List<SelectListItem> Dishes { get; set; } = new List<SelectListItem>();
     public Dictionary<string, int> Counts { get; set; } = new Dictionary<string, int>();
 
-    /// <summary>The tab an announcement belongs to at the given moment.</summary>
+    /// <summary>The tab an announcement belongs to at the given moment. A recurring post between its showings is upcoming.</summary>
     public static string StateOf(Announcement item, DateTime nowUtc)
     {
         if (!item.IsPublished) { return "drafts"; }
         if (item.EndUtc <= nowUtc) { return "ended"; }
-        return item.StartUtc > nowUtc ? "upcoming" : "live";
+        if (AnnouncementSchedule.IsShowing(item, nowUtc)) { return "live"; }
+        return AnnouncementSchedule.NextStartUtc(item, nowUtc) == null ? "ended" : "upcoming";
     }
 
     public async Task<IActionResult> OnGetAsync(int? id)
@@ -38,6 +44,7 @@ public class IndexModel : PageModel
             Input = item;
             StartLocal = MalaysiaTime.FromUtc(item.StartUtc);
             EndLocal = MalaysiaTime.FromUtc(item.EndUtc);
+            RepeatOn = WeekOrder.Where(d => (item.RepeatDays & DiscountDays.Bit(d)) != 0).ToList();
         }
         return Page();
     }
@@ -47,13 +54,14 @@ public class IndexModel : PageModel
         {
             Input.StartUtc = MalaysiaTime.ToUtc(StartLocal);
             Input.EndUtc = MalaysiaTime.ToUtc(EndLocal);
+            Input.RepeatDays = RepeatOn.Distinct().Aggregate(0, (mask, day) => mask | DiscountDays.Bit(day));
             var result = await _service.SaveAsync(Input);
             if (result.Succeeded)
             {
                 bool scheduled = Input.IsPromotion && Input.IsPublished && Input.StartUtc > DateTime.UtcNow;
-                TempData["StatusMessage"] = scheduled
-                    ? "Announcement scheduled. Customers are notified when it starts."
-                    : "Announcement saved.";
+                TempData["StatusMessage"] = Input.IsPromotion && Input.IsPublished && Input.RepeatDays != 0
+                    ? "Recurring announcement saved. Customers are notified each time it starts showing."
+                    : scheduled ? "Announcement scheduled. Customers are notified when it starts." : "Announcement saved.";
                 return RedirectToPage();
             }
             foreach (string error in result.Errors) { ModelState.AddModelError("", error); }

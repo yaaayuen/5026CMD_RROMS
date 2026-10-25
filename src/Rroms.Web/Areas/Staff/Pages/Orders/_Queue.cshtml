@@ -42,6 +42,29 @@
 {
     <div class="alert alert-warning" role="status"><strong>Kitchen paused.</strong> Food already cooking finishes as normal; queued orders keep their place and start when you resume.</div>
 }
+@if (Model.Requests.Count > 0)
+{
+    <section class="mb-4" aria-labelledby="requests-heading">
+        <h2 id="requests-heading" class="h4">Table requests <span class="badge text-bg-danger">@Model.Requests.Count</span></h2>
+        <ul class="list-unstyled d-grid gap-2">
+            @foreach (var request in Model.Requests)
+            {
+                bool bill = request.Kind == Rroms.Web.Models.TableRequestKind.Bill;
+                <li class="tg-card table-request d-flex flex-wrap align-items-center gap-2 p-2">
+                    <strong>Table @(request.Reservation?.DiningTable?.Label ?? "#" + request.Reservation?.DiningTableId)</strong>
+                    <span>@(bill ? "asked for the bill" : "needs a staff member")</span>
+                    <span class="small text-secondary">@MinutesBetween(request.CreatedAtUtc, now) min ago · @request.Reservation?.Customer?.FullName</span>
+                    <span class="ms-auto d-flex gap-2">
+                        @if (bill) { <a class="btn btn-sm btn-outline-primary" asp-area="Staff" asp-page="/Billing/Visit" asp-route-id="@request.ReservationId">Open bill</a> }
+                        <form method="post" asp-page="/Orders/Index" asp-area="Staff" asp-page-handler="HandleRequest" asp-route-requestId="@request.Id">
+                            <button class="btn btn-sm btn-primary">Done</button>
+                        </form>
+                    </span>
+                </li>
+            }
+        </ul>
+    </section>
+}
 <section class="mb-4" aria-labelledby="cooking-heading">
     <h2 id="cooking-heading" class="h4">Cooking now <span class="badge text-bg-secondary">@board.Cooking.Count / @board.CookingSlots</span></h2>
     @if (board.Cooking.Count == 0) { <p class="text-secondary">Nothing is cooking.</p> }

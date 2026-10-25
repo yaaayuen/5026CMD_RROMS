@@ -12,6 +12,21 @@
     // Each order is shown under the visit it belongs to, so customers never need a reservation number.
     var ordersByVisit = Model.Orders.ToLookup(o => o.ReservationId);
     DateTime today = MalaysiaTime.FromUtc(DateTime.UtcNow).Date;
+    var unrated = Model.Unrated.Select(r => r.Id).ToHashSet();
+    // The newest finished visit without a rating, if it was recent, gets a prompt at the top.
+    var toRate = Model.Unrated.FirstOrDefault(r => r.EndUtc >= DateTime.UtcNow.AddDays(-Rroms.Web.Areas.Customer.Pages.Tracking.IndexModel.RatingPromptDays));
+
+    // Five star links that open the feedback form with the visit and the stars already chosen.
+    void Stars(int reservationId)
+    {
+        <span class="rate-stars" role="group" aria-label="Rate this visit">
+            @for (int n = 1; n <= 5; n++)
+            {
+                <a href="@Url.Page("/Feedback/Index", new { area = "Customer", reservationId, rating = n })"
+                   aria-label="@n @(n == 1 ? "star" : "stars")">★</a>
+            }
+        </span>
+    }
 
     // One order: the stepper (or a Cancelled badge), the dishes and the total. Past visits show a badge instead of the stepper.
     void RenderOrder(Order order, ReservationStatus visitStatus, bool stepper)
@@ -84,6 +99,14 @@
         </article>
     }
 }
+@if (toRate != null)
+{
+    <section class="tg-card h-auto mb-4 p-3" aria-labelledby="rate-visit-heading">
+        <h2 id="rate-visit-heading" class="h5 mb-1">How was your visit on @MalaysiaTime.FromUtc(toRate.StartUtc).ToString("dddd d MMMM")?</h2>
+        <p class="small text-secondary mb-2">Tap the stars to rate it. You can also rate the dishes you had.</p>
+        @{ Stars(toRate.Id); }
+    </section>
+}
 <section class="tg-card h-auto mb-4" aria-labelledby="track-reservations-heading">
     <h2 id="track-reservations-heading" class="h4 mb-3">Your visits</h2>
     @if (Model.Reservations.Count == 0)
@@ -123,6 +146,22 @@
                     <a class="btn btn-outline-primary btn-sm" asp-area="Customer" asp-page="/Reservations/Details" asp-route-id="@booking.Id"
                        aria-label="View reservation on @start.ToString("d MMMM")">View</a>
                 }
+                @if (booking.Status == ReservationStatus.Seated)
+                {
+                    bool staffAsked = Model.HasOpen(booking.Id, TableRequestKind.CallStaff);
+                    bool billAsked = Model.HasOpen(booking.Id, TableRequestKind.Bill);
+                    <div class="track-help d-flex flex-wrap align-items-center gap-2 w-100" role="group" aria-label="Help at your table">
+                        <form method="post" asp-area="Customer" asp-page="/Tracking/Index" asp-page-handler="Request"
+                              asp-route-reservationId="@booking.Id" asp-route-kind="@TableRequestKind.CallStaff">
+                            <button class="btn btn-sm btn-outline-primary" disabled="@staffAsked">@(staffAsked ? "Staff are on the way" : "Call staff")</button>
+                        </form>
+                        <form method="post" asp-area="Customer" asp-page="/Tracking/Index" asp-page-handler="Request"
+                              asp-route-reservationId="@booking.Id" asp-route-kind="@TableRequestKind.Bill">
+                            <button class="btn btn-sm btn-outline-primary" disabled="@billAsked">@(billAsked ? "Bill requested" : "Request the bill")</button>
+                        </form>
+                        <span class="small text-secondary">A staff member sees this straight away.</span>
+                    </div>
+                }
                 @if (ordersByVisit[booking.Id].Any())
                 {
                     <div class="track-orders">
@@ -145,6 +184,10 @@
                             <a asp-area="Customer" asp-page="/Reservations/Details" asp-route-id="@booking.Id">@start.ToString("ddd d MMM yyyy, h:mm tt")</a>
                             <span class="badge @ReservationStatusDisplay.BadgeClass(booking.Status) ms-auto">@ReservationStatusDisplay.Label(booking.Status)</span>
                         </div>
+                        @if (unrated.Contains(booking.Id))
+                        {
+                            <div class="d-flex flex-wrap align-items-center gap-2 small">Rate this visit: @{ Stars(booking.Id); }</div>
+                        }
                         @if (ordersByVisit[booking.Id].Any())
                         {
                             <div class="track-orders">

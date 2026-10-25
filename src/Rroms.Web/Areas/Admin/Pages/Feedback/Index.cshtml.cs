@@ -5,7 +5,10 @@ using Rroms.Web.Models.ViewModels;
 using Rroms.Web.Services;
 namespace Rroms.Web.Areas.Admin.Pages.Feedback;
 
-/// <summary>Rating summary, filters and moderation: reply, hide from the website, delete a comment and manage blocked words.</summary>
+/// <summary>
+/// Rating summary, dish ratings, filters, CSV download and moderation: reply, hide from the website,
+/// delete a comment and manage blocked words.
+/// </summary>
 public class IndexModel : PageModel
 {
     /// <summary>Weeks shown in the rating trend.</summary>
@@ -19,6 +22,10 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)] public string? Search { get; set; }
     public List<Models.Feedback> Items { get; set; } = new List<Models.Feedback>();
     public FeedbackSummary Summary { get; set; } = new FeedbackSummary();
+    /// <summary>Average stars per dish, best first.</summary>
+    public List<DishRatingSummary> Dishes { get; set; } = new List<DishRatingSummary>();
+    /// <summary>Dishes shown in each of the best and lowest rated lists.</summary>
+    public const int DishListSize = 5;
     public double? Average => Items.Count == 0 ? null : Items.Average(f => f.Rating);
     public List<Models.BlockedWord> CustomWords { get; set; } = new List<Models.BlockedWord>();
     public IReadOnlyList<string> FixedWords => _service.FixedBlockedWords;
@@ -33,12 +40,33 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
+        await LoadSummaryAsync();
+        await LoadItemsAsync();
+    }
+
+    /// <summary>Downloads the reviews that match the current filters as a CSV file.</summary>
+    public async Task<IActionResult> OnGetExportAsync()
+    {
+        if (!await LoadItemsAsync()) { await LoadSummaryAsync(); return Page(); }
+        string name = $"three-grills-feedback-{MalaysiaTime.FromUtc(DateTime.UtcNow):yyyyMMdd-HHmm}.csv";
+        return File(FeedbackCsv.Write(Items), "text/csv; charset=utf-8", name);
+    }
+
+    private async Task LoadSummaryAsync()
+    {
         Summary = await _service.GetSummaryAsync(TrendWeeks);
+        Dishes = await _service.GetDishSummaryAsync();
         CustomWords = await _service.GetCustomBlockedWordsAsync();
-        if (!ModelState.IsValid) { return; }
-        if (From > Until) { ModelState.AddModelError("", "End date must not precede start date."); return; }
+    }
+
+    /// <summary>Fills <see cref="Items"/> from the filters. Returns false when the filters are invalid.</summary>
+    private async Task<bool> LoadItemsAsync()
+    {
+        if (!ModelState.IsValid) { return false; }
+        if (From > Until) { ModelState.AddModelError("", "End date must not precede start date."); return false; }
         Items = await _service.GetAsync(Rating, From.HasValue ? MalaysiaTime.ToUtc(From.Value.Date) : null,
             Until.HasValue ? MalaysiaTime.ToUtc(Until.Value.Date.AddDays(1)) : null, View, Search);
+        return true;
     }
 
     public Task<IActionResult> OnPostReplyAsync(int id, string? reply) =>

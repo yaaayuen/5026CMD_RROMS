@@ -76,7 +76,17 @@ public class FeedbackService : IFeedbackService
             .OrderByDescending(r => r.StartUtc).ToListAsync();
     }
 
-    public async Task<ServiceResult> SubmitAsync(string customerId, int reservationId, int rating, string? comment)
+    public Task<List<MenuItem>> GetVisitDishesAsync(string customerId, int reservationId)
+    {
+        // Dishes from orders the customer actually received; cancelled orders are left out.
+        var ordered = _context.OrderItems
+            .Where(i => i.Order!.ReservationId == reservationId && i.Order.CustomerId == customerId && i.Order.Status != OrderStatus.Cancelled)
+            .Select(i => i.MenuItemId);
+        return _context.MenuItems.AsNoTracking().Where(m => ordered.Contains(m.Id)).OrderBy(m => m.Name).ToListAsync();
+    }
+
+    public async Task<ServiceResult> SubmitAsync(string customerId, int reservationId, int rating, string? comment,
+        IReadOnlyDictionary<int, int>? dishRatings = null)
     {
         var reservation = await _context.Reservations.AsNoTracking()
             .SingleOrDefaultAsync(r => r.Id == reservationId && r.CustomerId == customerId);
@@ -90,10 +100,18 @@ public class FeedbackService : IFeedbackService
         {
             return ServiceResult.Failure("This visit already has feedback.");
         }
+        var dishes = dishRatings ?? new Dictionary<int, int>();
+        if (dishes.Values.Any(stars => stars < 1 || stars > 5)) { return ServiceResult.Failure("Rate each dish from 1 to 5 stars."); }
+        if (dishes.Count > 0)
+        {
+            var eaten = (await GetVisitDishesAsync(customerId, reservationId)).Select(m => m.Id).ToHashSet();
+            if (!dishes.Keys.All(eaten.Contains)) { return ServiceResult.Failure("Only dishes from this visit can be rated."); }
+        }
         // A blocked word hides the review from the website until an administrator checks it. The customer is not told.
         bool flagged = _words.Find(comment, await CustomWordsAsync()).Count > 0;
         var feedback = new Feedback { ReservationId = reservationId, Rating = rating,
-            Comment = comment?.Trim() ?? "", CreatedAtUtc = DateTime.UtcNow, IsHidden = flagged, IsFlagged = flagged };
+            Comment = comment?.Trim() ?? "", CreatedAtUtc = DateTime.UtcNow, IsHidden = flagged, IsFlagged = flagged,
+            DishRatings = dishes.Select(d => new DishRating { MenuItemId = d.Key, Rating = d.Value }).ToList() };
         _context.Feedback.Add(feedback);
         try { await _context.SaveChangesAsync(); }
         catch (DbUpdateException ex) when ((ex.InnerException?.Message ?? "").Contains("IX_Feedback_ReservationId")
@@ -108,7 +126,8 @@ public class FeedbackService : IFeedbackService
     public Task<List<Feedback>> GetAsync(int? rating, DateTime? fromUtc, DateTime? untilUtc,
         FeedbackView view = FeedbackView.All, string? search = null)
     {
-        var query = _context.Feedback.AsNoTracking().Include(f => f.Reservation).ThenInclude(r => r!.Customer).AsQueryable();
+        var query = _context.Feedback.AsNoTracking().Include(f => f.Reservation).ThenInclude(r => r!.Customer)
+            .Include(f => f.DishRatings).ThenInclude(d => d.MenuItem).AsQueryable();
         if (rating.HasValue) { query = query.Where(f => f.Rating == rating.Value); }
         if (fromUtc.HasValue) { query = query.Where(f => f.CreatedAtUtc >= fromUtc.Value); }
         if (untilUtc.HasValue) { query = query.Where(f => f.CreatedAtUtc < untilUtc.Value); }
@@ -133,6 +152,7 @@ public class FeedbackService : IFeedbackService
     public Task<List<Feedback>> GetMineAsync(string customerId)
     {
         return _context.Feedback.AsNoTracking().Include(f => f.Reservation)
+            .Include(f => f.DishRatings).ThenInclude(d => d.MenuItem)
             .Where(f => f.Reservation!.CustomerId == customerId)
             .OrderByDescending(f => f.CreatedAtUtc).ToListAsync();
     }
@@ -168,6 +188,17 @@ public class FeedbackService : IFeedbackService
             summary.Weeks.Add(new FeedbackWeek(start, inWeek.Count, inWeek.Count == 0 ? null : inWeek.Average(f => f.Rating)));
         }
         return summary;
+    }
+
+    public async Task<List<DishRatingSummary>> GetDishSummaryAsync()
+    {
+        // Every rating counts, including those on hidden reviews, like the overall average.
+        var rows = await _context.DishRatings.AsNoTracking()
+            .GroupBy(d => new { d.MenuItemId, d.MenuItem!.Name })
+            .Select(g => new { g.Key.MenuItemId, g.Key.Name, Count = g.Count(), Average = g.Average(d => (double)d.Rating) })
+            .ToListAsync();
+        return rows.Select(r => new DishRatingSummary(r.MenuItemId, r.Name, r.Count, r.Average))
+            .OrderByDescending(r => r.Average).ThenByDescending(r => r.Count).ThenBy(r => r.Name).ToList();
     }
 
     public async Task<ServiceResult> ReplyAsync(int id, string? reply)

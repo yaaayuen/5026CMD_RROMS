@@ -1188,3 +1188,26 @@ input[type="password"]::-ms-clear {
     width: 11rem;
     flex-shrink: 0;
 }
+
+/* Table requests and visit rating (Alex). */
+.table-request {
+    border-left: 4px solid var(--bs-danger);
+}
+
+.track-help {
+    padding: 0.5rem 0.75rem;
+    border-left: 3px solid var(--tg-raspberry);
+    background-color: var(--tg-surface);
+}
+
+.rate-stars a {
+    font-size: 1.5rem;
+    line-height: 1;
+    text-decoration: none;
+    color: var(--tg-raspberry);
+}
+
+    .rate-stars a:hover,
+    .rate-stars a:focus-visible {
+        color: var(--tg-teal);
+    }

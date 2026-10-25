@@ -223,6 +223,12 @@ namespace Rroms.Web.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<TimeOnly?>("DailyFromLocal")
+                        .HasColumnType("time");
+
+                    b.Property<TimeOnly?>("DailyUntilLocal")
+                        .HasColumnType("time");
+
                     b.Property<DateTime>("EndUtc")
                         .HasColumnType("datetime2");
 
@@ -242,6 +248,9 @@ namespace Rroms.Web.Data.Migrations
 
                     b.Property<DateTime?>("NotifiedAtUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<int>("RepeatDays")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("StartUtc")
                         .HasColumnType("datetime2");
@@ -583,6 +592,36 @@ namespace Rroms.Web.Data.Migrations
                             DiningAreaId = 2,
                             IsActive = true,
                             Label = "P02"
+                        });
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.DishRating", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("FeedbackId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MenuItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MenuItemId");
+
+                    b.HasIndex("FeedbackId", "MenuItemId")
+                        .IsUnique();
+
+                    b.ToTable("DishRatings", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_DishRatings_Rating", "[Rating] BETWEEN 1 AND 5");
                         });
                 });
 
@@ -1519,6 +1558,35 @@ namespace Rroms.Web.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Rroms.Web.Models.TableRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("HandledAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("ReservationId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReservationId", "HandledAtUtc");
+
+                    b.ToTable("TableRequests");
+                });
+
             modelBuilder.Entity("CustomerAvoidedDietaryTags", b =>
                 {
                     b.HasOne("Rroms.Web.Models.DietaryTag", null)
@@ -1649,6 +1717,25 @@ namespace Rroms.Web.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("DiningArea");
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.DishRating", b =>
+                {
+                    b.HasOne("Rroms.Web.Models.Feedback", "Feedback")
+                        .WithMany("DishRatings")
+                        .HasForeignKey("FeedbackId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Rroms.Web.Models.MenuItem", "MenuItem")
+                        .WithMany()
+                        .HasForeignKey("MenuItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Feedback");
+
+                    b.Navigation("MenuItem");
                 });
 
             modelBuilder.Entity("Rroms.Web.Models.Feedback", b =>
@@ -1816,9 +1903,25 @@ namespace Rroms.Web.Data.Migrations
                     b.Navigation("Reservation");
                 });
 
+            modelBuilder.Entity("Rroms.Web.Models.TableRequest", b =>
+                {
+                    b.HasOne("Rroms.Web.Models.Reservation", "Reservation")
+                        .WithMany()
+                        .HasForeignKey("ReservationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Reservation");
+                });
+
             modelBuilder.Entity("Rroms.Web.Models.DiningArea", b =>
                 {
                     b.Navigation("Tables");
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.Feedback", b =>
+                {
+                    b.Navigation("DishRatings");
                 });
 
             modelBuilder.Entity("Rroms.Web.Models.Order", b =>

@@ -7,7 +7,10 @@ using Rroms.Web.Data;
 using Rroms.Web.Models;
 namespace Rroms.Web.Services;
 
-/// <summary>Publishes dated notices and notifies customers once, when a published promotion reaches its start time.</summary>
+/// <summary>
+/// Publishes dated notices and notifies customers when a published promotion starts showing:
+/// once for a one-off post, and on each chosen day for a recurring one.
+/// </summary>
 public class AnnouncementService : IAnnouncementService
 {
     private readonly ApplicationDbContext _context;
@@ -18,15 +21,15 @@ public class AnnouncementService : IAnnouncementService
         _notifications = notifications;
     }
 
-    public Task<List<Announcement>> GetAsync(bool activeOnly)
+    public async Task<List<Announcement>> GetAsync(bool activeOnly)
     {
         IQueryable<Announcement> query = _context.Announcements.AsNoTracking().Include(a => a.MenuItem);
-        if (activeOnly)
-        {
-            DateTime now = DateTime.UtcNow;
-            query = query.Where(a => a.IsPublished && a.StartUtc <= now && now < a.EndUtc);
-        }
-        return query.OrderByDescending(a => a.StartUtc).ToListAsync();
+        if (!activeOnly) { return await query.OrderByDescending(a => a.StartUtc).ToListAsync(); }
+        DateTime now = DateTime.UtcNow;
+        var inDates = await query.Where(a => a.IsPublished && a.StartUtc <= now && now < a.EndUtc)
+            .OrderByDescending(a => a.StartUtc).ToListAsync();
+        // Days and daily hours of recurring posts are checked here, in Malaysia time.
+        return inDates.Where(a => AnnouncementSchedule.IsShowing(a, now)).ToList();
     }
 
     public async Task<ServiceResult> SaveAsync(Announcement input)
@@ -44,6 +47,20 @@ public class AnnouncementService : IAnnouncementService
         {
             return ServiceResult.Failure("The linked dish no longer exists.");
         }
+        if (input.RepeatDays is < 0 or > 127) { return ServiceResult.Failure("Choose valid days to repeat on."); }
+        if (input.RepeatDays == 0) { input.DailyFromLocal = null; input.DailyUntilLocal = null; }
+        else
+        {
+            if (input.DailyFromLocal.HasValue != input.DailyUntilLocal.HasValue)
+            {
+                return ServiceResult.Failure("Enter both daily times, or leave both empty to show all day.");
+            }
+            if (input.DailyUntilLocal <= input.DailyFromLocal) { return ServiceResult.Failure("The daily end time must be after the daily start time."); }
+            if (AnnouncementSchedule.NextStartUtc(input, input.StartUtc.AddTicks(-1)) == null)
+            {
+                return ServiceResult.Failure("The dates never include one of the chosen days.");
+            }
+        }
         item.Title = input.Title.Trim();
         item.Message = input.Message.Trim();
         item.StartUtc = input.StartUtc;
@@ -51,10 +68,13 @@ public class AnnouncementService : IAnnouncementService
         item.IsPromotion = input.IsPromotion;
         item.IsPublished = input.IsPublished;
         item.MenuItemId = input.MenuItemId;
+        item.RepeatDays = input.RepeatDays;
+        item.DailyFromLocal = input.DailyFromLocal;
+        item.DailyUntilLocal = input.DailyUntilLocal;
         item.UpdatedAtUtc = DateTime.UtcNow;
         if (item.Id == 0) { _context.Announcements.Add(item); }
         await _context.SaveChangesAsync();
-        // A promotion that already started is announced now; a future one waits for AnnouncementScheduler.
+        // A promotion that is showing now is announced now; a later one waits for AnnouncementScheduler.
         await NotifyDueAsync();
         return ServiceResult.Success();
     }
@@ -67,14 +87,18 @@ public class AnnouncementService : IAnnouncementService
     public async Task<int> NotifyDueAsync()
     {
         DateTime now = DateTime.UtcNow;
-        List<int> due = await _context.Announcements
-            .Where(a => a.IsPromotion && a.IsPublished && a.NotifiedAtUtc == null && a.StartUtc <= now && now < a.EndUtc)
-            .Select(a => a.Id).ToListAsync();
+        var candidates = await _context.Announcements.AsNoTracking()
+            .Where(a => a.IsPromotion && a.IsPublished && a.StartUtc <= now && now < a.EndUtc).ToListAsync();
+        // Due when the current showing began after the last notice: once for a one-off post, once a day for a recurring one.
+        var due = candidates.Select(a => (a.Id, Start: AnnouncementSchedule.CurrentStartUtc(a, now), a.NotifiedAtUtc))
+            .Where(a => a.Start.HasValue && (a.NotifiedAtUtc == null || a.NotifiedAtUtc < a.Start)).ToList();
         int sent = 0;
-        foreach (int id in due)
+        foreach (var (id, start, _) in due)
         {
             // Claim the row first, so two overlapping runs can never notify customers twice.
-            int claimed = await _context.Announcements.Where(a => a.Id == id && a.NotifiedAtUtc == null)
+            DateTime showingStart = start!.Value;
+            int claimed = await _context.Announcements
+                .Where(a => a.Id == id && (a.NotifiedAtUtc == null || a.NotifiedAtUtc < showingStart))
                 .ExecuteUpdateAsync(s => s.SetProperty(a => a.NotifiedAtUtc, now));
             if (claimed == 0) { continue; }
             var item = await _context.Announcements.AsNoTracking().Include(a => a.MenuItem).SingleAsync(a => a.Id == id);

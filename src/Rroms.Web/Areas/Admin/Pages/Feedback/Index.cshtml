@@ -49,6 +49,39 @@
     </div>
 </section>
 
+<section class="tg-card p-3 mb-4" aria-labelledby="dishes-heading">
+    <h2 id="dishes-heading" class="h5">Dish ratings</h2>
+    @if (Model.Dishes.Count == 0)
+    {
+        <p class="small text-secondary mb-0">No dish has been rated yet. Guests can rate the dishes they ordered when they leave feedback.</p>
+    }
+    else
+    {
+        var best = Model.Dishes.Take(Rroms.Web.Areas.Admin.Pages.Feedback.IndexModel.DishListSize).ToList();
+        // The lowest list leaves out dishes already in the best list, so a short menu does not repeat them.
+        var lowest = Model.Dishes.AsEnumerable().Reverse().Where(d => !best.Contains(d))
+            .Take(Rroms.Web.Areas.Admin.Pages.Feedback.IndexModel.DishListSize).ToList();
+        <div class="row g-3">
+            @foreach (var list in new[] { ("Best rated", best), ("Lowest rated", lowest) })
+            {
+                if (list.Item2.Count == 0) { continue; }
+                <div class="col-md-6">
+                    <h3 class="h6 text-secondary">@list.Item1</h3>
+                    <table class="table table-sm small mb-0">
+                        <thead><tr><th scope="col">Dish</th><th scope="col">Average</th><th scope="col">Ratings</th></tr></thead>
+                        <tbody>
+                        @foreach (var dish in list.Item2)
+                        {
+                            <tr><td>@dish.Name</td><td>@dish.Average.ToString("0.0") ★</td><td>@dish.Count</td></tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    }
+</section>
+
 <section class="tg-card p-3 mb-4" aria-labelledby="blocked-heading">
     <h2 id="blocked-heading" class="h5">Blocked words</h2>
     <p class="small text-secondary">A new review containing one of these words is hidden from the website and flagged for you to check.
@@ -88,7 +121,10 @@
     <div class="col-sm"><label asp-for="Until">Through</label><input asp-for="Until" type="date" class="form-control" /></div>
     <div class="col-sm align-self-end"><button class="btn btn-primary">Filter</button></div>
 </form>
-<p>@Model.Items.Count reviews · Average: @(Model.Average?.ToString("0.0") ?? "No ratings")</p>
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <p class="mb-0">@Model.Items.Count reviews · Average: @(Model.Average?.ToString("0.0") ?? "No ratings")</p>
+    <a class="btn btn-sm btn-outline-primary ms-auto" asp-page-handler="Export" asp-all-route-data="Model.Filters">Download CSV</a>
+</div>
 @foreach(var item in Model.Items)
 {
     <article class="tg-card p-3 mb-3 @(item.IsHidden ? "feedback-hidden" : null)">
@@ -103,6 +139,10 @@
             @if (item.RepliedAtUtc == null) { <span class="badge text-bg-warning">Awaiting reply</span> }
         </div>
         <p class="mb-1">@(item.CommentRemoved ? "Comment deleted by an administrator." : item.Comment.Length == 0 ? "No comment." : item.Comment)</p>
+        @if (item.DishRatings.Count > 0)
+        {
+            <p class="small mb-1">Dishes: @string.Join(" · ", item.DishRatings.OrderBy(d => d.MenuItem?.Name).Select(d => $"{d.MenuItem?.Name} {d.Rating}★"))</p>
+        }
         <small>@item.Reservation?.Customer?.FullName · @MalaysiaTime.FromUtc(item.CreatedAtUtc).ToString("dd MMM yyyy HH:mm")</small>
 
         <form method="post" asp-page-handler="Reply" asp-all-route-data="Model.Filters" asp-route-id="@item.Id" class="mt-3">

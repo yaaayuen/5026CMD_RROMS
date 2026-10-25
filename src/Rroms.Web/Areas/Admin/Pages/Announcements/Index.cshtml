@@ -1,6 +1,7 @@
 @page
 @model Rroms.Web.Areas.Admin.Pages.Announcements.IndexModel
 @using Rroms.Web.Common
+@using Rroms.Web.Services
 @{
     ViewData["Title"] = "Announcements";
     DateTime now = DateTime.UtcNow;
@@ -15,6 +16,21 @@
     <label asp-for="Input.Message" class="form-label">Message</label><textarea asp-for="Input.Message" class="form-control mb-2" rows="3"></textarea>
     <label asp-for="StartLocal" class="form-label">Starts (Malaysia time)</label><input asp-for="StartLocal" type="datetime-local" class="form-control mb-2" />
     <label asp-for="EndLocal" class="form-label">Ends (Malaysia time)</label><input asp-for="EndLocal" type="datetime-local" class="form-control mb-2" />
+    <fieldset class="mb-2" aria-describedby="repeat-help">
+        <legend class="form-label fs-6 mb-1">Repeat on (optional)</legend>
+        <div class="d-flex flex-wrap gap-3">
+            @foreach (var day in Rroms.Web.Areas.Admin.Pages.Announcements.IndexModel.WeekOrder)
+            {
+                <label><input type="checkbox" name="RepeatOn" value="@day" checked="@Model.RepeatOn.Contains(day)" /> @day.ToString()[..3]</label>
+            }
+        </div>
+        <div class="row g-2 mt-1">
+            <div class="col-sm-6"><label asp-for="Input.DailyFromLocal" class="form-label small mb-0">Daily from</label><input asp-for="Input.DailyFromLocal" type="time" class="form-control" /></div>
+            <div class="col-sm-6"><label asp-for="Input.DailyUntilLocal" class="form-label small mb-0">Daily until</label><input asp-for="Input.DailyUntilLocal" type="time" class="form-control" /></div>
+        </div>
+        <p id="repeat-help" class="form-text mt-1 mb-0">Tick days to show the post only on those days between the dates above, for example a lunch set Monday to Friday from 11:00 to 14:00.
+            Leave the times empty to show all day. A recurring promotion notifies customers each day it starts.</p>
+    </fieldset>
     <label asp-for="Input.MenuItemId" class="form-label">Linked dish (optional)</label>
     <select asp-for="Input.MenuItemId" asp-items="Model.Dishes" class="form-select mb-1" aria-describedby="dish-help"><option value="">No dish</option></select>
     <p id="dish-help" class="form-text mt-0 mb-2">Customers get a button that opens this dish on the menu.</p>
@@ -40,6 +56,11 @@
         <div class="d-flex flex-wrap gap-2 mb-2">
             <span class="badge @(state switch { "live" => "text-bg-success", "upcoming" => "text-bg-info", "ended" => "text-bg-secondary", _ => "text-bg-light" })">@(state switch { "live" => "Live", "upcoming" => "Scheduled", "ended" => "Ended", _ => "Draft" })</span>
             @if (item.IsPromotion) { <span class="badge text-bg-primary">Offer</span> }
+            @if (AnnouncementSchedule.IsRecurring(item)) { <span class="badge text-bg-light">Repeats @AnnouncementSchedule.Describe(item)</span> }
+            @if (state == "upcoming" && AnnouncementSchedule.NextStartUtc(item, now) is DateTime next)
+            {
+                <span class="badge text-bg-light">Next showing @MalaysiaTime.FromUtc(next).ToString("ddd dd MMM HH:mm")</span>
+            }
             @if (item.NotifiedAtUtc.HasValue) { <span class="badge text-bg-light">Customers notified @MalaysiaTime.FromUtc(item.NotifiedAtUtc.Value).ToString("dd MMM HH:mm")</span> }
         </div>
         <h2 class="h5">@item.Title</h2><p>@item.Message</p>
