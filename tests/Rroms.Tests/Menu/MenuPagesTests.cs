@@ -50,12 +50,6 @@ public class MenuPagesTests : IClassFixture<TestWebApplicationFactory>
 
     private const decimal NormalPrice = 20.00m;
 
-    /// <summary>The text format an HTML date-time box sends, down to the minute.</summary>
-    private const string DateTimeBoxFormat = "yyyy-MM-ddTHH:mm";
-
-    /// <summary>Malaysia is UTC+8 all year (no daylight saving).</summary>
-    private const int MalaysiaHoursAheadOfUtc = 8;
-
     private readonly TestWebApplicationFactory _factory;
 
     /// <summary>Receives the shared in-memory application from xUnit.</summary>
@@ -155,65 +149,38 @@ public class MenuPagesTests : IClassFixture<TestWebApplicationFactory>
         Assert.Contains(MenuService.PriceMessage, html);
     }
 
-    /// <summary>An offer price without its dates is refused.</summary>
+    /// <summary>The dish form no longer has an offer section: discounts are set on the Promotions page.</summary>
     [Fact]
-    public async Task Add_OfferWithoutDates_ShowsServiceError()
+    public async Task EditPage_HasNoOfferFields()
     {
         HttpClient client = await SignInAsAdministratorAsync();
-        Dictionary<string, string> fields = ValidDishFields(NewDishName());
-        fields["Input.PromoPrice"] = "15.00";
 
-        HttpResponseMessage response = await FormHelper.PostFormAsync(client, EditUrl, EditUrl, fields);
-        string html = await response.Content.ReadAsStringAsync();
+        string html = await client.GetStringAsync(EditUrl);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains(MenuService.PromoIncompleteMessage, html);
+        Assert.DoesNotContain("Offer price", html);
+        Assert.DoesNotContain("Offer starts", html);
+        Assert.DoesNotContain("PromoStartLocal", html);
     }
 
-    /// <summary>
-    /// Offer times typed in Malaysia time (UTC+8) are stored as UTC: 10:00 in Kuala Lumpur is 02:00 UTC.
-    /// </summary>
+    /// <summary>An offer sent by hand (not through the form) is ignored: the dish is saved without one.</summary>
     [Fact]
-    public async Task Add_OfferTimes_AreStoredInUtc()
+    public async Task Add_OfferSentByHand_IsIgnored()
     {
         HttpClient client = await SignInAsAdministratorAsync();
         string name = NewDishName();
         Dictionary<string, string> fields = ValidDishFields(name);
         fields["Input.PromoPrice"] = "15.00";
-
-        // 10:00 Malaysia time, two days from now (offers cannot start in the past) until a week later.
-        DateTime startLocal = MalaysiaTime.FromUtc(DateTime.UtcNow).Date.AddDays(2).AddHours(10);
-        DateTime endLocal = startLocal.AddDays(7);
-        fields["PromoStartLocal"] = startLocal.ToString(DateTimeBoxFormat, CultureInfo.InvariantCulture);
-        fields["PromoEndLocal"] = endLocal.ToString(DateTimeBoxFormat, CultureInfo.InvariantCulture);
+        fields["Input.PromoStartUtc"] = DateTime.UtcNow.AddDays(1).ToString("o", CultureInfo.InvariantCulture);
+        fields["Input.PromoEndUtc"] = DateTime.UtcNow.AddDays(8).ToString("o", CultureInfo.InvariantCulture);
 
         HttpResponseMessage response = await FormHelper.PostFormAsync(client, EditUrl, EditUrl, fields);
         MenuItem? saved = await FindDishAsync(name);
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.NotNull(saved);
-        Assert.Equal(15.00m, saved.PromoPrice);
-        Assert.Equal(startLocal.AddHours(-MalaysiaHoursAheadOfUtc), saved.PromoStartUtc);
-        Assert.Equal(endLocal.AddHours(-MalaysiaHoursAheadOfUtc), saved.PromoEndUtc);
-    }
-
-    /// <summary>An offer that starts yesterday is refused and the service's message is shown.</summary>
-    [Fact]
-    public async Task Add_OfferStartingInThePast_ShowsServiceError()
-    {
-        HttpClient client = await SignInAsAdministratorAsync();
-        Dictionary<string, string> fields = ValidDishFields(NewDishName());
-        fields["Input.PromoPrice"] = "15.00";
-
-        DateTime yesterday = MalaysiaTime.FromUtc(DateTime.UtcNow).Date.AddDays(-1).AddHours(10);
-        fields["PromoStartLocal"] = yesterday.ToString(DateTimeBoxFormat, CultureInfo.InvariantCulture);
-        fields["PromoEndLocal"] = yesterday.AddDays(7).ToString(DateTimeBoxFormat, CultureInfo.InvariantCulture);
-
-        HttpResponseMessage response = await FormHelper.PostFormAsync(client, EditUrl, EditUrl, fields);
-        string html = await response.Content.ReadAsStringAsync();
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains(MenuService.PromoInPastMessage, html);
+        Assert.Null(saved.PromoPrice);
+        Assert.Null(saved.PromoStartUtc);
+        Assert.Null(saved.PromoEndUtc);
     }
 
     /// <summary>The same dish name in another category is refused, because names are unique on the whole menu.</summary>
