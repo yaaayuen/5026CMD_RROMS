@@ -19,7 +19,7 @@ namespace Rroms.Tests.Menu;
 public class SampleMenuSeederTests : IDisposable
 {
     private const int GrillsId = 2;
-    private const int SampleDishCount = 10;
+    private const int SampleDishCount = 27;
     private const decimal NormalPrice = 20.00m;
 
     private readonly SqliteConnection _connection;
@@ -80,7 +80,7 @@ public class SampleMenuSeederTests : IDisposable
     // Empty menu
     // ---------------------------------------------------------------------------------------------
 
-    /// <summary>A teammate with an empty menu gets all ten sample dishes.</summary>
+    /// <summary>A teammate with an empty menu gets all the sample dishes.</summary>
     [Fact]
     public async Task Seed_EmptyMenu_AddsAllSampleDishes()
     {
@@ -137,10 +137,10 @@ public class SampleMenuSeederTests : IDisposable
             Assert.StartsWith(item.MenuCategory!.Name.Substring(0, 1), item.Code);
         }
 
-        Assert.Equal("S01", (await LoadDishAsync("Garlic Bread")).Code);
+        Assert.Equal("S03", (await LoadDishAsync("Garlic Bread")).Code);
         Assert.Equal("G01", (await LoadDishAsync("Smoky BBQ Burger")).Code);
-        Assert.Equal("P03", (await LoadDishAsync("Pesto Pasta")).Code);
-        Assert.Equal("B02", (await LoadDishAsync("Orange Juice")).Code);
+        Assert.Equal("P01", (await LoadDishAsync("Pesto Pasta")).Code);
+        Assert.Equal("B01", (await LoadDishAsync("Orange Juice")).Code);
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -238,7 +238,7 @@ public class SampleMenuSeederTests : IDisposable
 
         int added = await _seeder.SeedAsync();
 
-        Assert.Equal(SampleDishCount - 2, added);
+        Assert.Equal(SampleDishCount - 6, added);
         Assert.False(await _context.MenuItems.AnyAsync(i => i.Name == "Orange Juice"));
     }
 
