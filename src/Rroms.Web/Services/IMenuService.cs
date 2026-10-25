@@ -26,6 +26,13 @@ public interface IMenuService
     Task<MenuItem?> GetMenuItemAsync(int id);
 
     /// <summary>
+    /// What a customer pays right now for each of the given dishes, looking at the dish's own offer and the
+    /// running promotions (the cheapest wins). The key is the dish Id. Used by the admin menu list.
+    /// </summary>
+    /// <param name="items">The dishes to price.</param>
+    Task<IReadOnlyDictionary<int, PriceQuote>> GetCurrentPricesAsync(IEnumerable<MenuItem> items);
+
+    /// <summary>
     /// The customer menu: dishes in active categories that match the search text, 
     /// category and price range, ready to display 
     /// (current price, running offer, photo address and whether the dish can be ordered).
