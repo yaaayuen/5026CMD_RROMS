@@ -30,7 +30,7 @@ public class IndexModel : PageModel
                 "/Admin/Restaurant"),
             new ModuleTileViewModel(
                 "Menu items",
-                "Dishes, prices, availability, offers and photos.",
+                "Dishes, prices, availability and photos.",
                 "menu",
                 "Sprint 3 · YJ",
                 "/Admin/Menu"),

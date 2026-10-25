@@ -11,7 +11,7 @@
 	<div class="position-relative">
 		<span class="eyebrow">Menu</span>
 		<h1 id="edit-heading" class="mb-1">@(isEditing ? $"Edit {Model.EditingName}" : "Add a dish")</h1>
-		<p class="lead mb-0">Price, availability, an optional offer and a photo.</p>
+		<p class="lead mb-0">Price, availability and a photo. Discounts are set on the Promotions page.</p>
 	</div>
 </section>
 
@@ -74,28 +74,6 @@
 			}
 		</fieldset>
 
-		<fieldset class="mb-3">
-			<legend class="h5">Offer (optional)</legend>
-			<p class="text-secondary small">Fill in all three fields, or leave all three empty. The offer price must be lower than the normal price.</p>
-			<div class="row">
-				<div class="col-md-4 mb-3">
-					<label asp-for="Input.PromoPrice" class="form-label fw-semibold"></label>
-					<input asp-for="Input.PromoPrice" type="number" step="0.01" min="@Model.MinPriceText" class="form-control" />
-					<span asp-validation-for="Input.PromoPrice" class="text-danger small"></span>
-				</div>
-				<div class="col-md-4 mb-3">
-					<label asp-for="PromoStartLocal" class="form-label fw-semibold"></label>
-					<input asp-for="PromoStartLocal" class="form-control" min="@Model.MinStartText" />
-					<span asp-validation-for="PromoStartLocal" class="text-danger small"></span>
-				</div>
-				<div class="col-md-4 mb-3">
-					<label asp-for="PromoEndLocal" class="form-label fw-semibold"></label>
-					<input asp-for="PromoEndLocal" class="form-control" min="@Model.MinEndText" data-floor="@Model.MinEndText" />
-					<span asp-validation-for="PromoEndLocal" class="text-danger small"></span>
-				</div>
-			</div>
-		</fieldset>
-
 		<fieldset class="mb-4">
 			<legend class="h5">Photo</legend>
 
@@ -122,36 +100,4 @@
 
 @section Scripts {
 	<partial name="_ValidationScriptsPartial" />
-
-	<script>
-		(function () {
-			var start = document.getElementById('PromoStartLocal');
-			var end = document.getElementById('PromoEndLocal');
-
-			if (!start || !end) {
-				return;
-			}
-
-			// The offer cannot end before it starts: once a start is chosen, the end picker begins there,
-			// but never earlier than its own floor (now, unless the saved end has already passed).
-			var floor = end.getAttribute('data-floor') || '';
-
-			function limitEnd() {
-				var lowest = floor;
-
-				if (start.value && start.value > lowest) {
-					lowest = start.value;
-				}
-
-				if (lowest) {
-					end.min = lowest;
-				} else {
-					end.removeAttribute('min');
-				}
-			}
-
-			start.addEventListener('change', limitEnd);
-			limitEnd();
-		})();
-	</script>
 }

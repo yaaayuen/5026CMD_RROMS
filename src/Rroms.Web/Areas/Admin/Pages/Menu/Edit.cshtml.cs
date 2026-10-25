@@ -15,20 +15,17 @@ using Rroms.Web.Services;
 namespace Rroms.Web.Areas.Admin.Pages.Menu;
 
 /// <summary>
-/// Add or edit one dish, including its offer and photo. Owner: YJ (YJ-1).
+/// Add or edit one dish, including its photo. Owner: YJ (YJ-1).
 /// </summary>
 /// <remarks>
 /// /Admin/Menu/Edit adds a dish, /Admin/Menu/Edit/5 edits dish 5.
-/// The offer times are typed in Malaysia time and converted to UTC here, because the service and the
-/// database work in UTC (shared-contracts.md, section 7). The dish is saved first; the photo is saved
-/// second, so a rejected photo never loses the other changes.
+/// Discounts are no longer set per dish: the administrator uses the Promotions page. Saving a dish here
+/// clears any old offer it still had, and an offer sent by hand is ignored. The dish is saved first; the
+/// photo is saved second, so a rejected photo never loses the other changes.
 /// </remarks>
 public class EditModel : PageModel
 {
     private const long BytesPerMegabyte = 1024 * 1024;
-
-    /// <summary>The text format an HTML date-time box accepts, down to the minute.</summary>
-    private const string DateTimeBoxFormat = "yyyy-MM-ddTHH:mm";
 
     private readonly IMenuService _menuService;
     private readonly IRestaurantService _restaurantService;
@@ -59,16 +56,6 @@ public class EditModel : PageModel
     /// <summary>The dish details from the form.</summary>
     [BindProperty]
     public MenuItemInput Input { get; set; } = new MenuItemInput();
-
-    /// <summary>When the offer starts, as typed in the form (Malaysia time).</summary>
-    [BindProperty]
-    [Display(Name = "Offer starts (Malaysia time)")]
-    public DateTime? PromoStartLocal { get; set; }
-
-    /// <summary>When the offer ends, as typed in the form (Malaysia time).</summary>
-    [BindProperty]
-    [Display(Name = "Offer ends (Malaysia time)")]
-    public DateTime? PromoEndLocal { get; set; }
 
     /// <summary>A new photo chosen by the administrator, or null to keep the current one.</summary>
     [BindProperty]
@@ -105,28 +92,6 @@ public class EditModel : PageModel
         }
     }
 
-    /// <summary>
-    /// The earliest time the "Offer starts" box accepts, so the browser's picker greys out the past.
-    /// Null (no limit) when the box already holds a time that has passed, which happens when you edit an
-    /// offer that is already running: the saved start must not block the form. The service checks again.
-    /// </summary>
-    public string? MinStartText => BuildMinText(PromoStartLocal);
-
-    /// <summary>The earliest time the "Offer ends" box accepts. Null when the saved end has already passed.</summary>
-    public string? MinEndText => BuildMinText(PromoEndLocal);
-
-    private static string? BuildMinText(DateTime? savedValue)
-    {
-        DateTime malaysiaNow = MalaysiaTime.FromUtc(DateTime.UtcNow);
-
-        if (savedValue.HasValue && savedValue.Value < malaysiaNow)
-        {
-            return null;
-        }
-
-        return malaysiaNow.ToString(DateTimeBoxFormat, CultureInfo.InvariantCulture);
-    }
-
     /// <summary>The smallest price, formatted for an HTML number field.</summary>
     public string MinPriceText
     {
@@ -161,12 +126,8 @@ public class EditModel : PageModel
             MenuCategoryId = item.MenuCategoryId,
             Price = item.Price,
             IsAvailable = item.IsAvailable,
-            DietaryTagIds = item.DietaryTags.Select(tag => tag.Id).ToList(),
-            PromoPrice = item.PromoPrice
+            DietaryTagIds = item.DietaryTags.Select(tag => tag.Id).ToList()
         };
-
-        PromoStartLocal = ToMalaysiaTime(item.PromoStartUtc);
-        PromoEndLocal = ToMalaysiaTime(item.PromoEndUtc);
 
         await LoadChoicesAsync(item.MenuCategoryId);
         return Page();
@@ -193,10 +154,11 @@ public class EditModel : PageModel
             originalCategoryId = existing.MenuCategoryId;
         }
 
-        // The service works in UTC, so the Malaysia times from the form are converted here.
-        // Always overwrite: a browser must not be able to send UTC values directly.
-        Input.PromoStartUtc = ToUtc(PromoStartLocal);
-        Input.PromoEndUtc = ToUtc(PromoEndLocal);
+        // Dish offers are retired (discounts are Promotions now). Always clear them: a request made by hand
+        // must not be able to set one, and saving a dish removes any old offer it still had.
+        Input.PromoPrice = null;
+        Input.PromoStartUtc = null;
+        Input.PromoEndUtc = null;
 
         if (!ModelState.IsValid)
         {
@@ -341,27 +303,5 @@ public class EditModel : PageModel
         }
 
         return _imageStorage.GetPublicUrl(item.ImageFileName);
-    }
-
-    /// <summary>Converts a UTC time from the database to Malaysia time for the form.</summary>
-    private static DateTime? ToMalaysiaTime(DateTime? utc)
-    {
-        if (!utc.HasValue)
-        {
-            return null;
-        }
-
-        return MalaysiaTime.FromUtc(utc.Value);
-    }
-
-    /// <summary>Converts a Malaysia time from the form to UTC for the service.</summary>
-    private static DateTime? ToUtc(DateTime? malaysiaLocal)
-    {
-        if (!malaysiaLocal.HasValue)
-        {
-            return null;
-        }
-
-        return MalaysiaTime.ToUtc(malaysiaLocal.Value);
     }
 }
