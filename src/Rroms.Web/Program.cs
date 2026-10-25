@@ -195,6 +195,7 @@ builder.Services.AddSingleton<FeedbackWordFilter>();
 builder.Services.AddHostedService<AnnouncementScheduler>();
 builder.Services.Configure<KitchenOptions>(builder.Configuration.GetSection(KitchenOptions.SectionName));
 builder.Services.AddHostedService<KitchenScheduler>();
+builder.Services.AddScoped<IKitchenInsightsService, KitchenInsightsService>();
 
 // ----- Sprint 5 (Darren): billing and receipts (DA-1) -----
 builder.Services.AddSingleton<IPaymentTerminal>(

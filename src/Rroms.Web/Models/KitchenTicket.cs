@@ -13,5 +13,10 @@ public class KitchenTicket
     /// <summary>The longest dish in the order, copied when cooking starts so later menu edits do not move the countdown.</summary>
     public int CookingMinutes { get; set; }
     public DateTime StartedAtUtc { get; set; }
+    /// <summary>When cooking ends. Moves if staff finish early or add time.</summary>
     public DateTime ReadyAtUtc { get; set; }
+    /// <summary>When the order joined the kitchen line, kept for the average-wait statistics.</summary>
+    public DateTime QueuedSinceUtc { get; set; }
+    /// <summary>When staff marked the order served, kept for the ready-to-served statistics.</summary>
+    public DateTime? ServedAtUtc { get; set; }
 }

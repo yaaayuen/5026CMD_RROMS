@@ -369,6 +369,34 @@ namespace Rroms.Web.Data.Migrations
                     b.ToTable("BlockedWords");
                 });
 
+            modelBuilder.Entity("Rroms.Web.Models.ChatQuestionLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AskedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("Topic")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AskedAtUtc");
+
+                    b.ToTable("ChatQuestionLogs");
+                });
+
             modelBuilder.Entity("Rroms.Web.Models.DietaryTag", b =>
                 {
                     b.Property<int>("Id")
@@ -607,6 +635,30 @@ namespace Rroms.Web.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Rroms.Web.Models.KitchenStatus", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ChangedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsPaused")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("KitchenStatuses");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            ChangedAtUtc = new DateTime(2026, 10, 26, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsPaused = false
+                        });
+                });
+
             modelBuilder.Entity("Rroms.Web.Models.KitchenTicket", b =>
                 {
                     b.Property<int>("Id")
@@ -621,7 +673,13 @@ namespace Rroms.Web.Data.Migrations
                     b.Property<int>("OrderId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime>("QueuedSinceUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("ReadyAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ServedAtUtc")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("StartedAtUtc")

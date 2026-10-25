@@ -5,6 +5,8 @@ public class KitchenBoard
 {
     public DateTime NowUtc { get; set; }
     public int CookingSlots { get; set; }
+    /// <summary>True while staff have paused the kitchen: queued orders keep their place but do not start.</summary>
+    public bool IsPaused { get; set; }
     /// <summary>Orders on the stove, finishing soonest first.</summary>
     public List<KitchenEntry> Cooking { get; set; } = new List<KitchenEntry>();
     /// <summary>Orders waiting for a free slot, first in line first, with an estimated start time.</summary>

@@ -14,6 +14,8 @@ public class OrderProcessingService : IOrderProcessingService
     private readonly ApplicationDbContext _context;
     private readonly INotificationService _notifications;
     private readonly int _slots;
+    /// <summary>Most minutes staff can add to a countdown in one press.</summary>
+    public const int MaxExtraMinutes = 30;
 
     public OrderProcessingService(ApplicationDbContext context, INotificationService notifications)
         : this(context, notifications, Microsoft.Extensions.Options.Options.Create(new KitchenOptions())) { }
@@ -57,7 +59,7 @@ public class OrderProcessingService : IOrderProcessingService
         {
             return ServiceResult.Failure("That order status change is not allowed.");
         }
-        var order = await _context.Orders.AsNoTracking().SingleOrDefaultAsync(o => o.Id == id);
+        var order = await _context.Orders.AsNoTracking().Include(o => o.Reservation).SingleOrDefaultAsync(o => o.Id == id);
         if (order == null) { return ServiceResult.Failure("Order not found."); }
 
         // Compare-and-update prevents two staff clicks from moving the same version twice.
@@ -75,7 +77,12 @@ public class OrderProcessingService : IOrderProcessingService
         if (next == OrderStatus.Preparing)
         {
             // A manual start still gets a countdown, so the board and the customer see the same timer.
-            await AddTicketAsync(id, await CookingMinutesAsync(id), DateTime.UtcNow);
+            await AddTicketAsync(id, await CookingMinutesAsync(id), DateTime.UtcNow, InLineSince(order));
+        }
+        if (next == OrderStatus.Served)
+        {
+            DateTime served = DateTime.UtcNow;
+            await _context.KitchenTickets.Where(t => t.OrderId == id).ExecuteUpdateAsync(s => s.SetProperty(t => t.ServedAtUtc, served));
         }
         await _notifications.NotifyUserAsync(order.CustomerId, NotificationType.OrderUpdated,
             "Order updated", $"Order #{id} is now {OrderStatusRules.Label(next)}.", "/Customer/Tracking");
@@ -91,7 +98,7 @@ public class OrderProcessingService : IOrderProcessingService
         List<int> untimed = await _context.Orders
             .Where(o => o.Status == OrderStatus.Preparing && !_context.KitchenTickets.Any(t => t.OrderId == o.Id))
             .Select(o => o.Id).ToListAsync();
-        foreach (int id in untimed) { await AddTicketAsync(id, await CookingMinutesAsync(id), now); }
+        foreach (int id in untimed) { await AddTicketAsync(id, await CookingMinutesAsync(id), now, now); }
 
         // 1. Countdowns that have ended. The status check makes a repeated or parallel run harmless.
         var finished = await _context.KitchenTickets.AsNoTracking()
@@ -110,17 +117,19 @@ public class OrderProcessingService : IOrderProcessingService
         // 2. Seated orders waiting for the kitchen, first in line first.
         List<Order> waiting = await WaitingOrdersAsync();
         int cooking = await _context.Orders.CountAsync(o => o.Status == OrderStatus.Preparing);
+        // While paused, food already cooking still finishes, but nothing new starts. Drinks need no kitchen.
+        bool paused = await IsPausedAsync();
         foreach (Order order in waiting)
         {
             int minutes = LongestDish(order);
-            if (minutes > 0 && cooking >= _slots) { continue; }
+            if (minutes > 0 && (paused || cooking >= _slots)) { continue; }
             // Claim the order only if it is still Placed and the guests are still seated.
             bool claimed = await _context.Orders
                 .Where(o => o.Id == order.Id && o.Status == OrderStatus.Placed && o.Reservation!.Status == ReservationStatus.Seated)
                 .ExecuteUpdateAsync(s => s.SetProperty(o => o.Status, minutes == 0 ? OrderStatus.ReadyToServe : OrderStatus.Preparing)
                     .SetProperty(o => o.UpdatedAtUtc, now)) == 1;
             if (!claimed) { continue; }
-            await AddTicketAsync(order.Id, minutes, now);
+            await AddTicketAsync(order.Id, minutes, now, InLineSince(order));
             moved++;
             if (minutes == 0)
             {
@@ -136,10 +145,58 @@ public class OrderProcessingService : IOrderProcessingService
         return moved;
     }
 
+    public async Task<ServiceResult> FinishEarlyAsync(int orderId)
+    {
+        DateTime now = DateTime.UtcNow;
+        var order = await _context.Orders.AsNoTracking().SingleOrDefaultAsync(o => o.Id == orderId);
+        if (order == null || !await MoveAsync(orderId, OrderStatus.Preparing, OrderStatus.ReadyToServe, now))
+        {
+            return ServiceResult.Failure("That order is no longer cooking. Refresh and try again.");
+        }
+        await _context.KitchenTickets.Where(t => t.OrderId == orderId).ExecuteUpdateAsync(s => s.SetProperty(t => t.ReadyAtUtc, now));
+        await _notifications.NotifyUserAsync(order.CustomerId, NotificationType.OrderUpdated,
+            "Your food is ready", $"Order #{orderId} is ready. Staff will bring it to your table.", "/Customer/Tracking");
+        return ServiceResult.Success();
+    }
+
+    public async Task<ServiceResult> AddCookingTimeAsync(int orderId, int minutes)
+    {
+        if (minutes < 1 || minutes > MaxExtraMinutes)
+        {
+            return ServiceResult.Failure($"Add between 1 and {MaxExtraMinutes} minutes.");
+        }
+        // Only a countdown that is still running can be extended.
+        int changed = await _context.KitchenTickets
+            .Where(t => t.OrderId == orderId && t.Order!.Status == OrderStatus.Preparing)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.ReadyAtUtc, t => t.ReadyAtUtc.AddMinutes(minutes))
+                .SetProperty(t => t.CookingMinutes, t => t.CookingMinutes + minutes));
+        if (changed == 0) { return ServiceResult.Failure("That order is no longer cooking. Refresh and try again."); }
+        string customerId = await _context.Orders.Where(o => o.Id == orderId).Select(o => o.CustomerId).SingleAsync();
+        await _notifications.NotifyUserAsync(customerId, NotificationType.OrderUpdated,
+            "A little more time", $"Order #{orderId} needs about {minutes} more min. Thank you for waiting.", "/Customer/Tracking");
+        return ServiceResult.Success();
+    }
+
+    public async Task<bool> IsPausedAsync() =>
+        await _context.KitchenStatuses.Where(k => k.Id == KitchenStatus.SingletonId).Select(k => k.IsPaused).SingleOrDefaultAsync();
+
+    public async Task SetPausedAsync(bool paused)
+    {
+        DateTime now = DateTime.UtcNow;
+        int changed = await _context.KitchenStatuses.Where(k => k.Id == KitchenStatus.SingletonId)
+            .ExecuteUpdateAsync(s => s.SetProperty(k => k.IsPaused, paused).SetProperty(k => k.ChangedAtUtc, now));
+        if (changed == 0)
+        {
+            // Normally seeded by the migration; this covers a database created another way.
+            _context.KitchenStatuses.Add(new KitchenStatus { Id = KitchenStatus.SingletonId, IsPaused = paused, ChangedAtUtc = now });
+            await _context.SaveChangesAsync();
+        }
+    }
+
     public async Task<KitchenBoard> GetKitchenBoardAsync()
     {
         DateTime now = DateTime.UtcNow;
-        var board = new KitchenBoard { NowUtc = now, CookingSlots = _slots };
+        var board = new KitchenBoard { NowUtc = now, CookingSlots = _slots, IsPaused = await IsPausedAsync() };
         List<Order> active = await _context.Orders.AsNoTracking()
             .Include(o => o.Reservation!).ThenInclude(r => r.DiningTable)
             .Include(o => o.Items).ThenInclude(i => i.MenuItem)
@@ -222,11 +279,12 @@ public class OrderProcessingService : IOrderProcessingService
             .ExecuteUpdateAsync(s => s.SetProperty(o => o.Status, to).SetProperty(o => o.UpdatedAtUtc, now)) == 1;
     }
 
-    private async Task AddTicketAsync(int orderId, int minutes, DateTime now)
+    private async Task AddTicketAsync(int orderId, int minutes, DateTime now, DateTime queuedSince)
     {
         // A ticket left from an earlier start is replaced, so the countdown always matches the current cooking.
         await _context.KitchenTickets.Where(t => t.OrderId == orderId).ExecuteDeleteAsync();
-        _context.KitchenTickets.Add(new KitchenTicket { OrderId = orderId, CookingMinutes = minutes, StartedAtUtc = now, ReadyAtUtc = now.AddMinutes(minutes) });
+        _context.KitchenTickets.Add(new KitchenTicket { OrderId = orderId, CookingMinutes = minutes, StartedAtUtc = now,
+            ReadyAtUtc = now.AddMinutes(minutes), QueuedSinceUtc = queuedSince < now ? queuedSince : now });
         await _context.SaveChangesAsync();
     }
 

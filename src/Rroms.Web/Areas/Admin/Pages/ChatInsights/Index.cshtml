@@ -1,0 +1,57 @@
+@page
+@model Rroms.Web.Areas.Admin.Pages.ChatInsights.IndexModel
+@using Rroms.Web.Areas.Admin.Pages.ChatInsights
+@{
+    ViewData["Title"] = "Chatbot insights";
+    var data = Model.Insights;
+    int most = Math.Max(1, data.Topics.Select(t => t.Count).DefaultIfEmpty(0).Max());
+    int[] ranges = { 7, 30, 90 };
+}
+<h1>Chatbot insights</h1>
+<p class="text-secondary">Only the topic of each question is recorded. The question text and who asked it are never stored.</p>
+<nav class="news-tabs mb-4" aria-label="Period">
+    @foreach (int range in ranges)
+    {
+        bool active = Model.Days == range;
+        <a class="news-tab @(active ? "active" : null)" asp-page="./Index" asp-route-days="@range" aria-current="@(active ? "page" : null)">Last @range days</a>
+    }
+</nav>
+
+<section class="row g-3 mb-4" aria-label="Answer sources">
+    <div class="col-6 col-lg-3"><div class="tg-card h-100 p-3"><h2 class="h6 text-secondary">Questions</h2><p class="display-6 mb-0">@data.Total</p></div></div>
+    <div class="col-6 col-lg-3"><div class="tg-card h-100 p-3"><h2 class="h6 text-secondary">Answered locally</h2><p class="display-6 mb-0">@Model.Percent(data.Local)%</p><p class="small mb-0">@data.Local questions</p></div></div>
+    <div class="col-6 col-lg-3"><div class="tg-card h-100 p-3"><h2 class="h6 text-secondary">Three Grills AI</h2><p class="display-6 mb-0">@Model.Percent(data.Ai)%</p><p class="small mb-0">@data.Ai questions</p></div></div>
+    <div class="col-6 col-lg-3"><div class="tg-card h-100 p-3"><h2 class="h6 text-secondary">Not answered</h2><p class="display-6 mb-0">@Model.Percent(data.Fallback)%</p><p class="small mb-0">@data.Fallback fell back to "cannot answer"</p></div></div>
+</section>
+
+<div class="row g-3">
+    <section class="col-lg-7" aria-labelledby="topics-heading">
+        <div class="tg-card p-3 h-100">
+            <h2 id="topics-heading" class="h5">Most asked topics</h2>
+            @if (data.Topics.Count == 0) { <p class="text-secondary mb-0">No questions in this period.</p> }
+            <ul class="list-unstyled feedback-bars mb-0">
+                @foreach (var topic in data.Topics)
+                {
+                    <li><span class="chat-topic-label">@IndexModel.TopicName(topic.Topic)</span>
+                        <span class="feedback-bar" aria-hidden="true"><span style="width:@(topic.Count * 100 / most)%"></span></span>
+                        <span class="feedback-bar-count">@topic.Count</span></li>
+                }
+            </ul>
+        </div>
+    </section>
+    <section class="col-lg-5" aria-labelledby="days-heading">
+        <div class="tg-card p-3 h-100">
+            <h2 id="days-heading" class="h5">Questions per day</h2>
+            <table class="table table-sm mb-0">
+                <thead><tr><th scope="col">Day</th><th scope="col">Questions</th></tr></thead>
+                <tbody>
+                @foreach (var day in data.PerDay.Where(d => d.Count > 0).Reverse())
+                {
+                    <tr><td>@day.Day.ToString("ddd d MMM")</td><td>@day.Count</td></tr>
+                }
+                @if (data.PerDay.All(d => d.Count == 0)) { <tr><td colspan="2" class="text-secondary">No questions yet.</td></tr> }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
