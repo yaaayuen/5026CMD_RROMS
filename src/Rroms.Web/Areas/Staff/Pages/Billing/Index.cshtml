@@ -20,14 +20,24 @@
 </nav>
 <form method="get" class="d-flex gap-2"><input type="hidden" name="view" value="@Model.View" /><label class="visually-hidden" for="billing-search">Order number, table or customer</label><input id="billing-search" name="search" value="@Model.Search" class="form-control" placeholder="Order, table or customer" maxlength="100" /><button class="btn btn-outline-primary">Search</button></form>
 </div>
-<div class="table-responsive"><table class="table align-middle"><thead><tr><th>Order</th><th>Customer / table</th><th>Items</th><th>Total</th><th>Payment</th><th>Action</th></tr></thead><tbody>
-@foreach (var bill in d.Rows) {
+<div class="table-responsive"><table class="table align-middle"><thead><tr><th>@(Model.View == "unpaid" ? "Orders" : "Order")</th><th>Customer / table</th><th>Items</th><th>Total</th><th>Payment</th><th>Action</th></tr></thead><tbody>
+@if (Model.View == "unpaid") {
+    // One bill per table visit, as at a real till: every unpaid order of the reservation is paid together.
+    foreach (var visit in d.Rows.GroupBy(b => b.ReservationId)) {
+        var first = visit.First();
+<tr><th>@string.Join(", ", visit.OrderBy(b => b.OrderId).Select(b => "#" + b.OrderId))@if (visit.Count() > 1) { <small class="d-block text-secondary fw-normal">@visit.Count() orders · one bill</small> }</th><td>@first.CustomerName<small class="d-block text-secondary">@first.TableLabel · @first.AreaName</small></td><td>@visit.Sum(b => b.ItemCount)</td><td class="text-nowrap">@Money.Format(visit.Sum(b => b.TotalAmount))</td>
+<td><span class="badge text-bg-warning">Unpaid</span></td><td><a asp-page="Visit" asp-route-id="@first.ReservationId" class="btn btn-primary btn-sm">Take payment</a></td></tr>
+    }
+}
+else {
+foreach (var bill in d.Rows) {
 <tr><th>#@bill.OrderId</th><td>@bill.CustomerName<small class="d-block text-secondary">@bill.TableLabel · @bill.AreaName</small></td><td>@bill.ItemCount</td><td class="text-nowrap">@Money.Format(bill.TotalAmount)</td>
 @if (bill.PaidPaymentId.HasValue) {
 <td><span class="badge text-bg-success">@(bill.IsRefunded ? "Refunded" : "Paid")</span><small class="d-block">@Money.Method(bill.PaidMethod!.Value) · @MalaysiaTime.FromUtc(bill.PaidAtUtc!.Value).ToString("dd MMM, h:mm tt")</small></td><td><a asp-page="Receipt" asp-route-id="@bill.PaidPaymentId" class="btn btn-outline-primary btn-sm">Receipt</a></td>
 } else {
-<td><span class="badge text-bg-warning">Unpaid</span></td><td><div class="d-flex flex-wrap gap-2"><a asp-page="Details" asp-route-id="@bill.OrderId" class="btn btn-primary btn-sm">Take payment</a><a asp-page="Visit" asp-route-id="@bill.ReservationId" class="btn btn-outline-primary btn-sm">Bill whole visit</a></div></td>
+<td><span class="badge text-bg-warning">Unpaid</span></td><td><a asp-page="Visit" asp-route-id="@bill.ReservationId" class="btn btn-primary btn-sm">Take payment</a></td>
 }</tr>
+}
 }
 </tbody></table></div>
 @if (d.Total == 0) { <p class="text-secondary">No completed orders match this view.</p> }
