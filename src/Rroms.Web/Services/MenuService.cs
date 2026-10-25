@@ -109,6 +109,22 @@ public class MenuService : IMenuService
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyDictionary<int, PriceQuote>> GetCurrentPricesAsync(IEnumerable<MenuItem> items)
+    {
+        DiscountSet discounts = await DiscountSet.LoadAsync(_context);
+        DateTime now = DateTime.UtcNow;
+        var quotes = new Dictionary<int, PriceQuote>();
+
+        foreach (MenuItem item in items)
+        {
+            quotes[item.Id] = MenuItemPricing.Quote(item, now, discounts);
+        }
+
+        return quotes;
+    }
+
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<MenuItemCard>> SearchMenuAsync(MenuSearchCriteria criteria)
     {
         // Dishes in a hidden category are hidden from customers too.
