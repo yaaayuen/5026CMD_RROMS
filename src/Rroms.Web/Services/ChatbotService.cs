@@ -19,12 +19,14 @@ public class ChatbotService : IChatbotService
     private readonly IAnnouncementService _announcements;
     private readonly IOrderProcessingService _orders;
     private readonly IDiscountService _discounts;
+    private readonly IKitchenInsightsService _insights;
     private readonly HttpClient _http;
     private readonly ChatbotOptions _options;
     private readonly ILogger<ChatbotService> _logger;
 
     public ChatbotService(IMenuService menu, IRestaurantService restaurant, IReservationService reservations,
-        IAnnouncementService announcements, IOrderProcessingService orders, IDiscountService discounts, HttpClient http,
+        IAnnouncementService announcements, IOrderProcessingService orders, IDiscountService discounts,
+        IKitchenInsightsService insights, HttpClient http,
         IOptions<ChatbotOptions> options, ILogger<ChatbotService> logger)
     {
         _menu = menu;
@@ -33,6 +35,7 @@ public class ChatbotService : IChatbotService
         _announcements = announcements;
         _orders = orders;
         _discounts = discounts;
+        _insights = insights;
         _http = http;
         _options = options.Value;
         _logger = logger;
@@ -40,28 +43,39 @@ public class ChatbotService : IChatbotService
 
     public async Task<ChatReply> AskAsync(string question, bool isCustomer, CancellationToken cancellationToken = default, string? customerId = null)
     {
+        ChatReply reply = await AnswerAsync(question, isCustomer, customerId, cancellationToken);
+        // Only the topic and where the answer came from are counted; the question itself is never stored.
+        string source = reply.Source == "AI" ? "AI" : reply.Answer == FallbackText ? "Fallback" : "Local";
+        await _insights.RecordQuestionAsync(reply.Topic, source);
+        return reply;
+    }
+
+    private async Task<ChatReply> AnswerAsync(string question, bool isCustomer, string? customerId, CancellationToken cancellationToken)
+    {
         question = question.Trim();
         if (question.Length == 0 || question.Length > ChatbotOptions.MaxQuestionLength)
         {
-            return Reply("Please enter a question of 1 to 500 characters.");
+            return Tag("invalid", Reply("Please enter a question of 1 to 500 characters."));
         }
         string text = question.ToLowerInvariant();
         // Personal records remain on authenticated pages; they are never sent to the AI service.
         if (Has(text, "thanks", "thank you", "thx"))
         {
-            return Reply("You're welcome! Ask me any time about the menu, bookings or your order.");
+            return Tag("thanks", Reply("You're welcome! Ask me any time about the menu, bookings or your order."));
         }
-        if (Has(text, "order", "tracking", "status", "ready"))
+        // "How long until my food?" is about the kitchen, not about booking a table.
+        bool waitQuestion = Has(text, "how long", "when will", "wait") && Has(text, "food", "order", "meal", "dish");
+        if (waitQuestion || Has(text, "order", "tracking", "status", "ready"))
         {
             // "Where is my order?" is answered from the customer's own orders; "how do I order?" gets the steps.
-            if (isCustomer && customerId != null && Has(text, "my order", "my food", "where is", "status", "ready", "tracking"))
+            if (isCustomer && customerId != null && (waitQuestion || Has(text, "my order", "my food", "where is", "status", "ready", "tracking")))
             {
-                return await OrderStatusAsync(customerId);
+                return Tag("order-status", await OrderStatusAsync(customerId));
             }
-            return CustomerPage(isCustomer, "Pre-orders reach the kitchen only after you are seated. You can check your current order and reservation status on Track my visit.", "/Customer/Tracking", "Track my visit",
+            return Tag("orders", CustomerPage(isCustomer, "Pre-orders reach the kitchen only after you are seated. You can check your current order and reservation status on Track my visit.", "/Customer/Tracking", "Track my visit",
                 "Open My reservations and choose a confirmed booking.",
                 "Press Order food, add the dishes you want, then press Place order.",
-                "The kitchen starts cooking once staff seat you. Follow each step on Track my visit.");
+                "The kitchen starts cooking once staff seat you. Follow each step on Track my visit."));
         }
         if (Has(text, "book", "booking", "reservation", "reserve", "table", "availability", "available table"))
         {
@@ -73,37 +87,37 @@ public class ChatbotService : IChatbotService
                 { Date = date, Time = time, PartySize = int.Parse(request.Groups["party"].Value, CultureInfo.InvariantCulture) });
                 string answer = result.Succeeded ? $"There are {result.Value!.Count} suitable tables available for that visit. Availability may change until you book."
                     : string.Join(" ", result.Errors);
-                return CustomerPage(isCustomer, answer, "/Customer/Reservations", "My reservations");
+                return Tag("table-check", CustomerPage(isCustomer, answer, "/Customer/Reservations", "My reservations"));
             }
             if (Has(text, "cancel", "change", "edit", "move"))
             {
-                return CustomerPage(isCustomer, "You can change or cancel a pending or confirmed booking before your visit starts.", "/Customer/Reservations", "My reservations",
+                return Tag("booking-change", CustomerPage(isCustomer, "You can change or cancel a pending or confirmed booking before your visit starts.", "/Customer/Reservations", "My reservations",
                     "Open My reservations and choose the booking.",
                     "Press Change booking to pick a new date, time or party size, or press Cancel booking.",
-                    "Press Save changes. If a table is free, the changed booking is confirmed straight away.");
+                    "Press Save changes. If a table is free, the changed booking is confirmed straight away."));
             }
-            return CustomerPage(isCustomer, "Here is how to book a table. For a quick live check you can also ask: table yyyy-MM-dd HH:mm for 2.", "/Customer/Reservations", "My reservations",
+            return Tag("booking", CustomerPage(isCustomer, "Here is how to book a table. For a quick live check you can also ask: table yyyy-MM-dd HH:mm for 2.", "/Customer/Reservations", "My reservations",
                 "Open My reservations and press Book a table.",
                 "Choose a date, a time and the number of guests, then press Find tables.",
                 "Pick one of the free tables and add any special requests, such as a birthday or a high chair.",
-                "Press Book. Your booking is confirmed straight away, and you get a notification.");
+                "Press Book. Your booking is confirmed straight away, and you get a notification."));
         }
         if (Has(text, "feedback", "review", "rating", "rate"))
         {
-            return CustomerPage(isCustomer, "You can leave one rating from 1 to 5 stars after staff complete your visit.", "/Customer/Feedback", "Dining feedback",
+            return Tag("feedback", CustomerPage(isCustomer, "You can leave one rating from 1 to 5 stars after staff complete your visit.", "/Customer/Feedback", "Dining feedback",
                 "Open Dining feedback after your visit is marked as completed.",
                 "Choose the visit, pick a rating from 1 to 5 stars and add a comment if you like.",
-                "Press Submit feedback.");
+                "Press Submit feedback."));
         }
         if (Has(text, "profile", "password", "account"))
         {
-            return CustomerPage(isCustomer, "Your profile page contains your account details and links to password settings.", "/Account/Profile", "My profile",
+            return Tag("account", CustomerPage(isCustomer, "Your profile page contains your account details and links to password settings.", "/Account/Profile", "My profile",
                 "Open My profile from your email address at the top of the page.",
-                "Update your details there, or press Change password to choose a new password.");
+                "Update your details there, or press Change password to choose a new password."));
         }
         if (Has(text, "promotion", "campaign", "announcement", "offers", "special offer", "deal", "discount", "promo"))
         {
-            return await PromotionsAsync();
+            return Tag("offers", await PromotionsAsync());
         }
         if (Has(text, "hours", "open", "opening", "close", "closing"))
         {
@@ -112,20 +126,20 @@ public class ChatbotService : IChatbotService
             string todayText = await _restaurant.IsClosedOnAsync(today) ? "Closed today. " : "";
             string week = string.Join("; ", hours.Select(h => h.DayOfWeek + ": " +
                 (h.IsClosed ? "closed" : h.OpensAt.ToString("HH:mm") + " to " + h.ClosesAt.ToString("HH:mm"))));
-            return Reply(todayText + "Usual hours (Malaysia time): " + week + ". Special closures are listed on Opening hours.", "/Visit", "Opening hours");
+            return Tag("hours", Reply(todayText + "Usual hours (Malaysia time): " + week + ". Special closures are listed on Opening hours.", "/Visit", "Opening hours"));
         }
         if (Has(text, "address", "location", "located", "where are you", "directions", "contact", "phone", "email"))
         {
             var profile = await _restaurant.GetProfileAsync();
-            return Reply(profile.Name + ": " + profile.Address + ". Phone: " + profile.Phone + ". Email: " + profile.Email, "/Visit", "Opening hours and contact");
+            return Tag("contact", Reply(profile.Name + ": " + profile.Address + ". Phone: " + profile.Phone + ". Email: " + profile.Email, "/Visit", "Opening hours and contact"));
         }
         if (Has(text, "payment", "pay", "bill", "cash", "card"))
         {
-            return Reply("Staff handle billing at the restaurant. This coursework system records payments; any online payment is a labelled simulation, not a real charge.");
+            return Tag("payment", Reply("Staff handle billing at the restaurant. This coursework system records payments; any online payment is a labelled simulation, not a real charge."));
         }
         if (text is "hi" or "hello" or "hey" || Has(text, "help", "faq"))
         {
-            return Reply("Hello! Ask me about the menu, opening hours or booking a table. I can also help you find your order status.");
+            return Tag("greeting", Reply("Hello! Ask me about the menu, opening hours or booking a table. I can also help you find your order status."));
         }
         var menu = await _menu.SearchMenuAsync(new MenuSearchCriteria());
         var matches = menu.Where(m => text.Contains(m.Name.ToLowerInvariant())).Take(5).ToList();
@@ -134,14 +148,14 @@ public class ChatbotService : IChatbotService
         {
             if (Has(text, "allergy", "allergen"))
             {
-                return Reply("Please confirm allergies with restaurant staff before ordering. Menu descriptions alone cannot guarantee that a dish is safe for an allergy.", "/Menu", "Menu");
+                return Tag("allergy", Reply("Please confirm allergies with restaurant staff before ordering. Menu descriptions alone cannot guarantee that a dish is safe for an allergy.", "/Menu", "Menu"));
             }
             if (matches.Count == 0)
             {
-                return Reply("The menu shows current prices, dish descriptions and availability. Use its search and filters to find a dish.", "/Menu", "Menu");
+                return Tag("menu", Reply("The menu shows current prices, dish descriptions and availability. Use its search and filters to find a dish.", "/Menu", "Menu"));
             }
-            return Reply(string.Join("; ", matches.Select(m => m.Name + ": RM " + m.CurrentPrice.ToString("0.00")
-                + (m.CanOrder ? " (available)" : " (unavailable)"))), "/Menu", "Menu");
+            return Tag("menu", Reply(string.Join("; ", matches.Select(m => m.Name + ": RM " + m.CurrentPrice.ToString("0.00")
+                + (m.CanOrder ? " (available)" : " (unavailable)"))), "/Menu", "Menu"));
         }
         if (string.IsNullOrWhiteSpace(_options.ApiKey)) { return Fallback(); }
         try
@@ -180,7 +194,10 @@ public class ChatbotService : IChatbotService
         return phrases.Any(p => Regex.IsMatch(text, @"\b" + Regex.Escape(p) + @"(?:s|es)?\b"));
     }
 
-    /// <summary>The customer's unfinished orders, read locally. Personal data never reaches the AI service.</summary>
+    /// <summary>
+    /// The customer's unfinished orders with the kitchen's live countdown or queue estimate, read locally.
+    /// Personal data never reaches the AI service.
+    /// </summary>
     private async Task<ChatReply> OrderStatusAsync(string customerId)
     {
         var active = (await _orders.GetCustomerOrdersAsync(customerId))
@@ -190,10 +207,30 @@ public class ChatbotService : IChatbotService
             return Reply("You have no orders in progress right now. To order, open a confirmed booking in My reservations and press Order food.",
                 "/Customer/Tracking", "Track my visit");
         }
+        KitchenBoard board = await _orders.GetKitchenBoardAsync();
         var lines = active.Select(o => $"Order #{o.Id}: {OrderStatusRules.Label(o.Status)}"
             + (o.Status == OrderStatus.Placed && o.Reservation?.Status != ReservationStatus.Seated
-                ? " (saved; the kitchen receives it after you are seated)" : ""));
+                ? " (saved; the kitchen receives it after you are seated)" : KitchenTiming(board, o.Id)));
         return Reply(string.Join(". ", lines) + ".", "/Customer/Tracking", "Track my visit");
+    }
+
+    /// <summary>", ready in about 4 min (around 7:38 PM)" for cooking orders; the queue estimate for waiting ones.</summary>
+    private static string KitchenTiming(KitchenBoard board, int orderId)
+    {
+        KitchenEntry? entry = board.Find(orderId);
+        if (entry?.ReadyAtUtc == null) { return ""; }
+        string at = MalaysiaTime.FromUtc(entry.ReadyAtUtc.Value).ToString("h:mm tt", CultureInfo.InvariantCulture);
+        int readyIn = Math.Max(0, (int)Math.Ceiling((entry.ReadyAtUtc.Value - board.NowUtc).TotalMinutes));
+        if (entry.Order.Status == OrderStatus.Preparing)
+        {
+            return readyIn == 0 ? ", almost ready" : $", ready in about {readyIn} min (around {at})";
+        }
+        if (entry.Order.Status != OrderStatus.Placed) { return ""; }
+        int ahead = entry.QueuePosition - 1;
+        string place = ahead == 0 ? "you are next in the kitchen queue" : $"{ahead} {(ahead == 1 ? "order" : "orders")} ahead of you in the kitchen queue";
+        if (board.IsPaused) { return $", {place}; the kitchen is paused for a moment, so your order keeps its place"; }
+        int startsIn = Math.Max(0, (int)Math.Ceiling((entry.StartUtc!.Value - board.NowUtc).TotalMinutes));
+        return $", {place}; cooking starts {(startsIn == 0 ? "any moment now" : $"in about {startsIn} min")}, ready around {at}";
     }
 
     /// <summary>
@@ -242,8 +279,15 @@ public class ChatbotService : IChatbotService
         answerWithSteps.Steps = steps;
         return answerWithSteps;
     }
+    /// <summary>Labels a reply with its topic for the admin statistics.</summary>
+    private static ChatReply Tag(string topic, ChatReply reply)
+    {
+        reply.Topic = topic;
+        return reply;
+    }
+    private const string FallbackText = "I cannot answer that right now. Try asking about the menu, booking a table or opening hours, or speak with restaurant staff.";
     private static ChatReply Fallback()
     {
-        return Reply("I cannot answer that right now. Try asking about the menu, booking a table or opening hours, or speak with restaurant staff.");
+        return Reply(FallbackText);
     }
 }

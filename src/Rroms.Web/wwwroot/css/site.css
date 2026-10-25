@@ -1183,3 +1183,8 @@ input[type="password"]::-ms-clear {
     background-color: var(--tg-surface);
     font-size: 0.95rem;
 }
+
+.chat-topic-label {
+    width: 11rem;
+    flex-shrink: 0;
+}

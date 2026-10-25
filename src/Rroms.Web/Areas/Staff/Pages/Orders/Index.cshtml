@@ -3,7 +3,12 @@
 @{ ViewData["Title"] = "Kitchen orders"; }
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
     <h1 class="mb-0">Kitchen orders</h1>
-    <button type="button" id="kitchen-sound" class="btn btn-sm btn-outline-primary" aria-pressed="false">Sound alerts: off</button>
+    <div class="d-flex flex-wrap gap-2">
+        <form method="post" asp-page-handler="Pause" asp-route-paused="@(!Model.Board.IsPaused)">
+            <button class="btn btn-sm @(Model.Board.IsPaused ? "btn-primary" : "btn-outline-danger")">@(Model.Board.IsPaused ? "Resume kitchen" : "Pause kitchen")</button>
+        </form>
+        <button type="button" id="kitchen-sound" class="btn btn-sm btn-outline-primary" aria-pressed="false">Sound alerts: off</button>
+    </div>
 </div>
 <p class="mt-2">Pre-orders appear here only after staff seat the customer. Cooking starts and finishes automatically,
     up to @Model.Board.CookingSlots orders at a time; staff serve, complete or cancel.</p>

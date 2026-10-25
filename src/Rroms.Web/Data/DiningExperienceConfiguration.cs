@@ -25,5 +25,10 @@ public static class DiningExperienceConfiguration
         builder.Entity<KitchenTicket>().HasIndex(t => t.OrderId).IsUnique();
         builder.Entity<KitchenTicket>().HasOne(t => t.Order).WithMany()
             .HasForeignKey(t => t.OrderId).OnDelete(DeleteBehavior.Cascade);
+        // The pause switch is one fixed row, so it never needs to be created at run time.
+        builder.Entity<KitchenStatus>().Property(k => k.Id).ValueGeneratedNever();
+        builder.Entity<KitchenStatus>().HasData(new KitchenStatus { Id = KitchenStatus.SingletonId, IsPaused = false,
+            ChangedAtUtc = new DateTime(2026, 10, 26, 0, 0, 0, DateTimeKind.Utc) });
+        builder.Entity<ChatQuestionLog>().HasIndex(l => l.AskedAtUtc);
     }
 }

@@ -1,0 +1,58 @@
+@page
+@model Rroms.Web.Areas.Admin.Pages.Kitchen.IndexModel
+@using Rroms.Web.Areas.Admin.Pages.Kitchen
+@{
+    ViewData["Title"] = "Kitchen performance";
+    var stats = Model.Stats;
+    int most = Math.Max(1, stats.OrdersByHour.Max());
+    int weekMost = Math.Max(1, stats.Week.Max(d => d.Orders));
+}
+<h1>Kitchen performance</h1>
+<p><a asp-area="Staff" asp-page="/Orders/Index">Open the kitchen display</a></p>
+<form method="get" class="d-flex flex-wrap gap-2 align-items-end mb-4">
+    <div><label asp-for="Day" class="form-label">Day (Malaysia time)</label><input asp-for="Day" type="date" class="form-control" /></div>
+    <button class="btn btn-primary">Show</button>
+</form>
+
+<section class="row g-3 mb-4" aria-label="Summary for @stats.Day.ToString("d MMM yyyy")">
+    <div class="col-6 col-lg-3"><div class="tg-card h-100 p-3"><h2 class="h6 text-secondary">Orders</h2><p class="display-6 mb-0">@stats.Orders</p><p class="small mb-0">@stats.DrinksOnly drinks only</p></div></div>
+    <div class="col-6 col-lg-3"><div class="tg-card h-100 p-3"><h2 class="h6 text-secondary">Average wait before cooking</h2><p class="display-6 mb-0">@IndexModel.Minutes(stats.AverageWaitMinutes)</p></div></div>
+    <div class="col-6 col-lg-3"><div class="tg-card h-100 p-3"><h2 class="h6 text-secondary">Average cooking time</h2><p class="display-6 mb-0">@IndexModel.Minutes(stats.AverageCookMinutes)</p></div></div>
+    <div class="col-6 col-lg-3"><div class="tg-card h-100 p-3"><h2 class="h6 text-secondary">Ready to served</h2><p class="display-6 mb-0">@IndexModel.Minutes(stats.AverageReadyToServedMinutes)</p><p class="small mb-0">time food waits at the pass</p></div></div>
+</section>
+
+<div class="row g-3">
+    <section class="col-lg-6" aria-labelledby="hours-heading">
+        <div class="tg-card p-3 h-100">
+            <h2 id="hours-heading" class="h5">Orders by hour</h2>
+            @if (stats.BusiestHour is int busy)
+            {
+                <p class="small">Busiest hour: <strong>@(new TimeOnly(busy, 0).ToString("h tt"))–@(new TimeOnly((busy + 1) % 24, 0).ToString("h tt"))</strong></p>
+                <ul class="list-unstyled feedback-bars mb-0">
+                    @for (int hour = 0; hour < 24; hour++)
+                    {
+                        if (stats.OrdersByHour[hour] == 0) { continue; }
+                        <li><span class="feedback-bar-label">@(new TimeOnly(hour, 0).ToString("h tt"))</span>
+                            <span class="feedback-bar" aria-hidden="true"><span style="width:@(stats.OrdersByHour[hour] * 100 / most)%"></span></span>
+                            <span class="feedback-bar-count">@stats.OrdersByHour[hour]</span></li>
+                    }
+                </ul>
+            }
+            else { <p class="text-secondary mb-0">No kitchen orders on this day.</p> }
+        </div>
+    </section>
+    <section class="col-lg-6" aria-labelledby="week-heading">
+        <div class="tg-card p-3 h-100">
+            <h2 id="week-heading" class="h5">Last 7 days</h2>
+            <table class="table table-sm mb-0">
+                <thead><tr><th scope="col">Day</th><th scope="col">Orders</th><th scope="col">Average wait</th></tr></thead>
+                <tbody>
+                @foreach (var day in stats.Week)
+                {
+                    <tr><td>@day.Day.ToString("ddd d MMM")</td><td>@day.Orders</td><td>@IndexModel.Minutes(day.AverageWaitMinutes)</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

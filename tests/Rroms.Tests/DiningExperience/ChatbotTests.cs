@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -263,6 +264,54 @@ public class ChatbotTests
         var reply = await Service(scope.ServiceProvider, new Provider()).AskAsync(question, true);
         Assert.NotEqual("/Customer/Reservations", reply.PageUrl);
     }
+    [Fact]
+    public async Task HowLongUntilMyFoodUsesTheKitchenCountdownAndQueue()
+    {
+        using var factory = new TestWebApplicationFactory();
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        ApplicationUser alice = await OrderTestData.AddCustomerAsync(db);
+        MenuItem dish = await OrderTestData.AddDishAsync(db, "Chat wait lamb");
+        dish.CookingMinutes = 10;
+        var visits = new List<Reservation>();
+        for (int n = 0; n < 5; n++) { visits.Add(await HistoryTestData.AddReservationAsync(db, alice.Id, DateTime.UtcNow.AddHours(-1), ReservationStatus.Seated)); }
+        var orders = visits.Select((v, n) => AddOrder(db, v, OrderStatus.Placed)).ToList();
+        foreach (var (order, n) in orders.Select((o, n) => (o, n)))
+        {
+            order.PlacedAtUtc = DateTime.UtcNow.AddMinutes(-30 + n);
+            order.Items.Add(new OrderItem { MenuItemId = dish.Id, Quantity = 1, UnitPrice = 20m });
+        }
+        await db.SaveChangesAsync();
+        var kitchen = scope.ServiceProvider.GetRequiredService<IOrderProcessingService>();
+        await kitchen.AdvanceKitchenAsync();
+        var handler = new Provider();
+        var service = Service(scope.ServiceProvider, handler);
+
+        var reply = await service.AskAsync("How long until my food?", true, default, alice.Id);
+        Assert.Contains($"Order #{orders[3].Id}: Preparing, ready in about 10 min (around ", reply.Answer);
+        Assert.Contains($"Order #{orders[4].Id}: Placed, you are next in the kitchen queue; cooking starts in about", reply.Answer);
+        Assert.Equal("/Customer/Tracking", reply.PageUrl);
+        Assert.Equal(0, handler.Calls);
+
+        await kitchen.SetPausedAsync(true);
+        var paused = await service.AskAsync("when will my order be ready", true, default, alice.Id);
+        Assert.Contains("the kitchen is paused for a moment, so your order keeps its place", paused.Answer);
+    }
+    [Fact]
+    public async Task EveryQuestionIsCountedByTopicWithoutItsText()
+    {
+        using var factory = new TestWebApplicationFactory();
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await Service(scope.ServiceProvider, new Provider()).AskAsync("What are your opening hours?", true);
+        await Service(scope.ServiceProvider, new Provider()).AskAsync("Explain grilling to me", true);
+        await Service(scope.ServiceProvider, new Provider { Mode = "error" }).AskAsync("Explain smoking to me", true);
+        var logs = await db.ChatQuestionLogs.AsNoTracking().OrderBy(l => l.Id).ToListAsync();
+        Assert.Equal(new[] { ("hours", "Local"), ("other", "AI"), ("other", "Fallback") }, logs.Select(l => (l.Topic, l.Source)));
+        // The topic is for statistics only and never reaches the browser.
+        string json = JsonSerializer.Serialize(new Rroms.Web.Models.ViewModels.ChatReply { Answer = "a", Topic = "menu" });
+        Assert.DoesNotContain("menu", json);
+    }
     private static Order AddOrder(ApplicationDbContext db, Reservation visit, OrderStatus status)
     {
         var order = new Order { ReservationId = visit.Id, CustomerId = visit.CustomerId, Status = status, TotalAmount = 20m,
@@ -274,7 +323,7 @@ public class ChatbotTests
     {
         return new ChatbotService(services.GetRequiredService<IMenuService>(), services.GetRequiredService<IRestaurantService>(), services.GetRequiredService<IReservationService>(),
             services.GetRequiredService<IAnnouncementService>(), services.GetRequiredService<IOrderProcessingService>(),
-            services.GetRequiredService<IDiscountService>(), new HttpClient(handler), Microsoft.Extensions.Options.Options.Create(new ChatbotOptions { ApiKey = key }), NullLogger<ChatbotService>.Instance);
+            services.GetRequiredService<IDiscountService>(), services.GetRequiredService<IKitchenInsightsService>(), new HttpClient(handler), Microsoft.Extensions.Options.Options.Create(new ChatbotOptions { ApiKey = key }), NullLogger<ChatbotService>.Instance);
     }
     private class Provider : HttpMessageHandler
     {

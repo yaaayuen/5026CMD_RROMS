@@ -80,6 +80,62 @@ public class KitchenPageTests
         Assert.Contains("Leave empty for drinks", form);
     }
 
+    [Fact]
+    public async Task StaffCanPauseResumeFinishEarlyAndAddTime()
+    {
+        using var factory = new TestWebApplicationFactory();
+        ApplicationUser guest = await factory.CreateUserAsync("alex-controls@test.local", "Test!Customer2026", RoleNames.Customer);
+        int cooking = await AddOrderAsync(factory, guest.Id, 12, placedMinutesAgo: 10);
+        using var staff = factory.CreateSecureClient();
+        await FormHelper.LoginAsync(staff, TestWebApplicationFactory.AdminEmail, TestWebApplicationFactory.AdminPassword);
+        string page = await staff.GetStringAsync("/Staff/Orders");
+        Assert.Contains("Pause kitchen", page);
+        Assert.Contains("Ready now", page);
+        Assert.Contains("+5 min", page);
+
+        var added = await FormHelper.PostFormAsync(staff, "/Staff/Orders", $"/Staff/Orders?handler=AddTime&id={cooking}", new Dictionary<string, string>());
+        Assert.Equal(System.Net.HttpStatusCode.Redirect, added.StatusCode);
+        var paused = await FormHelper.PostFormAsync(staff, "/Staff/Orders", "/Staff/Orders?handler=Pause&paused=true", new Dictionary<string, string>());
+        Assert.Equal(System.Net.HttpStatusCode.Redirect, paused.StatusCode);
+        string queue = await staff.GetStringAsync("/Staff/Orders?handler=Queue");
+        Assert.Contains("Kitchen paused.", queue);
+        Assert.Contains("Resume kitchen", await staff.GetStringAsync("/Staff/Orders"));
+
+        var finished = await FormHelper.PostFormAsync(staff, "/Staff/Orders", $"/Staff/Orders?handler=Finish&id={cooking}", new Dictionary<string, string>());
+        Assert.Equal(System.Net.HttpStatusCode.Redirect, finished.StatusCode);
+        using IServiceScope scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.Equal(OrderStatus.ReadyToServe, (await db.Orders.FindAsync(cooking))!.Status);
+        Assert.Equal(17, (await db.KitchenTickets.SingleAsync(t => t.OrderId == cooking)).CookingMinutes);
+    }
+
+    [Fact]
+    public async Task AdminSeesKitchenAndChatbotStatisticsButCustomersCannot()
+    {
+        using var factory = new TestWebApplicationFactory();
+        await factory.CreateUserAsync("alex-stats@test.local", "Test!Customer2026", RoleNames.Customer);
+        using var admin = factory.CreateSecureClient();
+        await FormHelper.LoginAsync(admin, TestWebApplicationFactory.AdminEmail, TestWebApplicationFactory.AdminPassword);
+        string dashboard = await admin.GetStringAsync("/Admin");
+        Assert.Contains("/Admin/Kitchen", dashboard);
+        Assert.Contains("/Admin/ChatInsights", dashboard);
+        string kitchen = await admin.GetStringAsync("/Admin/Kitchen?day=2026-01-05");
+        Assert.Contains("Kitchen performance", kitchen);
+        Assert.Contains("No kitchen orders on this day.", kitchen);
+        string chat = await admin.GetStringAsync("/Admin/ChatInsights?days=7");
+        Assert.Contains("Only the topic of each question is recorded", chat);
+        Assert.Matches("aria-current=\"page\"[^>]*>Last 7 days", chat);
+
+        using var customer = factory.CreateSecureClient();
+        await FormHelper.LoginAsync(customer, "alex-stats@test.local", "Test!Customer2026");
+        foreach (string url in new[] { "/Admin/Kitchen", "/Admin/ChatInsights" })
+        {
+            var denied = await customer.GetAsync(url);
+            Assert.Equal(System.Net.HttpStatusCode.Redirect, denied.StatusCode);
+            Assert.Contains("AccessDenied", denied.Headers.Location!.ToString());
+        }
+    }
+
     private static async Task<int> AddOrderAsync(TestWebApplicationFactory factory, string customerId, int cookingMinutes, int placedMinutesAgo)
     {
         using IServiceScope scope = factory.Services.CreateScope();

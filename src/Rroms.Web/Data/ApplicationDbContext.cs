@@ -74,6 +74,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Feedback> Feedback => Set<Feedback>();
     public DbSet<BlockedWord> BlockedWords => Set<BlockedWord>();
     public DbSet<KitchenTicket> KitchenTickets => Set<KitchenTicket>();
+    public DbSet<KitchenStatus> KitchenStatuses => Set<KitchenStatus>();
+    public DbSet<ChatQuestionLog> ChatQuestionLogs => Set<ChatQuestionLog>();
 
     // ----- Sprint 5 (Darren): payments -----
 

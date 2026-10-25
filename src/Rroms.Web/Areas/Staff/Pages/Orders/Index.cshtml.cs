@@ -7,7 +7,8 @@ namespace Rroms.Web.Areas.Staff.Pages.Orders;
 
 /// <summary>
 /// Automatic kitchen display: cooking countdowns, the queue and food waiting to be served.
-/// Staff only serve, complete or cancel; starting and finishing cooking happen by themselves.
+/// Staff serve, complete or cancel, can finish a dish early or add time, and can pause the kitchen;
+/// starting and finishing cooking otherwise happen by themselves.
 /// The Staff area policy also allows administrators.
 /// </summary>
 public class IndexModel : PageModel
@@ -39,6 +40,36 @@ public class IndexModel : PageModel
         await OnGetAsync();
         return Partial("_Queue", this);
     }
+    /// <summary>Minutes the "+5 min" button adds.</summary>
+    public const int ExtraMinutes = 5;
+
+    public Task<IActionResult> OnPostFinishAsync(int id) => RunAsync(_orders.FinishEarlyAsync(id));
+
+    public Task<IActionResult> OnPostAddTimeAsync(int id) => RunAsync(_orders.AddCookingTimeAsync(id, ExtraMinutes));
+
+    public async Task<IActionResult> OnPostPauseAsync(bool paused)
+    {
+        await _orders.SetPausedAsync(paused);
+        TempData["StatusMessage"] = paused
+            ? "Kitchen paused. Food already cooking will finish; new orders wait in the queue."
+            : "Kitchen resumed. Queued orders start as slots are free.";
+        await _orders.AdvanceKitchenAsync();
+        return RedirectToPage();
+    }
+
+    private async Task<IActionResult> RunAsync(Task<Rroms.Web.Common.ServiceResult> action)
+    {
+        var result = await action;
+        if (result.Succeeded)
+        {
+            await _orders.AdvanceKitchenAsync();
+            return RedirectToPage();
+        }
+        foreach (string error in result.Errors) { ModelState.AddModelError("", error); }
+        await OnGetAsync();
+        return Page();
+    }
+
     public async Task<IActionResult> OnPostAsync(int id, OrderStatus expected, OrderStatus next)
     {
         if (!ModelState.IsValid) { await OnGetAsync(); return Page(); }

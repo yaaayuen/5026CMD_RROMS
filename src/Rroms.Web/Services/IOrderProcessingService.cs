@@ -22,4 +22,11 @@ public interface IOrderProcessingService
     Task<int> AdvanceKitchenAsync();
     /// <summary>Everything on the kitchen board, with countdowns and estimated start times for the queue.</summary>
     Task<KitchenBoard> GetKitchenBoardAsync();
+    /// <summary>Staff finish a cooking order now instead of waiting for its countdown.</summary>
+    Task<ServiceResult> FinishEarlyAsync(int orderId);
+    /// <summary>Staff give a cooking order more time; the customer is told.</summary>
+    Task<ServiceResult> AddCookingTimeAsync(int orderId, int minutes);
+    Task<bool> IsPausedAsync();
+    /// <summary>Pauses or resumes the kitchen. While paused, nothing new starts cooking.</summary>
+    Task SetPausedAsync(bool paused);
 }

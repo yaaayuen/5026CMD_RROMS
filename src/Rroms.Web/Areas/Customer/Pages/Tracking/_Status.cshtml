@@ -57,7 +57,14 @@
                     int startsIn = Math.Max(0, (int)Math.Ceiling((kitchen.StartUtc.Value - kitchenNow).TotalMinutes));
                     <p class="track-eta mb-2">
                         In the kitchen queue: @(ahead == 0 ? "you are next" : ahead == 1 ? "1 order ahead of you" : $"{ahead} orders ahead of you").
-                        Cooking starts @(startsIn == 0 ? "any moment now" : $"in about {startsIn} min")@if (kitchen.ReadyAtUtc.HasValue && kitchen.CookingMinutes > 0) {<text>, ready around @MalaysiaTime.FromUtc(kitchen.ReadyAtUtc.Value).ToString("h:mm tt")</text>}.
+                        @if (Model.Board.IsPaused)
+                        {
+                            <text>The kitchen is paused for a moment; your order keeps its place.</text>
+                        }
+                        else
+                        {
+                            <text>Cooking starts @(startsIn == 0 ? "any moment now" : $"in about {startsIn} min")@if (kitchen.ReadyAtUtc.HasValue && kitchen.CookingMinutes > 0) {<text>, ready around @MalaysiaTime.FromUtc(kitchen.ReadyAtUtc.Value).ToString("h:mm tt")</text>}.</text>
+                        }
                     </p>
                 }
                 else if (order.Status == OrderStatus.Preparing && kitchen.ReadyAtUtc.HasValue)

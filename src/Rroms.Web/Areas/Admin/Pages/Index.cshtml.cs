@@ -60,10 +60,22 @@ public class IndexModel : PageModel
                 "/Admin/Announcements"),
             new ModuleTileViewModel(
                 "Kitchen orders",
-                "Move orders from Preparing to Ready to Serve to Served.",
+                "Automatic cooking queue with countdowns; serve, complete or pause.",
                 "flame",
                 "Sprint 4 · Alex",
                 "/Staff/Orders"),
+            new ModuleTileViewModel(
+                "Kitchen performance",
+                "Orders, waiting and cooking times, and the busiest hour.",
+                "chart",
+                "Sprint 4 · Alex",
+                "/Admin/Kitchen"),
+            new ModuleTileViewModel(
+                "Chatbot insights",
+                "Most asked topics and how often the AI answered.",
+                "chat",
+                "Sprint 4 · Alex",
+                "/Admin/ChatInsights"),
             new ModuleTileViewModel(
                 "Analytics dashboard",
                 "Sales, reservations, table occupancy and popular dishes.",

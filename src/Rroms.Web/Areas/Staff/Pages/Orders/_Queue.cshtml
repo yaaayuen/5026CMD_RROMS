@@ -38,6 +38,10 @@
     }
 }
 <div data-order-ids="@ids">
+@if (board.IsPaused)
+{
+    <div class="alert alert-warning" role="status"><strong>Kitchen paused.</strong> Food already cooking finishes as normal; queued orders keep their place and start when you resume.</div>
+}
 <section class="mb-4" aria-labelledby="cooking-heading">
     <h2 id="cooking-heading" class="h4">Cooking now <span class="badge text-bg-secondary">@board.Cooking.Count / @board.CookingSlots</span></h2>
     @if (board.Cooking.Count == 0) { <p class="text-secondary">Nothing is cooking.</p> }
@@ -51,7 +55,16 @@
                         <span data-ends-at="@entry.ReadyAtUtc?.ToString("o")">@(MinutesBetween(now, entry.ReadyAtUtc ?? now)) min</span>
                     </p>
                     <p class="small text-secondary">Ready at @MalaysiaTime.FromUtc(entry.ReadyAtUtc ?? now).ToString("h:mm tt") · @entry.CookingMinutes min cook</p>
-                    @{ Dishes(entry); await Buttons(entry); }
+                    @{ Dishes(entry); }
+                    <div class="d-flex flex-wrap gap-2 mb-2">
+                        <form method="post" asp-page="/Orders/Index" asp-area="Staff" asp-page-handler="Finish" asp-route-id="@entry.Order.Id">
+                            <button class="btn btn-sm btn-success">Ready now</button>
+                        </form>
+                        <form method="post" asp-page="/Orders/Index" asp-area="Staff" asp-page-handler="AddTime" asp-route-id="@entry.Order.Id">
+                            <button class="btn btn-sm btn-outline-secondary">+@Rroms.Web.Areas.Staff.Pages.Orders.IndexModel.ExtraMinutes min</button>
+                        </form>
+                    </div>
+                    @{ await Buttons(entry); }
                 </article>
             </div>
         }
@@ -72,7 +85,7 @@
                         <span class="badge text-bg-dark">#@entry.QueuePosition in line</span>
                         <h3 class="h6 mb-0">Table @entry.TableLabel · Order #@entry.Order.Id</h3>
                         <span class="small @(longWait ? "text-danger fw-semibold" : "text-secondary")">waiting @waited min@(longWait ? " (long wait)" : "")</span>
-                        <span class="small text-secondary ms-auto">starts in about @MinutesBetween(now, entry.StartUtc ?? now) min · @entry.CookingMinutes min cook</span>
+                        <span class="small text-secondary ms-auto">@(board.IsPaused ? "waiting for the kitchen to resume" : $"starts in about {MinutesBetween(now, entry.StartUtc ?? now)} min") · @entry.CookingMinutes min cook</span>
                     </div>
                     @{ Dishes(entry); await Buttons(entry); }
                 </article>
