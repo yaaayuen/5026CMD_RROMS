@@ -7,7 +7,13 @@ namespace Rroms.Web.Services;
 public interface IFeedbackService
 {
     Task<List<Reservation>> GetEligibleAsync(string customerId);
-    Task<ServiceResult> SubmitAsync(string customerId, int reservationId, int rating, string? comment);
+    /// <summary>Saves the visit's rating, with optional stars for dishes the customer ordered on that visit.</summary>
+    Task<ServiceResult> SubmitAsync(string customerId, int reservationId, int rating, string? comment,
+        IReadOnlyDictionary<int, int>? dishRatings = null);
+    /// <summary>Dishes the customer ordered on the visit (not cancelled), by name, so they can be rated.</summary>
+    Task<List<MenuItem>> GetVisitDishesAsync(string customerId, int reservationId);
+    /// <summary>Average stars per dish, best first. Dishes nobody rated are left out.</summary>
+    Task<List<DishRatingSummary>> GetDishSummaryAsync();
     Task<List<Feedback>> GetAsync(int? rating, DateTime? fromUtc, DateTime? untilUtc,
         FeedbackView view = FeedbackView.All, string? search = null);
     /// <summary>The customer's own reviews with any reply, newest first.</summary>

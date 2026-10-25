@@ -43,7 +43,7 @@
                 <h2 id="news-@item.Id" class="h5">@item.Title</h2>
                 <p class="news-message">@item.Message</p>
                 <div class="news-footer">
-                    <span class="small text-secondary">Until @MalaysiaTime.FromUtc(item.EndUtc).ToString("ddd d MMM yyyy")</span>
+                    <span class="small text-secondary">@(Rroms.Web.Services.AnnouncementSchedule.IsRecurring(item) ? Rroms.Web.Services.AnnouncementSchedule.Describe(item) + " · " : "")Until @MalaysiaTime.FromUtc(item.EndUtc).ToString("ddd d MMM yyyy")</span>
                     <span class="d-flex flex-wrap gap-2">
                         @if (item.MenuItem != null)
                         {

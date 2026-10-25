@@ -19,4 +19,9 @@ public class Announcement
     /// <summary>Optional dish the post is about, so customers can open it on the menu.</summary>
     public int? MenuItemId { get; set; }
     public MenuItem? MenuItem { get; set; }
+    /// <summary>Days the post repeats on, as a <see cref="Services.DiscountDays"/> mask. 0 means it is not recurring.</summary>
+    public int RepeatDays { get; set; }
+    /// <summary>Daily start and end in Malaysia time for a recurring post. Empty means all day.</summary>
+    public TimeOnly? DailyFromLocal { get; set; }
+    public TimeOnly? DailyUntilLocal { get; set; }
 }

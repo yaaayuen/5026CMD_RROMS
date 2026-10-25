@@ -27,3 +27,6 @@ public class FeedbackSummary
 
 /// <summary>One week of the rating trend. Average is empty when nobody left feedback that week.</summary>
 public record FeedbackWeek(DateTime StartLocal, int Count, double? Average);
+
+/// <summary>One dish's average stars from guests who rated it.</summary>
+public record DishRatingSummary(int MenuItemId, string Name, int Count, double Average);

@@ -30,5 +30,17 @@ public static class DiningExperienceConfiguration
         builder.Entity<KitchenStatus>().HasData(new KitchenStatus { Id = KitchenStatus.SingletonId, IsPaused = false,
             ChangedAtUtc = new DateTime(2026, 10, 26, 0, 0, 0, DateTimeKind.Utc) });
         builder.Entity<ChatQuestionLog>().HasIndex(l => l.AskedAtUtc);
+        // A dish is rated at most once per review, and the stars go with the review.
+        builder.Entity<DishRating>().HasIndex(d => new { d.FeedbackId, d.MenuItemId }).IsUnique();
+        builder.Entity<DishRating>().HasOne(d => d.Feedback).WithMany(f => f.DishRatings)
+            .HasForeignKey(d => d.FeedbackId).OnDelete(DeleteBehavior.Cascade);
+        builder.Entity<DishRating>().HasOne(d => d.MenuItem).WithMany()
+            .HasForeignKey(d => d.MenuItemId).OnDelete(DeleteBehavior.Cascade);
+        builder.Entity<DishRating>().ToTable("DishRatings", table =>
+            table.HasCheckConstraint("CK_DishRatings_Rating", "[Rating] BETWEEN 1 AND 5"));
+        builder.Entity<TableRequest>().HasIndex(r => new { r.ReservationId, r.HandledAtUtc });
+        builder.Entity<TableRequest>().HasOne(r => r.Reservation).WithMany()
+            .HasForeignKey(r => r.ReservationId).OnDelete(DeleteBehavior.Cascade);
+        builder.Entity<TableRequest>().Property(r => r.Kind).HasConversion<string>().HasMaxLength(20);
     }
 }

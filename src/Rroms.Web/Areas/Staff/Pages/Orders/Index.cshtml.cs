@@ -7,7 +7,7 @@ namespace Rroms.Web.Areas.Staff.Pages.Orders;
 
 /// <summary>
 /// Automatic kitchen display: cooking countdowns, the queue and food waiting to be served.
-/// Staff serve, complete or cancel, can finish a dish early or add time, and can pause the kitchen;
+/// Staff serve, complete or cancel, can finish a dish early or add time, can pause the kitchen and answer table requests;
 /// starting and finishing cooking otherwise happen by themselves.
 /// The Staff area policy also allows administrators.
 /// </summary>
@@ -18,8 +18,15 @@ public class IndexModel : PageModel
     /// <summary>Cooked food left unserved longer than this is highlighted.</summary>
     public const int LongReadyMinutes = 10;
     private readonly IOrderProcessingService _orders;
-    public IndexModel(IOrderProcessingService orders) { _orders = orders; }
+    private readonly ITableRequestService _requests;
+    public IndexModel(IOrderProcessingService orders, ITableRequestService requests)
+    {
+        _orders = orders;
+        _requests = requests;
+    }
     public KitchenBoard Board { get; set; } = new KitchenBoard();
+    /// <summary>Seated guests waiting for a staff member or the bill, oldest first.</summary>
+    public List<Rroms.Web.Models.TableRequest> Requests { get; set; } = new List<Rroms.Web.Models.TableRequest>();
 
     /// <summary>The moves staff still make by hand. Preparing and Ready to serve are automatic.</summary>
     public static IEnumerable<OrderStatus> StaffMoves(OrderStatus status) =>
@@ -33,6 +40,7 @@ public class IndexModel : PageModel
         // Advancing here as well as in KitchenScheduler means the page is never behind the clock.
         await _orders.AdvanceKitchenAsync();
         Board = await _orders.GetKitchenBoardAsync();
+        Requests = await _requests.GetOpenAsync();
     }
     public async Task<IActionResult> OnGetQueueAsync()
     {
@@ -46,6 +54,8 @@ public class IndexModel : PageModel
     public Task<IActionResult> OnPostFinishAsync(int id) => RunAsync(_orders.FinishEarlyAsync(id));
 
     public Task<IActionResult> OnPostAddTimeAsync(int id) => RunAsync(_orders.AddCookingTimeAsync(id, ExtraMinutes));
+
+    public Task<IActionResult> OnPostHandleRequestAsync(int requestId) => RunAsync(_requests.HandleAsync(requestId));
 
     public async Task<IActionResult> OnPostPauseAsync(bool paused)
     {

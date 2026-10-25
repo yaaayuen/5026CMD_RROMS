@@ -7,14 +7,48 @@
 @if (Model.Visits.Count == 0) { <p>No completed visits are waiting for feedback.</p> }
 else
 {
+    @if (Model.Visits.Count > 1)
+    {
+        <form method="get" class="d-flex flex-wrap align-items-end gap-2 mb-3">
+            <div>
+                <label for="visit-choice" class="form-label">Completed visit</label>
+                <select id="visit-choice" name="ReservationId" class="form-select" onchange="this.form.submit()">
+                @foreach (var visit in Model.Visits)
+                {
+                    <option value="@visit.Id" selected="@(visit.Id == Model.ReservationId)">@MalaysiaTime.FromUtc(visit.StartUtc).ToString("ddd dd MMM yyyy, h:mm tt")</option>
+                }
+                </select>
+            </div>
+            <input type="hidden" name="Rating" value="@Model.Rating" />
+            <button class="btn btn-outline-primary">Choose visit</button>
+        </form>
+    }
+    var chosen = Model.Visits.Single(v => v.Id == Model.ReservationId);
     <form method="post" class="tg-card p-3">
-        <label asp-for="ReservationId" class="form-label">Completed visit</label>
-        <select asp-for="ReservationId" class="form-select mb-3">
-        @foreach (var visit in Model.Visits) { <option value="@visit.Id">#@visit.Id · @MalaysiaTime.FromUtc(visit.StartUtc).ToString("dd MMM yyyy HH:mm")</option> }
+        <input type="hidden" asp-for="ReservationId" />
+        <h2 class="h5">Your visit on @MalaysiaTime.FromUtc(chosen.StartUtc).ToString("dddd d MMMM yyyy")</h2>
+        <label asp-for="Rating" class="form-label">Overall rating</label><select asp-for="Rating" class="form-select mb-3">
+        @for (int stars = 1; stars <= 5; stars++) { <option value="@stars">@stars @(stars == 1 ? "star" : "stars")</option> }
         </select>
-        <label asp-for="Rating" class="form-label">Rating</label><select asp-for="Rating" class="form-select mb-3">
-        @for (int stars = 1; stars <= 5; stars++) { <option value="@stars">@stars stars</option> }
-        </select>
+        @if (Model.Dishes.Count > 0)
+        {
+            <fieldset class="mb-3">
+                <legend class="form-label fs-6 mb-1">Rate your dishes (optional)</legend>
+                <div class="row g-2">
+                @foreach (var dish in Model.Dishes)
+                {
+                    int? current = Model.DishRatings.GetValueOrDefault(dish.Id);
+                    <div class="col-sm-6">
+                        <label for="dish-@dish.Id" class="form-label small mb-0">@dish.Name</label>
+                        <select id="dish-@dish.Id" name="DishRatings[@dish.Id]" class="form-select form-select-sm">
+                            <option value="">Not rated</option>
+                            @for (int stars = 5; stars >= 1; stars--) { <option value="@stars" selected="@(current == stars)">@stars @(stars == 1 ? "star" : "stars")</option> }
+                        </select>
+                    </div>
+                }
+                </div>
+            </fieldset>
+        }
         <label asp-for="Comment" class="form-label">Comment (optional)</label><textarea asp-for="Comment" class="form-control mb-3" maxlength="1000"></textarea>
         <button class="btn btn-primary">Submit feedback</button>
     </form>
@@ -28,6 +62,10 @@ else
             <article class="tg-card p-3 mb-3">
                 <h3 class="h6 mb-1">@review.Rating / 5 · Visit on @MalaysiaTime.FromUtc(review.Reservation!.StartUtc).ToString("dd MMM yyyy")</h3>
                 <p class="mb-1">@(review.CommentRemoved ? "Your comment was removed by the restaurant." : review.Comment.Length == 0 ? "No comment." : review.Comment)</p>
+                @if (review.DishRatings.Count > 0)
+                {
+                    <p class="small text-secondary mb-1">Dishes: @string.Join(" · ", review.DishRatings.OrderBy(d => d.MenuItem?.Name).Select(d => $"{d.MenuItem?.Name} {d.Rating}★"))</p>
+                }
                 @if (!string.IsNullOrEmpty(review.Reply))
                 {
                     <div class="review-reply"><strong>Reply from Three Grills</strong> (@MalaysiaTime.FromUtc(review.RepliedAtUtc!.Value).ToString("dd MMM yyyy")): @review.Reply</div>

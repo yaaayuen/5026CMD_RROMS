@@ -1,6 +1,6 @@
 namespace Rroms.Web.Services;
 
-/// <summary>Once a minute, tells customers about scheduled promotions whose start time has arrived (Alex).</summary>
+/// <summary>Once a minute, tells customers about scheduled and recurring promotions that have started showing (Alex).</summary>
 public class AnnouncementScheduler : BackgroundService
 {
     private static readonly TimeSpan Interval = TimeSpan.FromMinutes(1);

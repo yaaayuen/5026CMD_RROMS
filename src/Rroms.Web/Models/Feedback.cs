@@ -22,4 +22,6 @@ public class Feedback
     public bool IsFlagged { get; set; }
     /// <summary>The comment text was deleted by an administrator. The star rating is kept.</summary>
     public bool CommentRemoved { get; set; }
+    /// <summary>Stars for the dishes from this visit that the guest chose to rate.</summary>
+    public List<DishRating> DishRatings { get; set; } = new List<DishRating>();
 }

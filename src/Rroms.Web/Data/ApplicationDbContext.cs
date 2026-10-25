@@ -76,6 +76,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<KitchenTicket> KitchenTickets => Set<KitchenTicket>();
     public DbSet<KitchenStatus> KitchenStatuses => Set<KitchenStatus>();
     public DbSet<ChatQuestionLog> ChatQuestionLogs => Set<ChatQuestionLog>();
+    public DbSet<TableRequest> TableRequests => Set<TableRequest>();
+    public DbSet<DishRating> DishRatings => Set<DishRating>();
 
     // ----- Sprint 5 (Darren): payments -----
 
