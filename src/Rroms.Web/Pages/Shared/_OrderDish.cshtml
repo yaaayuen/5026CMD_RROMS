@@ -1,12 +1,12 @@
-@model Rroms.Web.Models.ViewModels.OrderDishView
+﻿@model Rroms.Web.Models.ViewModels.OrderDishView
 @using System.Globalization
 @using Rroms.Web.Models.ViewModels
-@* One dish card of the ordering view. Shared by the order page and the Menu ordering view. Owner: YJ (YJ-3). *@
 @{
-	MenuItemCard dish = Model.Dish;
-	IReadOnlyList<string> avoided = Model.Avoided;
-	int row = Model.Row;
-	string initial = string.IsNullOrEmpty(dish.Name) ? "?" : dish.Name.Substring(0, 1).ToUpperInvariant();
+    var dish = Model.Dish;
+    var avoided = Model.Avoided;
+    var row = Model.Row;
+    var initial = string.IsNullOrEmpty(dish.Name) ? "?" : dish.Name.Substring(0, 1).ToUpperInvariant();
+}
 <article class="tg-card ox-dish h-100 @(dish.CanOrder ? "" : "opacity-75") @(avoided.Count > 0 ? "has-warning" : "")"
 		 data-dish="@dish.Id"
 		 data-name="@dish.Name"

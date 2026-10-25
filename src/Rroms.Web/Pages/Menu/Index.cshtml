@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model Rroms.Web.Pages.Menu.IndexModel
 @using Rroms.Web.Models
 @using Rroms.Web.Models.ViewModels
@@ -23,6 +23,7 @@
 }
 
 <style>
+	.mn-ph { height: 12rem; margin-bottom: 1rem; border-radius: var(--bs-border-radius); background: var(--tg-gradient); display: grid; place-items: center; font-family: var(--tg-font-heading); font-size: 3rem; font-weight: 800; color: rgba(255, 255, 255, 0.85); }
 	.promo-banner { background: linear-gradient(135deg, #d81159, #ff8c42); color: #fff; border-radius: 14px; padding: .85rem 1.25rem; font-weight: 700; }
 </style>
 
@@ -37,7 +38,7 @@
 
 @foreach (string promotion in Model.Promotions)
 {
-	<div class="promo-banner mb-3" role="status">🎉 @promotion</div>
+	<div class="promo-banner mb-3" role="status">&#127881; @promotion</div>
 }
 
 @if (!Model.IsSignedIn)
@@ -210,6 +211,10 @@ else
 							@if (dish.PhotoUrl != null)
 							{
 								<img src="@dish.PhotoUrl" alt="Photo of @dish.Name" class="rounded mb-3 w-100" style="object-fit: cover; height: 12rem;" />
+							}
+							else
+							{
+								<div class="mn-ph" aria-hidden="true">@(string.IsNullOrEmpty(dish.Name) ? "?" : dish.Name.Substring(0, 1).ToUpperInvariant())</div>
 							}
 
 							<h3 class="h5">

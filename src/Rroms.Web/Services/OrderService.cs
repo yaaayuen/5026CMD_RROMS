@@ -137,10 +137,10 @@ public class OrderService : IOrderService
     /// <inheritdoc />
     public async Task<IReadOnlyDictionary<int, IReadOnlyDictionary<int, int>>> GetOrderedQuantitiesAsync(string customerId)
     {
-        var rows = await _context.Orders
-            .Where(o => o.CustomerId == customerId && o.Status != OrderStatus.Cancelled)
-            .SelectMany(o => o.Items.Select(i => new { o.ReservationId, i.MenuItemId, i.Quantity }))
-            .ToListAsync();
+            var rows = await _context.Orders
+                .Where(o => o.CustomerId == customerId && o.Status != OrderStatus.Cancelled)
+                .SelectMany(o => o.Items, (o, i) => new { o.ReservationId, i.MenuItemId, i.Quantity })
+                .ToListAsync();
 
         Dictionary<int, IReadOnlyDictionary<int, int>> result = new Dictionary<int, IReadOnlyDictionary<int, int>>();
 
