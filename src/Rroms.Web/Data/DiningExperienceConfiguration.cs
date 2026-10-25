@@ -21,5 +21,9 @@ public static class DiningExperienceConfiguration
         builder.Entity<Feedback>().ToTable("Feedback", table =>
             table.HasCheckConstraint("CK_Feedback_Rating", "[Rating] BETWEEN 1 AND 5"));
         builder.Entity<BlockedWord>().HasIndex(w => w.Word).IsUnique();
+        // One countdown per order; it goes when the order is deleted.
+        builder.Entity<KitchenTicket>().HasIndex(t => t.OrderId).IsUnique();
+        builder.Entity<KitchenTicket>().HasOne(t => t.Order).WithMany()
+            .HasForeignKey(t => t.OrderId).OnDelete(DeleteBehavior.Cascade);
     }
 }

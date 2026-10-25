@@ -1,30 +1,127 @@
 @model Rroms.Web.Areas.Staff.Pages.Orders.IndexModel
-@using Rroms.Web.Services
 @using Rroms.Web.Common
-@if (Model.Orders.Count == 0) { <p>No orders match this filter.</p> }
-@foreach (var order in Model.Orders)
-{
-    <article class="tg-card p-3 mb-3">
-        <h2 class="h4">Order #@order.Id · Table @order.Reservation?.DiningTable?.Label</h2>
-        <p><strong>@order.Status</strong> · @MalaysiaTime.FromUtc(order.PlacedAtUtc).ToString("dd MMM HH:mm")</p>
-        <ul>
-        @foreach (var item in order.Items)
+@using Rroms.Web.Models.ViewModels
+@using Rroms.Web.Services
+@{
+    var board = Model.Board;
+    DateTime now = board.NowUtc;
+    // The ids let the page script spot orders that arrived since the last refresh.
+    string ids = string.Join(",", board.Cooking.Concat(board.Queue).Select(e => e.Order.Id));
+
+    void Dishes(KitchenEntry entry)
+    {
+        <ul class="kitchen-dishes">
+        @foreach (var item in entry.Order.Items)
         {
-            <li>@item.Quantity × @item.MenuItem?.Name @if (!string.IsNullOrWhiteSpace(item.Notes)) { <strong>(@item.Notes)</strong> }</li>
+            <li>@item.Quantity × @item.MenuItem?.Name
+                @if (item.MenuItem?.CookingMinutes is int minutes) { <span class="text-secondary small">(@minutes min)</span> }
+                else { <span class="text-secondary small">(no cooking)</span> }
+                @if (!string.IsNullOrWhiteSpace(item.Notes)) { <strong>(@item.Notes)</strong> }</li>
         }
         </ul>
-        @if (!string.IsNullOrWhiteSpace(order.Notes)) { <p><strong>Customer note:</strong> @order.Notes</p> }
+        @if (!string.IsNullOrWhiteSpace(entry.Order.Notes)) { <p class="small mb-2"><strong>Customer note:</strong> @entry.Order.Notes</p> }
+    }
+
+    async Task Buttons(KitchenEntry entry)
+    {
         <div class="d-flex flex-wrap gap-2">
-        @foreach (var next in OrderStatusRules.Next(order.Status))
+        @foreach (var next in Rroms.Web.Areas.Staff.Pages.Orders.IndexModel.StaffMoves(entry.Order.Status))
         {
             <form method="post" asp-page="/Orders/Index" asp-area="Staff">
-                <input type="hidden" name="id" value="@order.Id" />
-                <input type="hidden" name="expected" value="@order.Status" />
+                <input type="hidden" name="id" value="@entry.Order.Id" />
+                <input type="hidden" name="expected" value="@entry.Order.Status" />
                 <input type="hidden" name="next" value="@next" />
-                <input type="hidden" name="Status" value="@Model.Status" />
-                <button class="btn btn-outline-primary">@next</button>
+                <button class="btn btn-sm @(next == Rroms.Web.Contracts.OrderStatus.Cancelled ? "btn-outline-danger" : "btn-primary")">@(next == Rroms.Web.Contracts.OrderStatus.Cancelled ? "Cancel" : "Mark " + OrderStatusRules.Label(next).ToLowerInvariant())</button>
             </form>
         }
         </div>
-    </article>
+    }
+}
+<div data-order-ids="@ids">
+<section class="mb-4" aria-labelledby="cooking-heading">
+    <h2 id="cooking-heading" class="h4">Cooking now <span class="badge text-bg-secondary">@board.Cooking.Count / @board.CookingSlots</span></h2>
+    @if (board.Cooking.Count == 0) { <p class="text-secondary">Nothing is cooking.</p> }
+    <div class="row g-3">
+        @foreach (var entry in board.Cooking)
+        {
+            <div class="col-md-6 col-xl-3">
+                <article class="tg-card kitchen-card is-cooking h-100" data-order-id="@entry.Order.Id">
+                    <h3 class="h6 mb-1">Table @entry.TableLabel · Order #@entry.Order.Id</h3>
+                    <p class="kitchen-countdown mb-1" aria-label="Time left">
+                        <span data-ends-at="@entry.ReadyAtUtc?.ToString("o")">@(MinutesBetween(now, entry.ReadyAtUtc ?? now)) min</span>
+                    </p>
+                    <p class="small text-secondary">Ready at @MalaysiaTime.FromUtc(entry.ReadyAtUtc ?? now).ToString("h:mm tt") · @entry.CookingMinutes min cook</p>
+                    @{ Dishes(entry); await Buttons(entry); }
+                </article>
+            </div>
+        }
+    </div>
+</section>
+
+<section class="mb-4" aria-labelledby="queue-heading">
+    <h2 id="queue-heading" class="h4">Queue <span class="badge text-bg-secondary">@board.Queue.Count</span></h2>
+    @if (board.Queue.Count == 0) { <p class="text-secondary">No orders waiting.</p> }
+    <ol class="list-unstyled d-grid gap-2">
+        @foreach (var entry in board.Queue)
+        {
+            int waited = MinutesBetween(entry.WaitingSinceUtc, now);
+            bool longWait = waited >= Rroms.Web.Areas.Staff.Pages.Orders.IndexModel.LongWaitMinutes;
+            <li>
+                <article class="tg-card kitchen-card @(longWait ? "is-late" : null)" data-order-id="@entry.Order.Id">
+                    <div class="d-flex flex-wrap gap-2 align-items-baseline">
+                        <span class="badge text-bg-dark">#@entry.QueuePosition in line</span>
+                        <h3 class="h6 mb-0">Table @entry.TableLabel · Order #@entry.Order.Id</h3>
+                        <span class="small @(longWait ? "text-danger fw-semibold" : "text-secondary")">waiting @waited min@(longWait ? " (long wait)" : "")</span>
+                        <span class="small text-secondary ms-auto">starts in about @MinutesBetween(now, entry.StartUtc ?? now) min · @entry.CookingMinutes min cook</span>
+                    </div>
+                    @{ Dishes(entry); await Buttons(entry); }
+                </article>
+            </li>
+        }
+    </ol>
+</section>
+
+<section class="mb-4" aria-labelledby="ready-heading">
+    <h2 id="ready-heading" class="h4">Ready to serve <span class="badge text-bg-secondary">@board.Ready.Count</span></h2>
+    @if (board.Ready.Count == 0) { <p class="text-secondary">No food waiting at the pass.</p> }
+    @foreach (var table in board.Ready.GroupBy(e => e.TableLabel))
+    {
+        <div class="tg-card kitchen-table mb-2">
+            <h3 class="h6">Table @table.Key</h3>
+            @foreach (var entry in table)
+            {
+                int waiting = MinutesBetween(entry.Order.UpdatedAtUtc, now);
+                bool cold = waiting >= Rroms.Web.Areas.Staff.Pages.Orders.IndexModel.LongReadyMinutes;
+                <div class="kitchen-card-row @(cold ? "is-late" : null)" data-order-id="@entry.Order.Id">
+                    <div class="d-flex flex-wrap gap-2 align-items-baseline">
+                        <strong>Order #@entry.Order.Id</strong>
+                        <span class="small @(cold ? "text-danger fw-semibold" : "text-secondary")">ready for @waiting min</span>
+                    </div>
+                    @{ Dishes(entry); await Buttons(entry); }
+                </div>
+            }
+        </div>
+    }
+</section>
+
+<section aria-labelledby="served-heading">
+    <h2 id="served-heading" class="h4">Served <span class="badge text-bg-secondary">@board.Served.Count</span></h2>
+    @if (board.Served.Count == 0) { <p class="text-secondary">Nothing waiting to be completed.</p> }
+    @foreach (var table in board.Served.GroupBy(e => e.TableLabel))
+    {
+        <div class="tg-card kitchen-table mb-2">
+            <h3 class="h6">Table @table.Key</h3>
+            @foreach (var entry in table)
+            {
+                <div class="kitchen-card-row" data-order-id="@entry.Order.Id">
+                    <strong>Order #@entry.Order.Id</strong>
+                    @{ await Buttons(entry); }
+                </div>
+            }
+        </div>
+    }
+</section>
+</div>
+@functions {
+    private static int MinutesBetween(DateTime from, DateTime to) => Rroms.Web.Areas.Staff.Pages.Orders.IndexModel.MinutesBetween(from, to);
 }

@@ -1124,3 +1124,62 @@ input[type="password"]::-ms-clear {
     border-radius: 999px;
     background-color: var(--tg-blush);
 }
+
+/* Automatic kitchen (Alex): countdown cards, the queue, late orders and newly arrived orders. */
+.kitchen-card {
+    padding: 1rem;
+    border-left: 4px solid var(--bs-border-color);
+}
+
+    .kitchen-card.is-cooking {
+        border-left-color: var(--tg-raspberry);
+    }
+
+.kitchen-card.is-late,
+.kitchen-card-row.is-late {
+    border-left: 4px solid var(--bs-danger);
+}
+
+.kitchen-card-row {
+    padding: 0.5rem 0 0.5rem 0.75rem;
+    border-top: 1px solid var(--bs-border-color);
+}
+
+.kitchen-countdown {
+    font-size: 2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.kitchen-dishes {
+    padding-left: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.kitchen-table {
+    padding: 1rem;
+}
+
+.is-new {
+    animation: kitchen-new 1.2s ease-in-out 3;
+}
+
+@keyframes kitchen-new {
+    50% {
+        box-shadow: 0 0 0 4px var(--tg-raspberry);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .is-new {
+        animation: none;
+        outline: 3px solid var(--tg-raspberry);
+    }
+}
+
+.track-eta {
+    padding: 0.5rem 0.75rem;
+    border-left: 3px solid var(--tg-teal);
+    background-color: var(--tg-surface);
+    font-size: 0.95rem;
+}

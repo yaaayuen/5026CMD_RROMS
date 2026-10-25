@@ -62,6 +62,15 @@
 			</div>
 		</div>
 
+		<div class="row">
+			<div class="col-md-4 mb-3">
+				<label asp-for="Input.CookingMinutes" class="form-label fw-semibold"></label>
+				<input asp-for="Input.CookingMinutes" type="number" min="1" max="@Rroms.Web.Models.MenuItem.MaxCookingMinutes" step="1" class="form-control" aria-describedby="cooking-help" />
+				<div id="cooking-help" class="form-text">Used for the kitchen countdown only; customers do not see it on the menu. Leave empty for drinks.</div>
+				<span asp-validation-for="Input.CookingMinutes" class="text-danger small"></span>
+			</div>
+		</div>
+
 		<fieldset class="mb-3">
 			<legend class="h5">Dietary tags</legend>
 			<p class="text-secondary small">Tick everything this dish contains. Customers can hide these dishes in the menu filter, and the recommendations never suggest a dish that has a tag the customer avoids.</p>

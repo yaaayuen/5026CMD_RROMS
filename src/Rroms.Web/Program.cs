@@ -193,6 +193,8 @@ builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.Configure<FeedbackOptions>(builder.Configuration.GetSection(FeedbackOptions.SectionName));
 builder.Services.AddSingleton<FeedbackWordFilter>();
 builder.Services.AddHostedService<AnnouncementScheduler>();
+builder.Services.Configure<KitchenOptions>(builder.Configuration.GetSection(KitchenOptions.SectionName));
+builder.Services.AddHostedService<KitchenScheduler>();
 
 // ----- Sprint 5 (Darren): billing and receipts (DA-1) -----
 builder.Services.AddSingleton<IPaymentTerminal>(

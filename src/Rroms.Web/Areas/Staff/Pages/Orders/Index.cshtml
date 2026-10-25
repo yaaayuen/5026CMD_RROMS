@@ -1,17 +1,15 @@
 @page
 @model Rroms.Web.Areas.Staff.Pages.Orders.IndexModel
-@using Rroms.Web.Contracts
 @{ ViewData["Title"] = "Kitchen orders"; }
-<h1>Kitchen orders</h1>
-<p>Pre-orders appear here only after staff seat the customer.</p>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <h1 class="mb-0">Kitchen orders</h1>
+    <button type="button" id="kitchen-sound" class="btn btn-sm btn-outline-primary" aria-pressed="false">Sound alerts: off</button>
+</div>
+<p class="mt-2">Pre-orders appear here only after staff seat the customer. Cooking starts and finishes automatically,
+    up to @Model.Board.CookingSlots orders at a time; staff serve, complete or cancel.</p>
 <div asp-validation-summary="All" class="text-danger" role="alert"></div>
-<form method="get" class="d-flex gap-2 mb-3">
-    <label asp-for="Status" class="form-label">Status</label>
-    <select asp-for="Status" asp-items="Html.GetEnumSelectList<OrderStatus>()" class="form-select w-auto"><option value="">Active orders</option></select>
-    <button class="btn btn-primary">Filter</button>
-</form>
 <p id="dining-refresh-state" class="text-muted" role="status">Updates automatically every 5 seconds.</p>
-<div id="dining-live-content" data-refresh-url="@Url.Page("/Orders/Index", "Queue", new { area = "Staff", Status = Model.Status })">
+<div id="dining-live-content" data-refresh-url="@Url.Page("/Orders/Index", "Queue", new { area = "Staff" })" data-kitchen="true">
     <partial name="_Queue" model="Model" />
 </div>
 @section Scripts { <script src="~/js/dining-live.js" asp-append-version="true"></script> }

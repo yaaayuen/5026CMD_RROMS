@@ -607,6 +607,34 @@ namespace Rroms.Web.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Rroms.Web.Models.KitchenTicket", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CookingMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ReadyAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("StartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique();
+
+                    b.ToTable("KitchenTickets");
+                });
+
             modelBuilder.Entity("Rroms.Web.Models.MenuCategory", b =>
                 {
                     b.Property<int>("Id")
@@ -732,6 +760,9 @@ namespace Rroms.Web.Data.Migrations
                     b.Property<string>("Code")
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
+
+                    b.Property<int?>("CookingMinutes")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
@@ -1571,6 +1602,17 @@ namespace Rroms.Web.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Reservation");
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.KitchenTicket", b =>
+                {
+                    b.HasOne("Rroms.Web.Models.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
                 });
 
             modelBuilder.Entity("Rroms.Web.Models.MenuItem", b =>
