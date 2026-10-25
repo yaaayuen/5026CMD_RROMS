@@ -126,6 +126,7 @@ public class EditModel : PageModel
             MenuCategoryId = item.MenuCategoryId,
             Price = item.Price,
             IsAvailable = item.IsAvailable,
+            CookingMinutes = item.CookingMinutes,
             DietaryTagIds = item.DietaryTags.Select(tag => tag.Id).ToList()
         };
 

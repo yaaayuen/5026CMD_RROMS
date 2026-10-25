@@ -34,6 +34,11 @@ public class MenuItemInput
     [Display(Name = "Available to order")]
     public bool IsAvailable { get; set; } = true;
 
+    /// <summary>Cooking time in minutes for the kitchen countdown. Leave empty for drinks (Alex).</summary>
+    [Range(1, MenuItem.MaxCookingMinutes)]
+    [Display(Name = "Cooking time (minutes)")]
+    public int? CookingMinutes { get; set; }
+
     /// <summary>The Ids of the dietary tags this dish contains (ticked boxes). Empty means none.</summary>
     public List<int> DietaryTagIds { get; set; } = new List<int>();
 

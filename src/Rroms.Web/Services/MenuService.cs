@@ -443,6 +443,11 @@ public class MenuService : IMenuService
             errors.Add(PriceMessage);
         }
 
+        if (input.CookingMinutes is < 1 or > MenuItem.MaxCookingMinutes)
+        {
+            errors.Add($"Cooking time must be 1 to {MenuItem.MaxCookingMinutes} minutes, or empty for drinks.");
+        }
+
         MenuCategory? category = await _restaurantService.GetMenuCategoryAsync(input.MenuCategoryId);
 
         if (category == null)
@@ -563,6 +568,7 @@ public class MenuService : IMenuService
         item.MenuCategoryId = input.MenuCategoryId;
         item.Price = input.Price;
         item.IsAvailable = input.IsAvailable;
+        item.CookingMinutes = input.CookingMinutes;
         item.PromoPrice = input.PromoPrice;
         item.PromoStartUtc = input.PromoStartUtc;
         item.PromoEndUtc = input.PromoEndUtc;

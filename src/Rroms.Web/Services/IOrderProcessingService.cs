@@ -1,6 +1,7 @@
 using Rroms.Web.Common;
 using Rroms.Web.Contracts;
 using Rroms.Web.Models;
+using Rroms.Web.Models.ViewModels;
 namespace Rroms.Web.Services;
 
 /// <summary>Alex owns order transitions after YJ creates a Placed order.</summary>
@@ -14,4 +15,11 @@ public interface IOrderProcessingService
     Task<int> CancelUnstartedOrdersForReservationAsync(int reservationId);
     /// <summary>Returns only the signed-in customer's orders.</summary>
     Task<List<Order>> GetCustomerOrdersAsync(string customerId);
+    /// <summary>
+    /// Runs the automatic kitchen: finished countdowns become Ready to serve, drinks-only orders are ready at once,
+    /// and queued orders start cooking while a slot is free. Safe to call often. Returns how many orders moved.
+    /// </summary>
+    Task<int> AdvanceKitchenAsync();
+    /// <summary>Everything on the kitchen board, with countdowns and estimated start times for the queue.</summary>
+    Task<KitchenBoard> GetKitchenBoardAsync();
 }

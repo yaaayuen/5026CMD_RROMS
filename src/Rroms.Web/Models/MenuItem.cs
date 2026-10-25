@@ -85,4 +85,14 @@ public class MenuItem
 
     /// <summary>When the item was last changed (UTC).</summary>
     public DateTime UpdatedAtUtc { get; set; }
+
+    /// <summary>Longest cooking time an administrator may enter, in minutes.</summary>
+    public const int MaxCookingMinutes = 180;
+
+    /// <summary>
+    /// How long the kitchen needs to cook this dish, in minutes (Alex, kitchen countdown). Empty for drinks and
+    /// anything served straight away. Not shown on the menu.
+    /// </summary>
+    [Range(1, MaxCookingMinutes)]
+    public int? CookingMinutes { get; set; }
 }

@@ -18,9 +18,13 @@ public class IndexModel : PageModel
     }
     public List<Order> Orders { get; set; } = new List<Order>();
     public IReadOnlyList<ReservationSummary> Reservations { get; set; } = Array.Empty<ReservationSummary>();
+    /// <summary>The kitchen board, used only to look up countdowns and queue estimates for this customer's own orders.</summary>
+    public KitchenBoard Board { get; set; } = new KitchenBoard();
     public async Task OnGetAsync()
     {
         Response.Headers.CacheControl = "no-store";
+        await _orders.AdvanceKitchenAsync();
+        Board = await _orders.GetKitchenBoardAsync();
         Orders = await _orders.GetCustomerOrdersAsync(User.GetUserId());
         Reservations = await _reservations.GetCustomerReservationsAsync(User.GetUserId());
     }

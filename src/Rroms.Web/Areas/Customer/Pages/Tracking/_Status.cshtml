@@ -48,6 +48,26 @@
             {
                 <p class="small text-secondary mb-2">Your pre-order is saved. The kitchen receives it after you are seated.</p>
             }
+            @if (stepper && Model.Board.Find(order.Id) is { } kitchen)
+            {
+                DateTime kitchenNow = Model.Board.NowUtc;
+                if (order.Status == OrderStatus.Placed && kitchen.StartUtc.HasValue)
+                {
+                    int ahead = kitchen.QueuePosition - 1;
+                    int startsIn = Math.Max(0, (int)Math.Ceiling((kitchen.StartUtc.Value - kitchenNow).TotalMinutes));
+                    <p class="track-eta mb-2">
+                        In the kitchen queue: @(ahead == 0 ? "you are next" : ahead == 1 ? "1 order ahead of you" : $"{ahead} orders ahead of you").
+                        Cooking starts @(startsIn == 0 ? "any moment now" : $"in about {startsIn} min")@if (kitchen.ReadyAtUtc.HasValue && kitchen.CookingMinutes > 0) {<text>, ready around @MalaysiaTime.FromUtc(kitchen.ReadyAtUtc.Value).ToString("h:mm tt")</text>}.
+                    </p>
+                }
+                else if (order.Status == OrderStatus.Preparing && kitchen.ReadyAtUtc.HasValue)
+                {
+                    <p class="track-eta mb-2">
+                        Cooking now. Ready in <strong data-ends-at="@kitchen.ReadyAtUtc.Value.ToString("o")">@Math.Max(0, (int)Math.Ceiling((kitchen.ReadyAtUtc.Value - kitchenNow).TotalMinutes)) min</strong>
+                        (around @MalaysiaTime.FromUtc(kitchen.ReadyAtUtc.Value).ToString("h:mm tt")).
+                    </p>
+                }
+            }
             <ul class="track-dishes list-unstyled mb-0">
                 @foreach (var item in order.Items)
                 {
