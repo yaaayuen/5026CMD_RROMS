@@ -9,7 +9,14 @@
     (FeedbackView Value, string Label)[] views = { (FeedbackView.All, "All"), (FeedbackView.Shown, "Shown on website"),
         (FeedbackView.Hidden, "Hidden"), (FeedbackView.Flagged, "Flagged by word filter"), (FeedbackView.AwaitingReply, "Awaiting reply"), (FeedbackView.Replied, "Replied") };
 }
-<h1>Customer feedback</h1>
+<section class="hero hero-compact mb-4" aria-labelledby="admin-feedback-heading">
+    <span class="hero-bubble one" aria-hidden="true"></span>
+    <div class="position-relative">
+        <span class="eyebrow">Administrator</span>
+        <h1 id="admin-feedback-heading" class="mb-1">Customer feedback</h1>
+        <p class="lead mb-0">Ratings, dish scores and guest comments, with replies and moderation.</p>
+    </div>
+</section>
 
 <section class="row g-3 mb-4" aria-label="Rating summary">
     <div class="col-md-4">

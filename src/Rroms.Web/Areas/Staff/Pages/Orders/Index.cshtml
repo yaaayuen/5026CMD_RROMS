@@ -1,17 +1,23 @@
 @page
 @model Rroms.Web.Areas.Staff.Pages.Orders.IndexModel
 @{ ViewData["Title"] = "Kitchen orders"; }
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-    <h1 class="mb-0">Kitchen orders</h1>
-    <div class="d-flex flex-wrap gap-2">
-        <form method="post" asp-page-handler="Pause" asp-route-paused="@(!Model.Board.IsPaused)">
-            <button class="btn btn-sm @(Model.Board.IsPaused ? "btn-primary" : "btn-outline-danger")">@(Model.Board.IsPaused ? "Resume kitchen" : "Pause kitchen")</button>
-        </form>
-        <button type="button" id="kitchen-sound" class="btn btn-sm btn-outline-primary" aria-pressed="false">Sound alerts: off</button>
+<section class="hero hero-compact mb-4" aria-labelledby="kitchen-heading">
+    <span class="hero-bubble one" aria-hidden="true"></span>
+    <div class="position-relative d-flex flex-wrap justify-content-between align-items-end gap-3">
+        <div>
+            <span class="eyebrow">Staff</span>
+            <h1 id="kitchen-heading" class="mb-1">Kitchen orders</h1>
+            <p class="lead mb-0">Pre-orders appear here only after staff seat the customer. Cooking starts and finishes automatically,
+                up to @Model.Board.CookingSlots orders at a time; staff serve, complete or cancel.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <form method="post" asp-page-handler="Pause" asp-route-paused="@(!Model.Board.IsPaused)">
+                <button class="btn btn-sm @(Model.Board.IsPaused ? "btn-gold" : "btn-light")">@(Model.Board.IsPaused ? "Resume kitchen" : "Pause kitchen")</button>
+            </form>
+            <button type="button" id="kitchen-sound" class="btn btn-sm btn-outline-light" aria-pressed="false">Sound alerts: off</button>
+        </div>
     </div>
-</div>
-<p class="mt-2">Pre-orders appear here only after staff seat the customer. Cooking starts and finishes automatically,
-    up to @Model.Board.CookingSlots orders at a time; staff serve, complete or cancel.</p>
+</section>
 <div asp-validation-summary="All" class="text-danger" role="alert"></div>
 <p id="dining-refresh-state" class="text-muted" role="status">Updates automatically every 5 seconds.</p>
 <div id="dining-live-content" data-refresh-url="@Url.Page("/Orders/Index", "Queue", new { area = "Staff" })" data-kitchen="true">

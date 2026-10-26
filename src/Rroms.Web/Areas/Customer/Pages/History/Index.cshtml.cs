@@ -70,23 +70,10 @@ public class IndexModel : PageModel
         }
     }
 
-    /// <summary>The Bootstrap colour class for a reservation status badge.</summary>
+    /// <summary>The shared status pill class for a reservation status (same colours as every other page).</summary>
     /// <param name="status">The reservation status.</param>
     public static string ReservationBadgeClass(ReservationStatus status)
     {
-        switch (status.ToString())
-        {
-            case "Pending":
-                return "text-bg-warning";
-            case "Confirmed":
-            case "Seated":
-            case "Completed":
-                return "text-bg-success";
-            case "Cancelled":
-            case "NoShow":
-                return "text-bg-danger";
-            default:
-                return "text-bg-secondary";
-        }
+        return Rroms.Web.Common.ReservationStatusDisplay.BadgeClass(status);
     }
 }

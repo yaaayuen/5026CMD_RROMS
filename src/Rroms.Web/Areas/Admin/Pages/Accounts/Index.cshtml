@@ -6,13 +6,17 @@
 }
 
 <a asp-area="Admin" asp-page="/Index" class="d-inline-block mb-3">&larr; Back to dashboard</a>
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-    <div>
-        <h1 class="section-title mb-1">Accounts and roles</h1>
-        <p class="section-subtitle mb-0">Create staff accounts, assign roles and deactivate users.</p>
+<section class="hero hero-compact mb-4" aria-labelledby="accounts-heading">
+    <span class="hero-bubble one" aria-hidden="true"></span>
+    <div class="position-relative d-flex flex-wrap justify-content-between align-items-end gap-3">
+        <div>
+            <span class="eyebrow">Administrator</span>
+            <h1 id="accounts-heading" class="mb-1">Accounts and roles</h1>
+            <p class="lead mb-0">Create staff accounts, assign roles and deactivate users.</p>
+        </div>
+        <a class="btn btn-gold" asp-page="Create">+ New account</a>
     </div>
-    <a class="btn btn-primary" asp-page="Create">+ New account</a>
-</div>
+</section>
 
 @* GET form: filters appear in the URL, so a filtered list can be bookmarked or shared. *@
 <form method="get" class="tg-card mb-4" role="search" aria-label="Filter accounts">
@@ -76,11 +80,11 @@
                         <td>
                             @if (user.IsActive)
                             {
-                                <span class="badge text-bg-success">Active</span>
+                                <span class="tg-status is-confirmed">Active</span>
                             }
                             else
                             {
-                                <span class="badge text-bg-secondary">Deactivated</span>
+                                <span class="tg-status is-cancelled">Deactivated</span>
                             }
                         </td>
                         <td>@MalaysiaTime.FromUtc(user.CreatedAtUtc).ToString("d MMM yyyy")</td>

@@ -7,7 +7,14 @@
     int most = Math.Max(1, stats.OrdersByHour.Max());
     int weekMost = Math.Max(1, stats.Week.Max(d => d.Orders));
 }
-<h1>Kitchen performance</h1>
+<section class="hero hero-compact mb-4" aria-labelledby="kitchen-perf-heading">
+    <span class="hero-bubble one" aria-hidden="true"></span>
+    <div class="position-relative">
+        <span class="eyebrow">Administrator</span>
+        <h1 id="kitchen-perf-heading" class="mb-1">Kitchen performance</h1>
+        <p class="lead mb-0">How long orders take from placing to serving, by day and hour.</p>
+    </div>
+</section>
 <p><a asp-area="Staff" asp-page="/Orders/Index">Open the kitchen display</a></p>
 <form method="get" class="d-flex flex-wrap gap-2 align-items-end mb-4">
     <div><label asp-for="Day" class="form-label">Day (Malaysia time)</label><input asp-for="Day" type="date" class="form-control" /></div>

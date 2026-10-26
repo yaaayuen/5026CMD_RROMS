@@ -3,7 +3,14 @@
 @using Rroms.Web.Common
 @using Rroms.Web.Contracts
 @{ ViewData["Title"] = "Monitor reservations"; }
-<div class="hero mb-4"><h1>Monitor reservations</h1><p>Filter by reservation start date. Both dates are inclusive, in Malaysia time (UTC+8). Refresh to see updates.</p></div>
+<section class="hero hero-compact mb-4" aria-labelledby="monitor-reservations-heading">
+    <span class="hero-bubble one" aria-hidden="true"></span>
+    <div class="position-relative">
+        <span class="eyebrow">Administrator · Monitoring</span>
+        <h1 id="monitor-reservations-heading" class="mb-1">Monitor reservations</h1>
+        <p class="lead mb-0">Filter by reservation start date. Both dates are inclusive, in Malaysia time (UTC+8). Refresh to see updates.</p>
+    </div>
+</section>
 <partial name="_MonitoringNav" />
 <div class="tg-card p-4 mb-4"><form method="get" class="row g-3 align-items-end">
 <div asp-validation-summary="All" class="text-danger" role="alert"></div>
@@ -27,7 +34,7 @@
         @foreach (var row in Model.Results.Rows)
         {
             <tr><td>#@row.Id</td><td>@row.CustomerName</td><td>@MalaysiaTime.FromUtc(row.StartUtc).ToString("dd MMM yyyy HH:mm")</td>
-<td>@row.PartySize</td><td>@row.TableLabel · @row.AreaName</td><td>@row.Status</td>
+<td>@row.PartySize</td><td>@row.TableLabel · @row.AreaName</td><td><span class="@ReservationStatusDisplay.BadgeClass(row.Status)">@ReservationStatusDisplay.Label(row.Status)</span></td>
 <td><a asp-area="Staff" asp-page="/Reservations/Index" asp-route-Date="@MalaysiaTime.FromUtc(row.StartUtc).ToString("yyyy-MM-dd")">Manage #@row.Id</a><br />
 <a asp-area="Staff" asp-page="/Reservations/CustomerHistory" asp-route-reservationId="@row.Id">Customer history</a></td></tr>
         }

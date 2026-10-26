@@ -24,25 +24,6 @@
 		return MalaysiaTime.FromUtc(utc).ToString("h:mm tt");
 	}
 
-	/// <summary>The soft badge colour for a reservation status (ok, warn, bad or muted).</summary>
-	private static string ReservationTone(ReservationStatus status)
-	{
-		switch (status.ToString())
-		{
-			case "Confirmed":
-			case "Seated":
-			case "Completed":
-				return "ok";
-			case "Pending":
-				return "warn";
-			case "Cancelled":
-			case "NoShow":
-				return "bad";
-			default:
-				return "muted";
-		}
-	}
-
 	/// <summary>A small icon for how a payment was made (decorative only).</summary>
 	private static string MethodIcon(PaymentMethod method)
 	{
@@ -146,11 +127,6 @@
 	.hx-chip.order { background: var(--hx-amber-bg); color: var(--hx-amber); }
 	.hx-chip.receipt { background: var(--hx-green-bg); color: var(--hx-green); }
 
-	.hx-badge { display: inline-block; padding: 5px 12px; border-radius: 99px; font-size: 12px; font-weight: 800; background: var(--hx-green-bg); color: var(--hx-green); }
-	.hx-badge::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin-right: 7px; vertical-align: middle; }
-	.hx-badge.warn { background: var(--hx-amber-bg); color: var(--hx-amber); }
-	.hx-badge.bad { background: var(--hx-red-bg); color: var(--hx-red); }
-	.hx-badge.muted { background: var(--hx-head); color: var(--hx-muted); }
 
 	.hx-mi { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; background: var(--hx-head); margin-right: 10px; font-size: 15px; vertical-align: middle; }
 
@@ -258,7 +234,7 @@
 							</td>
 							<td data-label="Table">@row.TableLabel · @row.AreaName</td>
 							<td data-label="Guests">@row.PartySize</td>
-							<td data-label="Status"><span class="hx-badge @ReservationTone(row.Status)">@row.Status</span></td>
+							<td data-label="Status"><span class="@ReservationStatusDisplay.BadgeClass(row.Status)">@ReservationStatusDisplay.Label(row.Status)</span></td>
 							<td class="hx-action"><a class="hx-btn" asp-page="/Reservations/Details" asp-route-id="@row.Id">View booking <span aria-hidden="true">→</span></a></td>
 						</tr>
 					}
@@ -311,7 +287,7 @@
 							<td data-label="Payment">
 								@if (paid != null)
 								{
-									<span class="hx-badge">Payment recorded</span>
+									<span class="tg-status is-confirmed">Payment recorded</span>
                                     <a class="hx-btn mt-2" asp-area="Customer" asp-page="/Receipts/Details" asp-route-id="@paid.ReceiptNumber">View receipt</a>
 									<span class="hx-sub">@(paid.Method == PaymentMethod.SimulatedOnline ? "Archived test payment" : IndexModel.MethodText(paid.Method)) · Receipt #@paid.ReceiptNumber</span>
 								}
@@ -321,7 +297,7 @@
 								}
 								else
 								{
-									<span class="hx-badge warn">@(paymentsCapped ? "Check order" : "Unpaid")</span>
+									<span class="tg-status is-pending">@(paymentsCapped ? "Check order" : "Unpaid")</span>
 								}
 							</td>
 							<td class="hx-action"><a class="hx-btn" asp-page="/Orders/Details" asp-route-id="@row.Id">View order <span aria-hidden="true">→</span></a></td>

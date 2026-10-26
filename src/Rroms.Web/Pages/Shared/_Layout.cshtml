@@ -1,3 +1,4 @@
+@inject Microsoft.AspNetCore.Identity.UserManager<Rroms.Web.Models.ApplicationUser> UserManager
 @*
     Shared layout for every page (customer, staff, admin)
 	@RenderBody() is where the page content is inserted.
@@ -28,6 +29,17 @@
 	}
 
 	string pageTitle = ViewData["Title"] as string ?? "Welcome";
+	//Name button in the navbar: a short role tag and the profile's full name (falls back to the e-mail).
+	string displayName = User.Identity?.Name ?? string.Empty;
+	if (isSignedIn)
+	{
+		Rroms.Web.Models.ApplicationUser? signedInUser = await UserManager.GetUserAsync(User);
+		if (!string.IsNullOrWhiteSpace(signedInUser?.FullName))
+		{
+			displayName = signedInUser.FullName.Trim();
+		}
+	}
+	string roleTag = roleLabel == RoleNames.Administrator ? "Admin" : roleLabel;
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -77,9 +89,8 @@
 							<a class="nav-link @(homeActive ? "active" : "")" aria-current="@(homeActive ? "page" : null)"
 							   asp-area="" asp-page="/Index">Home</a>
 						</li>
-						@* Menu link for visitors who are not signed in. Signed-in customers open the menu from the
-                           "Menu and ordering" tile on My dining; staff and administrators have their own menu pages. *@
-						@if (!isSignedIn)
+						@* Menu link for visitors and customers. Staff and administrators have their own menu pages. *@
+						@if (!isSignedIn || isCustomer)
 						{
 							bool menuActive = currentArea == string.Empty && currentPage == "/Menu/Index";
 							<li class="nav-item">
@@ -133,7 +144,7 @@
 							</li>
 						}
 					</ul>
-					<div class="d-flex flex-column flex-xl-row align-items-xl-center gap-2">
+					<div class="d-flex flex-column flex-xl-row align-items-xl-center gap-2 ms-xl-2">
 						<button type="button" class="theme-toggle align-self-start align-self-xl-center" data-theme-toggle aria-pressed="false" title="Switch between light and dark mode">
 							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 								<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
@@ -145,11 +156,16 @@
 							@* Bell with unread badge (YY-6), rendered by a view component. *@
 							@await Component.InvokeAsync("NotificationBell")
 
-							if (roleLabel != string.Empty)
-							{
-								<span class="role-chip align-self-start align-self-xl-center">@roleLabel</span>
-							}
-							<a class="fw-semibold text-reset navbar-user" asp-area="" asp-page="/Account/Profile" title="My profile: @User.Identity?.Name">@User.Identity?.Name</a>
+							@* One name button (role tag and name) instead of a separate role chip plus the full e-mail, so the bar fits at laptop width.
+							   "Administrator" is shortened to "Admin" here; the tooltip keeps the full role. *@
+							<a class="navbar-user-pill align-self-start align-self-xl-center" asp-area="" asp-page="/Account/Profile"
+							   title="@(roleLabel == string.Empty ? $"My profile: {User.Identity?.Name}" : $"My profile: {User.Identity?.Name} ({roleLabel})")">
+								@if (roleTag != string.Empty)
+								{
+									<span class="navbar-role">@roleTag</span>
+								}
+								<span class="navbar-user-name">@displayName</span>
+							</a>
 
 							@* Sign-out is a POST with an antiforgery token, so another site cannot log users out with a link. *@
 							<form method="post" asp-area="" asp-page="/Account/Logout" class="d-inline">

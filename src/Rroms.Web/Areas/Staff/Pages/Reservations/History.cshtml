@@ -5,11 +5,15 @@
 @{
     ViewData["Title"] = "Reservation history and filters";
 }
-<div class="hero mb-4">
-    <h1>Reservation history and filters</h1>
-    <p>Bookings, special requests and customer history. All times are Malaysia time (UTC+8).</p>
-</div>
-<p>Use Manage to open the booking date on WL's reservations page for Confirm, Seat, Complete, Cancel or No-show.</p>
+<section class="hero hero-compact mb-4" aria-labelledby="reservation-history-heading">
+    <span class="hero-bubble one" aria-hidden="true"></span>
+    <div class="position-relative">
+        <span class="eyebrow">Staff</span>
+        <h1 id="reservation-history-heading" class="mb-1">Reservation history and filters</h1>
+        <p class="lead mb-0">Bookings, special requests and customer history. All times are Malaysia time (UTC+8).</p>
+    </div>
+</section>
+<p>Use Manage to open the booking's day on the Reservations page, where you can confirm, seat, complete, cancel or mark it absent.</p>
 <div class="tg-card p-4 mb-4">
     <form method="get" class="row g-3 align-items-end">
         <div asp-validation-summary="All" class="text-danger" role="alert"></div>
@@ -60,7 +64,7 @@
                         <td>#@booking.Id<br />@MalaysiaTime.FromUtc(booking.StartUtc).ToString("HH:mm") – @MalaysiaTime.FromUtc(booking.EndUtc).ToString("dd MMM HH:mm")</td>
                         <td>@booking.CustomerName</td>
                         <td>@booking.PartySize guest(s)<br />@booking.TableLabel · @booking.AreaName</td>
-                        <td>@booking.Status</td>
+                        <td><span class="@ReservationStatusDisplay.BadgeClass(booking.Status)">@ReservationStatusDisplay.Label(booking.Status)</span></td>
                         <td class="text-break">@(string.IsNullOrWhiteSpace(booking.SpecialRequests) ? "None provided" : booking.SpecialRequests)</td>
                         <td class="text-break">@(string.IsNullOrWhiteSpace(row.DiningPreferences) ? "None provided" : row.DiningPreferences)</td>
                         <td><a asp-page="CustomerHistory" asp-route-reservationId="@booking.Id" class="btn btn-sm btn-outline-primary" aria-label="View reservation history for @booking.CustomerName">View history</a>
