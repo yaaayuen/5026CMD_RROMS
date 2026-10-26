@@ -1,5 +1,11 @@
+@{
+    //The open page is filled in and marked aria-current, so admins can see which list they are on.
+    string current = ViewContext.RouteData.Values["page"] as string ?? string.Empty;
+    string Css(string page) => current.EndsWith("/" + page) ? "btn btn-primary" : "btn btn-outline-primary";
+    string? Current(string page) => current.EndsWith("/" + page) ? "page" : null;
+}
 <nav class="d-flex flex-wrap gap-2 mb-4" aria-label="Monitoring pages">
-    <a asp-page="Reservations" class="btn btn-outline-primary">Reservations</a>
-    <a asp-page="Orders" class="btn btn-outline-primary">Orders</a>
-    <a asp-page="Transactions" class="btn btn-outline-primary">Transactions</a>
+    <a asp-page="Reservations" class="@Css("Reservations")" aria-current="@Current("Reservations")">Reservations</a>
+    <a asp-page="Orders" class="@Css("Orders")" aria-current="@Current("Orders")">Orders</a>
+    <a asp-page="Transactions" class="@Css("Transactions")" aria-current="@Current("Transactions")">Transactions</a>
 </nav>

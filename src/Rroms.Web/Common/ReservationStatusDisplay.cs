@@ -7,17 +7,18 @@ namespace Rroms.Web.Common;
 /// </summary>
 public static class ReservationStatusDisplay
 {
-    /// <summary>Bootstrap badge classes for a status, e.g. Pending is yellow and Confirmed is green.</summary>
+    /// <summary>Shared status pill classes (tg-status in site.css), e.g. Pending is amber and Confirmed is teal.</summary>
     /// <param name="status">The booking's status.</param>
     public static string BadgeClass(ReservationStatus status)
     {
-        return status switch
+        return "tg-status " + status switch
         {
-            ReservationStatus.Pending => "text-bg-warning",
-            ReservationStatus.Confirmed => "text-bg-success",
-            ReservationStatus.Seated => "text-bg-primary",
-            ReservationStatus.Completed => "text-bg-secondary",
-            _ => "text-bg-light border"
+            ReservationStatus.Pending => "is-pending",
+            ReservationStatus.Confirmed => "is-confirmed",
+            ReservationStatus.Seated => "is-seated",
+            ReservationStatus.Completed => "is-done",
+            ReservationStatus.NoShow => "is-noshow",
+            _ => "is-cancelled"
         };
     }
 

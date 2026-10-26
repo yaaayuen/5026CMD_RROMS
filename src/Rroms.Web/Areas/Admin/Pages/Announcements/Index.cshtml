@@ -7,7 +7,14 @@
     DateTime now = DateTime.UtcNow;
     (string? Key, string Label)[] tabs = { (null, "All"), ("upcoming", "Upcoming"), ("live", "Live"), ("drafts", "Drafts"), ("ended", "Ended") };
 }
-<h1>Announcements and campaigns</h1>
+<section class="hero hero-compact mb-4" aria-labelledby="announcements-heading">
+    <span class="hero-bubble one" aria-hidden="true"></span>
+    <div class="position-relative">
+        <span class="eyebrow">Administrator</span>
+        <h1 id="announcements-heading" class="mb-1">Announcements and campaigns</h1>
+        <p class="lead mb-0">Post news and offers, and schedule when guests see them.</p>
+    </div>
+</section>
 <p><a asp-area="Admin" asp-page="/Restaurant/Index">Restaurant settings</a> · <a asp-area="" asp-page="/Announcements/Index">Customer view</a></p>
 <form method="post" class="tg-card p-3 mb-4">
     <div asp-validation-summary="All" class="text-danger" role="alert"></div>

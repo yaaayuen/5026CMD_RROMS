@@ -38,6 +38,25 @@ public class ChatbotTests
         Assert.Equal(0, handler.Calls);
     }
     [Fact]
+    public async Task OpeningHoursAnswerPutsEachRunOfDaysOnItsOwnLine()
+    {
+        using var factory = new TestWebApplicationFactory();
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        foreach (OperatingHour day in await db.OperatingHours.ToListAsync())
+        {
+            bool weekend = day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+            day.IsClosed = day.DayOfWeek == DayOfWeek.Monday;
+            day.OpensAt = weekend ? new TimeOnly(10, 0) : new TimeOnly(11, 0);
+            day.ClosesAt = weekend ? new TimeOnly(23, 0) : new TimeOnly(22, 0);
+        }
+        await db.SaveChangesAsync();
+
+        var reply = await Service(scope.ServiceProvider, new Provider()).AskAsync("opening hours", true);
+
+        Assert.Contains("Usual hours (Malaysia time):\nMonday: Closed\nTuesday – Friday: 11:00 AM – 10:00 PM\nSaturday – Sunday: 10:00 AM – 11:00 PM\n\n", reply.Answer);
+    }
+    [Fact]
     public async Task MenuUsesCurrentPromotionalPrice()
     {
         using var factory = new TestWebApplicationFactory();

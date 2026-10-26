@@ -104,6 +104,8 @@ h1, h2, h3, h4, .display-heading {
     --bs-btn-hover-border-color: var(--tg-raspberry);
     --bs-btn-active-bg: var(--tg-raspberry-dark);
     --bs-btn-active-border-color: var(--tg-raspberry-dark);
+    --bs-btn-disabled-color: var(--tg-link);
+    --bs-btn-disabled-border-color: var(--tg-raspberry);
 }
 
 /* Gold call-to-action button with dark text for contrast. */
@@ -207,7 +209,7 @@ h1, h2, h3, h4, .display-heading {
     background-color: var(--tg-raspberry-dark);
     background-image: linear-gradient(160deg, var(--tg-raspberry-dark) 0%, #7d0a35 100%);
     color: #ffe3ec;
-    padding: 2.5rem 0 1.5rem;
+    padding: 2.5rem 0 5rem; /* bottom room so the floating chat button does not cover the footer text */
 }
 
     .site-footer a {
@@ -877,6 +879,12 @@ input[type="password"]::-ms-clear {
     border-radius: 1rem;
 }
 
+    /* Keep the line breaks in a reply (e.g. one line per day of opening hours) and give lines room to breathe. */
+    .chat-msg p {
+        white-space: pre-line;
+        line-height: 1.6;
+    }
+
     .chat-msg.from-you {
         align-self: flex-end;
         background-color: var(--tg-raspberry);
@@ -909,7 +917,7 @@ input[type="password"]::-ms-clear {
     }
 
 .chat-action {
-    margin-top: 0.6rem;
+    margin-top: 0.85rem;
     background-color: var(--tg-blush);
     color: var(--tg-link);
     border-radius: var(--tg-radius-pill);
@@ -1028,7 +1036,7 @@ input[type="password"]::-ms-clear {
 /* ===== Top bar: one tidy line (WL) =====
    With many links the labels wrapped onto two lines ("News and / offers", "Dark / mode").
    Every item now stays on one line, the theme switch shows only its icon (the text is kept for
-   screen readers), a long e-mail is shortened with "…", and below 1200px the menu folds into
+   screen readers), a long name is shortened with "…", and below 1200px the menu folds into
    the hamburger button (navbar-expand-xl in _Layout). */
 .site-navbar .nav-link,
 .site-navbar .btn,
@@ -1046,15 +1054,6 @@ input[type="password"]::-ms-clear {
     overflow: hidden;
     clip: rect(0, 0, 0, 0);
     border: 0;
-}
-
-.site-navbar .navbar-user {
-    display: inline-block;
-    max-width: 11rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    vertical-align: middle;
 }
 
 /* Feedback (Alex): star bars on the admin summary, and guest reviews on News and offers. */
@@ -1211,3 +1210,155 @@ input[type="password"]::-ms-clear {
     .rate-stars a:focus-visible {
         color: var(--tg-teal);
     }
+
+/* -----------------------------------------------------------------------------
+   Site-wide consistency (Alex_18)
+   ----------------------------------------------------------------------------- */
+
+/* Plain checkboxes, Bootstrap checkboxes, and the selected item in list menus (Restaurant setup) use the brand
+   colour instead of Bootstrap blue. */
+:root {
+    accent-color: var(--tg-raspberry);
+}
+
+.form-check-input:checked {
+    background-color: var(--tg-raspberry);
+    border-color: var(--tg-raspberry);
+}
+
+.form-check-input:focus {
+    border-color: var(--tg-raspberry);
+    box-shadow: 0 0 0 0.25rem rgba(216, 17, 89, 0.25);
+}
+
+.list-group {
+    --bs-list-group-active-bg: var(--tg-blush);
+    --bs-list-group-active-color: var(--tg-link);
+    --bs-list-group-active-border-color: var(--bs-border-color);
+}
+
+    .list-group-item.active {
+        font-weight: 800;
+        box-shadow: inset 3px 0 0 var(--tg-raspberry);
+    }
+
+/* Navbar: one name button (role tag + name) replaces the role chip and the e-mail. */
+.navbar-user-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    max-width: 17rem;
+    padding: 0.2rem 0.75rem 0.2rem 0.2rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--tg-radius-pill);
+    font-weight: 700;
+    color: var(--tg-ink);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+    .navbar-user-pill:hover,
+    .navbar-user-pill:focus-visible {
+        background-color: var(--tg-blush);
+        color: var(--tg-link-hover);
+    }
+
+    .navbar-user-pill .navbar-user-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+.navbar-role {
+    flex: none;
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--tg-radius-pill);
+    background-color: var(--tg-gold);
+    color: var(--tg-on-gold);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+/* One status pill for every page. Use with ReservationStatusDisplay.BadgeClass, or add "tg-status is-..." by hand. */
+.tg-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.28rem 0.7rem;
+    border: 1px solid transparent;
+    border-radius: var(--tg-radius-pill);
+    font-size: 0.78rem;
+    font-weight: 800;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+    .tg-status::before {
+        content: "";
+        flex: none;
+        width: 0.45rem;
+        height: 0.45rem;
+        border-radius: 50%;
+        background-color: currentColor;
+    }
+
+    .tg-status.is-pending {
+        color: #8a4b00;
+        background-color: #fff1dc;
+    }
+
+    .tg-status.is-confirmed {
+        color: #0d6b61;
+        background-color: #e3f4f1;
+    }
+
+    .tg-status.is-seated {
+        color: var(--tg-raspberry-dark);
+        background-color: var(--tg-blush);
+    }
+
+    .tg-status.is-done {
+        color: #4a4d63;
+        background-color: #eef0f5;
+    }
+
+    .tg-status.is-cancelled {
+        color: var(--tg-muted);
+        background-color: transparent;
+        border-color: var(--bs-border-color);
+    }
+
+        .tg-status.is-cancelled::before {
+            background-color: transparent;
+            border: 1.5px solid currentColor;
+        }
+
+    .tg-status.is-noshow {
+        color: #9b1c1c;
+        background-color: #fde8e8;
+    }
+
+[data-bs-theme="dark"] .tg-status.is-pending {
+    color: #ffd08a;
+    background-color: #3a2a12;
+}
+
+[data-bs-theme="dark"] .tg-status.is-confirmed {
+    color: #7fdccf;
+    background-color: #12302c;
+}
+
+[data-bs-theme="dark"] .tg-status.is-seated {
+    color: #ff9ab9;
+}
+
+[data-bs-theme="dark"] .tg-status.is-done {
+    color: #c9cbe0;
+    background-color: #2a2c3e;
+}
+
+[data-bs-theme="dark"] .tg-status.is-noshow {
+    color: #ff9a9a;
+    background-color: #3b1d1d;
+}

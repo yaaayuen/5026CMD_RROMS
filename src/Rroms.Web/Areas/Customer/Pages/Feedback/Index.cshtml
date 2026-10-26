@@ -2,7 +2,14 @@
 @model Rroms.Web.Areas.Customer.Pages.Feedback.IndexModel
 @using Rroms.Web.Common
 @{ ViewData["Title"] = "Dining feedback"; }
-<h1>Dining feedback</h1>
+<section class="hero hero-compact mb-4" aria-labelledby="feedback-heading">
+    <span class="hero-bubble one" aria-hidden="true"></span>
+    <div class="position-relative">
+        <span class="eyebrow">Customer</span>
+        <h1 id="feedback-heading" class="mb-1">Dining feedback</h1>
+        <p class="lead mb-0">Rate your visit and the dishes you ordered.</p>
+    </div>
+</section>
 <div asp-validation-summary="All" class="text-danger" role="alert"></div>
 @if (Model.Visits.Count == 0) { <p>No completed visits are waiting for feedback.</p> }
 else

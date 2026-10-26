@@ -7,8 +7,14 @@
     int most = Math.Max(1, data.Topics.Select(t => t.Count).DefaultIfEmpty(0).Max());
     int[] ranges = { 7, 30, 90 };
 }
-<h1>Chatbot insights</h1>
-<p class="text-secondary">Only the topic of each question is recorded. The question text and who asked it are never stored.</p>
+<section class="hero hero-compact mb-4" aria-labelledby="chat-insights-heading">
+    <span class="hero-bubble one" aria-hidden="true"></span>
+    <div class="position-relative">
+        <span class="eyebrow">Administrator</span>
+        <h1 id="chat-insights-heading" class="mb-1">Chatbot insights</h1>
+        <p class="lead mb-0">Only the topic of each question is recorded. The question text and who asked it are never stored.</p>
+    </div>
+</section>
 <nav class="news-tabs mb-4" aria-label="Period">
     @foreach (int range in ranges)
     {

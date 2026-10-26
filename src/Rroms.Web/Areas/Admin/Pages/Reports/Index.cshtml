@@ -4,12 +4,18 @@
 @{ ViewData["Title"] = "Reports"; }
 <link rel="stylesheet" href="~/css/reports.css" asp-append-version="true" />
 <div class="reports-page">
-<header class="reports-heading">
-    <div><a href="/Admin" class="reports-back">← Admin dashboard</a>
-    <p class="reports-eyebrow">THREE GRILLS · BUSINESS INSIGHTS</p>
-    <h1>Reports</h1><p class="reports-subtitle">A clearer view of your bookings, sales and guests.</p></div>
-    <span class="reports-timezone">Malaysia time · MYT</span>
-</header>
+<a href="/Admin" class="reports-back d-inline-block mb-3">← Admin dashboard</a>
+<section class="hero hero-compact mb-4" aria-labelledby="reports-heading">
+    <span class="hero-bubble one" aria-hidden="true"></span>
+    <div class="position-relative d-flex flex-wrap justify-content-between align-items-end gap-3">
+        <div>
+            <span class="eyebrow">Administrator</span>
+            <h1 id="reports-heading" class="mb-1">Reports</h1>
+            <p class="lead mb-0">A clearer view of your bookings, sales and guests.</p>
+        </div>
+        <span class="reports-timezone">Malaysia time · MYT</span>
+    </div>
+</section>
 <div asp-validation-summary="All" class="text-danger reports-validation"></div>
 <form method="get" id="report-filters" class="tg-card reports-filters">
     <div class="reports-filter-grid">
@@ -56,7 +62,7 @@
         <h2>Reservations</h2><details class="report-rules"><summary>How this report is calculated</summary><p>Based on reservation start date. All statuses are included; guest totals are booked guests, not attendance or occupancy.</p></details>
         <p><strong>@r.ReservationCount reservations · @r.GuestCount guests</strong></p>
         <div class="table-responsive"><table class="table report-table"><thead><tr><th>Status</th><th>Reservations</th><th>Guests</th></tr></thead><tbody>
-        @foreach (var row in r.Reservations) { <tr><td><span class="report-status status-@row.Status.ToString().ToLowerInvariant()">@row.Status</span></td><td>@row.Count</td><td>@row.Guests</td></tr> }
+        @foreach (var row in r.Reservations) { <tr><td><span class="@Rroms.Web.Common.ReservationStatusDisplay.BadgeClass(row.Status)">@Rroms.Web.Common.ReservationStatusDisplay.Label(row.Status)</span></td><td>@row.Count</td><td>@row.Guests</td></tr> }
         </tbody></table></div>
     </section>
     <section id="sales" class="report-panel">

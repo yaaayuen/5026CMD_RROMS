@@ -124,9 +124,7 @@ public class ChatbotService : IChatbotService
             var hours = await _restaurant.GetOperatingHoursAsync();
             var today = DateOnly.FromDateTime(MalaysiaTime.FromUtc(DateTime.UtcNow));
             string todayText = await _restaurant.IsClosedOnAsync(today) ? "Closed today. " : "";
-            string week = string.Join("; ", hours.Select(h => h.DayOfWeek + ": " +
-                (h.IsClosed ? "closed" : h.OpensAt.ToString("HH:mm") + " to " + h.ClosesAt.ToString("HH:mm"))));
-            return Tag("hours", Reply(todayText + "Usual hours (Malaysia time): " + week + ". Special closures are listed on Opening hours.", "/Visit", "Opening hours"));
+            return Tag("hours", Reply(todayText + "Usual hours (Malaysia time):\n" + WeekLines(hours) + "\n\nSpecial closures are listed on Opening hours.", "/Visit", "Opening hours"));
         }
         if (Has(text, "address", "location", "located", "where are you", "directions", "contact", "phone", "email"))
         {
@@ -255,6 +253,30 @@ public class ChatbotService : IChatbotService
         return offers.Count > 0
             ? Reply(string.Join(" ", parts), "/Announcements", "News and offers")
             : Reply(string.Join(" ", parts), "/Menu", "Menu");
+    }
+
+    /// <summary>
+    /// One line per run of days with the same hours, e.g. "Monday – Friday: 11:00 AM – 10:00 PM", or "Every day: ..."
+    /// when all seven match. The chat shows each line on its own row.
+    /// </summary>
+    private static string WeekLines(IReadOnlyList<Models.OperatingHour> hours)
+    {
+        static string Times(Models.OperatingHour h) => h.IsClosed ? "Closed"
+            : h.OpensAt.ToString("h:mm tt", CultureInfo.InvariantCulture) + " – " + h.ClosesAt.ToString("h:mm tt", CultureInfo.InvariantCulture);
+        if (hours.Count == 7 && hours.All(h => Times(h) == Times(hours[0])))
+        {
+            return "Every day: " + Times(hours[0]);
+        }
+        var lines = new List<string>();
+        for (int start = 0; start < hours.Count;)
+        {
+            int end = start;
+            while (end + 1 < hours.Count && Times(hours[end + 1]) == Times(hours[start])) { end++; }
+            string days = end == start ? hours[start].DayOfWeek.ToString() : hours[start].DayOfWeek + " – " + hours[end].DayOfWeek;
+            lines.Add(days + ": " + Times(hours[start]));
+            start = end + 1;
+        }
+        return string.Join("\n", lines);
     }
 
     /// <summary>Up to three items, then "and N more".</summary>

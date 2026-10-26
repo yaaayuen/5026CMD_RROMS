@@ -3,7 +3,14 @@
 @using Rroms.Web.Common
 @using Rroms.Web.Contracts
 @{ ViewData["Title"] = "Monitor orders"; }
-<div class="hero mb-4"><h1>Monitor orders</h1><p>Filter by order placement date. Both dates are inclusive, in Malaysia time (UTC+8). Refresh to see updates.</p></div>
+<section class="hero hero-compact mb-4" aria-labelledby="monitor-orders-heading">
+    <span class="hero-bubble one" aria-hidden="true"></span>
+    <div class="position-relative">
+        <span class="eyebrow">Administrator · Monitoring</span>
+        <h1 id="monitor-orders-heading" class="mb-1">Monitor orders</h1>
+        <p class="lead mb-0">Filter by order placement date. Both dates are inclusive, in Malaysia time (UTC+8). Refresh to see updates.</p>
+    </div>
+</section>
 <partial name="_MonitoringNav" />
 <div class="tg-card p-4 mb-4"><form method="get" class="row g-3 align-items-end">
 <div asp-validation-summary="All" class="text-danger" role="alert"></div>
@@ -24,7 +31,7 @@
         @foreach (var row in Model.Results.Rows)
         {
             <tr><td>#@row.Id / #@row.ReservationId</td><td>@row.CustomerName</td><td>@MalaysiaTime.FromUtc(row.PlacedAtUtc).ToString("dd MMM yyyy HH:mm")</td>
-<td>@row.TableLabel</td><td>@row.Status</td><td>@row.TotalAmount.ToString("N2")</td>
+<td>@row.TableLabel</td><td><span class="tg-status @(row.Status switch { OrderStatus.Completed or OrderStatus.Served => "is-done", OrderStatus.Cancelled => "is-cancelled", OrderStatus.ReadyToServe => "is-confirmed", OrderStatus.Preparing => "is-seated", _ => "is-pending" })">@Rroms.Web.Services.OrderStatusRules.Label(row.Status)</span></td><td>@row.TotalAmount.ToString("N2")</td>
 <td><a asp-area="Staff" asp-page="/Billing/Details" asp-route-id="@row.Id">Order / bill details</a></td></tr>
         }
         </tbody></table></div>

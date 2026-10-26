@@ -1,11 +1,8 @@
 /* Darren: scoped Reports layout using the shared Berry Bistro palette. */
 .reports-page { max-width:1240px; margin:auto; padding:12px 0 36px; }
-.reports-heading { display:flex; justify-content:space-between; align-items:center; gap:24px; margin-bottom:26px; }
 .reports-back { font-size:.85rem; }
 .reports-eyebrow { color:var(--tg-muted); font-size:.7rem; font-weight:800; letter-spacing:.13em; margin:22px 0 8px; }
-.reports-heading h1 { font-size:clamp(2.2rem,4vw,3.1rem); margin:0 0 8px; }
-.reports-subtitle { color:var(--tg-muted); margin:0; }
-.reports-timezone { border:1px solid var(--tg-blush); border-radius:30px; padding:8px 14px; white-space:nowrap; font-size:.8rem; }
+.reports-timezone { border:1px solid rgba(255,255,255,.6); border-radius:30px; padding:8px 14px; white-space:nowrap; font-size:.8rem; font-weight:700; }
 .reports-filters { padding:22px; }
 .reports-filter-grid { display:flex; gap:16px; flex-wrap:wrap; }
 .reports-filter-field { flex:1; min-width:180px; }
@@ -44,9 +41,6 @@
 .report-table :is(td,th):not(:first-child) { text-align:right; }
 #items .report-table :is(td,th):nth-child(2) { text-align:left; }
 .report-table tbody tr:hover td { background:var(--tg-cream); }
-.report-status { display:inline-block; border-radius:30px; padding:5px 11px; background:var(--tg-peach); font-size:.75rem; font-weight:800; }
-.report-status:is(.status-confirmed,.status-seated,.status-completed) { color:var(--tg-teal); background:#e8f5f0; }
-.report-status:is(.status-cancelled,.status-noshow) { color:var(--tg-raspberry-dark); background:var(--tg-blush); }
 .report-rank { display:inline-grid; place-items:center; min-width:30px; height:30px; border-radius:8px; background:var(--tg-blush); font-weight:800; }
 .report-customer-id { overflow-wrap:anywhere; max-width:230px; font-size:.65rem; color:var(--tg-muted); }
 .report-empty { text-align:center; padding:50px 20px; border:1px dashed var(--tg-muted); border-radius:12px; background:var(--tg-cream); }
