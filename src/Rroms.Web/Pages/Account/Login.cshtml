@@ -4,8 +4,18 @@
     ViewData["Title"] = "Sign in";
 }
 
-<div class="row justify-content-center">
-    <div class="col-md-8 col-lg-5">
+@* Gilded redesign: a split screen. The left half is a decorative photo panel (its text repeats nothing the form
+   needs), the right half is the unchanged sign-in form. *@
+<div class="login-split">
+    <div class="login-photo">
+        <img src="~/images/gilded/steak-butter.webp" alt="" aria-hidden="true" class="login-photo-dish" />
+        <div class="login-photo-text">
+            <span class="eyebrow">@SiteInfo.RestaurantName · Kuala Lumpur</span>
+            <p class="login-photo-title">Your table is <span class="script">waiting.</span></p>
+            <p class="mb-0">Book a table, order from your seat and track your meal.</p>
+        </div>
+    </div>
+    <div class="login-form">
         <section class="tg-card auth-card" aria-labelledby="login-heading">
             <span class="tg-icon coral"><partial name="_Icon" model='"users"' /></span>
             <h1 id="login-heading" class="h2 mb-1">Welcome back</h1>

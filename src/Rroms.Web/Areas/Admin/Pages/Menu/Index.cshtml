@@ -9,7 +9,7 @@
 
 <style>
 	.am-tile { width: 56px; height: 56px; border-radius: 12px; display: grid; place-items: center; color: #fff;
-		font: 800 1.4rem Georgia, serif; background: linear-gradient(135deg, #d81159, #ff8c42); }
+		font: 400 1.5rem "Playfair Display", Georgia, serif; background: linear-gradient(135deg, #3a2c1e, #8a6424); }
 	.am-was { text-decoration: line-through; color: #6c757d; margin-right: .25rem; }
 	.am-switch { display: inline-flex; align-items: center; gap: .5rem; border: 0; background: none; padding: 0; font-weight: 600; cursor: pointer; }
 	.am-track { width: 40px; height: 22px; border-radius: 99px; background: #adb5bd; position: relative; display: inline-block; transition: background .15s; }
@@ -30,129 +30,135 @@
 	</div>
 </section>
 
-<section class="tg-card h-auto" aria-labelledby="list-heading">
-	<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
-		<h2 id="list-heading" class="h4 mb-0">
-			All dishes (@Model.Items.Count)
-			@if (Model.IsFiltered)
+<div class="am-layout">
+	@* Left rail: the same GET filter as before (q, categoryId, status). Categories and status are radio buttons
+	   with the same names and values as the old drop-downs, so the page model reads them exactly the same way. *@
+	<form method="get" class="am-rail" aria-label="Filter dishes">
+		<label for="searchBox" class="visually-hidden">Search</label>
+		<input id="searchBox" name="q" type="search" class="form-control am-search" placeholder="Name or code" value="@Model.Search" />
+
+		<fieldset class="mt-4">
+			<legend class="am-label">Category</legend>
+			<input type="radio" class="btn-check" name="categoryId" id="cat-all" value="" checked="@(Model.CategoryId == null)" />
+			<label class="am-cat" for="cat-all">All categories</label>
+			@foreach (MenuCategory category in Model.Categories)
 			{
-				<small class="text-secondary fs-6 fw-normal">of @Model.TotalCount</small>
+				<input type="radio" class="btn-check" name="categoryId" id="cat-@category.Id" value="@category.Id" checked="@(category.Id == Model.CategoryId)" />
+				<label class="am-cat" for="cat-@category.Id">@category.Name@(category.IsActive ? "" : " (hidden)")</label>
 			}
+		</fieldset>
+
+		<fieldset class="mt-4">
+			<legend class="am-label">Status</legend>
+			<div class="am-seg">
+				<input type="radio" class="btn-check" name="status" id="status-any" value="" checked="@(Model.Status != IndexModel.StatusAvailable && Model.Status != IndexModel.StatusUnavailable)" />
+				<label for="status-any">Any</label>
+				<input type="radio" class="btn-check" name="status" id="status-on" value="available" checked="@(Model.Status == IndexModel.StatusAvailable)" />
+				<label for="status-on">Available</label>
+				<input type="radio" class="btn-check" name="status" id="status-off" value="unavailable" checked="@(Model.Status == IndexModel.StatusUnavailable)" />
+				<label for="status-off">Off</label>
+			</div>
+		</fieldset>
+
+		<button type="submit" class="btn btn-outline-primary btn-sm mt-4">Filter</button>
+	</form>
+
+	<section class="am-list" aria-labelledby="list-heading">
+		<h2 id="list-heading" class="h4 mb-3">
+			All dishes (@Model.Items.Count)
+			<small class="am-note">
+				@if (Model.IsFiltered)
+				{
+					<text>of @Model.TotalCount &middot; </text>
+				}
+				price shown is what customers pay now; offers come from Promotions
+			</small>
 		</h2>
 
-		<div class="d-flex flex-wrap align-items-end gap-3">
-			<form method="get" class="d-flex flex-wrap align-items-end gap-2">
-				<div>
-					<label for="searchBox" class="form-label fw-semibold mb-1">Search</label>
-					<input id="searchBox" name="q" type="search" class="form-control" placeholder="Name or code" value="@Model.Search" />
-				</div>
-				<div>
-					<label for="categoryFilter" class="form-label fw-semibold mb-1">Category</label>
-					<select id="categoryFilter" name="categoryId" class="form-select">
-						<option value="">All categories</option>
-						@foreach (MenuCategory category in Model.Categories)
-						{
-							<option value="@category.Id" selected="@(category.Id == Model.CategoryId)">@category.Name@(category.IsActive ? "" : " (hidden)")</option>
-						}
-					</select>
-				</div>
-				<div>
-					<label for="statusFilter" class="form-label fw-semibold mb-1">Status</label>
-					<select id="statusFilter" name="status" class="form-select">
-						<option value="">Any status</option>
-						<option value="available" selected="@(Model.Status == IndexModel.StatusAvailable)">Available</option>
-						<option value="unavailable" selected="@(Model.Status == IndexModel.StatusUnavailable)">Unavailable</option>
-					</select>
-				</div>
-				<button type="submit" class="btn btn-outline-primary">Filter</button>
-			</form>
+		@if (Model.TotalCount == 0)
+		{
+			<p class="text-secondary">No dishes yet. Use "Add a dish" to create the first one.</p>
+		}
+		else if (Model.Items.Count == 0)
+		{
+			<p class="text-secondary">No dishes match your search. <a asp-page="/Menu/Index">Clear the filters</a>.</p>
+		}
 
-			<a class="btn btn-primary" asp-page="/Menu/Edit">Add a dish</a>
-		</div>
-	</div>
+		<div class="am-grid">
+			<a class="am-add" asp-page="/Menu/Edit"><span class="am-plus" aria-hidden="true">+</span>Add a dish</a>
 
-	@if (Model.TotalCount == 0)
-	{
-		<p class="text-secondary mb-0">No dishes yet. Use "Add a dish" to create the first one.</p>
-	}
-	else if (Model.Items.Count == 0)
-	{
-		<p class="text-secondary mb-0">No dishes match your search. <a asp-page="/Menu/Index">Clear the filters</a>.</p>
-	}
-	else
-	{
-		<div class="table-responsive">
-			<table class="table align-middle">
-				<thead>
-					<tr>
-						<th scope="col"><span class="visually-hidden">Photo</span></th>
-						<th scope="col">Code</th>
-						<th scope="col">Dish</th>
-						<th scope="col">Category</th>
-						<th scope="col">Price now (RM)</th>
-						<th scope="col">Status</th>
-						<th scope="col"><span class="visually-hidden">Actions</span></th>
-					</tr>
-				</thead>
-				<tbody>
-					@foreach (MenuItem item in Model.Items)
-					{
-						string? photoUrl = Model.GetPhotoUrl(item);
-						PriceQuote quote = Model.GetQuote(item);
-
+			@if (Model.Items.Count > 0)
+			{
+				<table class="table align-middle">
+					<thead>
 						<tr>
-							<td>
-								@if (photoUrl != null)
-								{
-									<img src="@photoUrl" alt="Photo of @item.Name" width="56" height="56" class="rounded" style="object-fit: cover;" />
-								}
-								else
-								{
-									<div class="am-tile" aria-hidden="true">@Model.GetLetter(item)</div>
-								}
-							</td>
-							<td>@item.Code</td>
-							<th scope="row">@item.Name</th>
-							<td>@item.MenuCategory?.Name</td>
-							<td>
-								@if (quote.IsOffer)
-								{
-									<span class="am-was">@item.Price.ToString("N2")</span>
-									<strong>@quote.Price.ToString("N2")</strong>
-									<span class="badge text-bg-warning" title="@(quote.Label ?? quote.Note)">@quote.Badge</span>
-								}
-								else
-								{
-									@item.Price.ToString("N2")
-								}
-							</td>
-							<td>
-								<form method="post" asp-page-handler="Toggle" asp-route-id="@item.Id" asp-route-categoryId="@Model.CategoryId" asp-route-q="@Model.Search" asp-route-status="@Model.Status" class="d-inline">
-									<input type="hidden" name="makeAvailable" value="@(item.IsAvailable ? "false" : "true")" />
-									<button type="submit" class="am-switch" role="switch" aria-checked="@(item.IsAvailable ? "true" : "false")"
-											title="@(item.IsAvailable ? "Click to stop ordering this dish" : "Click to allow ordering this dish")">
-										<span class="am-track" aria-hidden="true"></span>
-										<span>@(item.IsAvailable ? "Available" : "Unavailable")</span>
-									</button>
-								</form>
-							</td>
-							<td class="text-end text-nowrap">
-								<a class="btn btn-sm btn-outline-primary" asp-page="/Menu/Edit" asp-route-id="@item.Id">Edit</a>
-
-								<form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" asp-route-categoryId="@Model.CategoryId" asp-route-q="@Model.Search" asp-route-status="@Model.Status"
-									  class="d-inline js-delete-form" data-dish="@item.Name">
-									<button type="submit" class="btn btn-outline-danger am-bin" title="Delete" aria-label="Delete @item.Name">&#128465;</button>
-								</form>
-							</td>
+							<th scope="col"><span class="visually-hidden">Photo</span></th>
+							<th scope="col">Code</th>
+							<th scope="col">Dish</th>
+							<th scope="col">Category</th>
+							<th scope="col">Price now (RM)</th>
+							<th scope="col">Status</th>
+							<th scope="col"><span class="visually-hidden">Actions</span></th>
 						</tr>
-					}
-				</tbody>
-			</table>
-		</div>
+					</thead>
+					<tbody>
+						@foreach (MenuItem item in Model.Items)
+						{
+							string? photoUrl = Model.GetPhotoUrl(item);
+							PriceQuote quote = Model.GetQuote(item);
 
-		<p class="text-secondary small mb-0">The price column shows what customers pay now. The tag says whether a promotion or an offer is applied. Discounts are set on the Promotions page.</p>
-	}
-</section>
+							<tr>
+								<td>
+									@if (photoUrl != null)
+									{
+										<img src="@photoUrl" alt="Photo of @item.Name" width="56" height="56" class="rounded" style="object-fit: cover;" />
+									}
+									else
+									{
+										<div class="am-tile" aria-hidden="true">@Model.GetLetter(item)</div>
+									}
+								</td>
+								<td>@item.Code</td>
+								<th scope="row">@item.Name</th>
+								<td>@item.MenuCategory?.Name</td>
+								<td>
+									@if (quote.IsOffer)
+									{
+										<span class="am-was">@item.Price.ToString("N2")</span>
+										<strong>@quote.Price.ToString("N2")</strong>
+										<span class="badge text-bg-warning" title="@(quote.Label ?? quote.Note)">@quote.Badge</span>
+									}
+									else
+									{
+										@item.Price.ToString("N2")
+									}
+								</td>
+								<td>
+									<form method="post" asp-page-handler="Toggle" asp-route-id="@item.Id" asp-route-categoryId="@Model.CategoryId" asp-route-q="@Model.Search" asp-route-status="@Model.Status" class="d-inline">
+										<input type="hidden" name="makeAvailable" value="@(item.IsAvailable ? "false" : "true")" />
+										<button type="submit" class="am-switch" role="switch" aria-checked="@(item.IsAvailable ? "true" : "false")"
+												title="@(item.IsAvailable ? "Click to stop ordering this dish" : "Click to allow ordering this dish")">
+											<span class="am-track" aria-hidden="true"></span>
+											<span>@(item.IsAvailable ? "Available" : "Unavailable")</span>
+										</button>
+									</form>
+								</td>
+								<td class="text-end text-nowrap">
+									<a class="btn btn-sm btn-outline-primary" asp-page="/Menu/Edit" asp-route-id="@item.Id">Edit</a>
+
+									<form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" asp-route-categoryId="@Model.CategoryId" asp-route-q="@Model.Search" asp-route-status="@Model.Status"
+										  class="d-inline js-delete-form" data-dish="@item.Name">
+										<button type="submit" class="btn btn-outline-danger am-bin" title="Delete" aria-label="Delete @item.Name">&#128465;</button>
+									</form>
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			}
+		</div>
+	</section>
+</div>
 
 <dialog id="deleteDialog" class="am-dialog" aria-labelledby="deleteTitle">
 	<h2 id="deleteTitle" class="h4 mb-2">Delete this dish?</h2>

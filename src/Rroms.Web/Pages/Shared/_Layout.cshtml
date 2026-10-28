@@ -40,19 +40,24 @@
 		}
 	}
 	string roleTag = roleLabel == RoleNames.Administrator ? "Admin" : roleLabel;
+
+	// Gilded redesign: staff and admin pages open in the light "cream" look, every other page in the dark "noir" look.
+	// This is only the starting look; the Dark mode button still switches it and remembers the visitor's choice (theme.js).
+	bool isBackOffice = currentArea == "Admin" || currentArea == "Staff";
+	string themeDefault = isBackOffice ? "light" : "dark";
+	string bodyArea = currentArea == string.Empty ? "Public" : currentArea;
 }
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme-default="@themeDefault">
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<title>@pageTitle | @SiteInfo.RestaurantName</title>
 	<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-	@* Fonts: Fraunces (headings) and Nunito (body)*@
-	<link rel="preconnect" href="https://fonts.googleapis.com" />
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@@9..144,700;9..144,800&family=Nunito:wght@@400;600;700;800&display=swap" />
+	@* Fonts (Gilded redesign): Playfair Display (headings), Jost (body), Pinyon Script (decorative words).
+	   Served from wwwroot/lib/gilded-fonts, so no request goes to Google. *@
+	<link rel="stylesheet" href="~/lib/gilded-fonts/fonts.css" asp-append-version="true" />
 
 	<link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
 	<link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
@@ -60,19 +65,16 @@
 	@await RenderSectionAsync("Styles", required: false)
 </head>
 
-<body>
+@* data-area / data-page let site.css pick the banner photo for each page without editing every page. *@
+<body data-area="@bodyArea" data-page="@currentPage">
 	<a class="skip-link" href="#main-content">Skip to main content</a>
 
 	<header>
 		<nav class="navbar navbar-expand-xl site-navbar sticky-top" aria-label="Main navigation">
 			<div class="container">
 				<a class="brand navbar-brand" asp-area="" asp-page="/Index">
-					<span class="brand-mark" aria-hidden="true">
-						<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-							<path d="M12 22c4 0 7-3 7-7 0-5-5-7-5-12-3 2-5 5-5 8-1-1-2-2-2-4-2 2-2 5-2 8 0 4 3 7 7 7z" />
-						</svg>
-					</span>
-					<span class="brand-name">Three <span>Grills</span></span>
+					<span class="brand-name">@SiteInfo.RestaurantName</span>
+					<span class="brand-sub" aria-hidden="true">Kitchen · Grill</span>
 				</a>
 
 				<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main-nav"
@@ -195,7 +197,8 @@
 			<div class="row gy-3 align-items-center">
 				<div class="col-md-6">
 					<div class="footer-brand">@SiteInfo.RestaurantName</div>
-					<small>@SiteInfo.Tagline</small>
+					<span class="footer-sub" aria-hidden="true">Kitchen · Grill</span>
+					<small class="d-block mt-2">@SiteInfo.Tagline</small>
 				</div>
 				<div class="col-md-6 text-md-end">
 					<small>&copy; @DateTime.UtcNow.Year @SiteInfo.RestaurantName. 5026CMD coursework project.</small>

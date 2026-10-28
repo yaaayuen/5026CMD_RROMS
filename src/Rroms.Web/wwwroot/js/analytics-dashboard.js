@@ -9,16 +9,23 @@
         return;
     }
 
-    // Brand colours from site.css, one per status, so each status always has the same colour.
+    // Gilded colours (site.css), one per status, so each status always has the same colour.
+    const isDark = document.documentElement.getAttribute("data-bs-theme") === "dark";
+    const inkColour = isDark ? "#f4eee6" : "#221c15";
     const statusColours = {
-        "Completed": "#12867a",
-        "Not finished yet": "#ffbc42",
-        "Seated": "#d81159",
-        "Confirmed": "#ffbc42",
-        "Pending": "#ff8c42",
-        "Cancelled": "#9a9cb0",
-        "Absent": "#5c5f77"
+        "Completed": "#2f7d5b",
+        "Not finished yet": "#c9a45c",
+        "Seated": "#8a6424",
+        "Confirmed": "#c9a45c",
+        "Pending": "#e2c27e",
+        "Cancelled": "#b9afa2",
+        "Absent": "#c05b4e"
     };
+
+    // Axis text, grid lines and font follow the page's light or dark look.
+    Chart.defaults.color = isDark ? "#c9bba6" : "#675b4d";
+    Chart.defaults.borderColor = isDark ? "rgba(244, 238, 230, 0.1)" : "rgba(90, 70, 40, 0.12)";
+    Chart.defaults.font.family = "Jost, 'Segoe UI', Roboto, Arial, sans-serif";
 
     function showError() {
         const error = document.getElementById("charts-error");
@@ -33,7 +40,7 @@
                 type: "bar",
                 label: series.name,
                 data: series.values,
-                backgroundColor: statusColours[series.name] || "#5c5f77",
+                backgroundColor: statusColours[series.name] || "#b9afa2",
                 stack: "bookings",
                 yAxisID: "y",
                 order: 2
@@ -44,8 +51,8 @@
             type: "line",
             label: "Guests served",
             data: data.guestsServed,
-            borderColor: "#2b2d42",
-            backgroundColor: "#2b2d42",
+            borderColor: inkColour,
+            backgroundColor: inkColour,
             tension: 0.25,
             pointRadius: 2,
             yAxisID: "guests",
@@ -76,7 +83,7 @@
                 datasets: [{
                     label: "Table-hours used",
                     data: data.tableHoursByHour,
-                    backgroundColor: "#d81159"
+                    backgroundColor: "#c9a45c"
                 }]
             },
             options: {
@@ -101,8 +108,8 @@
                 datasets: [{
                     label: "Paid sales (RM)",
                     data: data.dailySales,
-                    borderColor: "#12867a",
-                    backgroundColor: "rgba(18, 134, 122, 0.15)",
+                    borderColor: "#a7803a",
+                    backgroundColor: "rgba(201, 164, 92, 0.18)",
                     fill: true,
                     tension: 0.25,
                     pointRadius: 2
@@ -137,7 +144,7 @@
                 datasets: [{
                     label: "Units sold",
                     data: data.popularDishQuantities,
-                    backgroundColor: "#ff8c42"
+                    backgroundColor: "#8a6424"
                 }]
             },
             options: {

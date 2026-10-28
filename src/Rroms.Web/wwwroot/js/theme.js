@@ -5,8 +5,9 @@
 
    Order of choice:
      1. the visitor's saved choice (localStorage), if there is one
-     2. otherwise the device setting (prefers-color-scheme)
-     3. otherwise light
+     2. otherwise the page's starting look from <html data-theme-default> (Gilded redesign: staff/admin "light"
+        cream, every other page "dark" noir), set by _Layout
+     3. otherwise the device setting (prefers-color-scheme), then light
    Any button with the attribute data-theme-toggle switches the theme and remembers the choice.
    Storage can be blocked (private window), so every read and write is wrapped in try/catch.
    ============================================================================= */
@@ -30,6 +31,12 @@
         return wantsDark ? 'dark' : 'light';
     }
 
+    // Gilded redesign: the layout says which look the page starts in (light for staff/admin, dark elsewhere).
+    function pageDefaultTheme() {
+        var value = root.getAttribute('data-theme-default');
+        return value === 'dark' || value === 'light' ? value : null;
+    }
+
     function currentTheme() {
         return root.getAttribute('data-bs-theme') === 'dark' ? 'dark' : 'light';
     }
@@ -49,7 +56,7 @@
     }
 
     // 1. Set the theme right now, before the first paint.
-    applyTheme(savedTheme() || deviceTheme());
+    applyTheme(savedTheme() || pageDefaultTheme() || deviceTheme());
 
     // 2. Wire up the buttons once the page exists.
     document.addEventListener('DOMContentLoaded', function () {
@@ -78,7 +85,7 @@
     if (window.matchMedia) {
         var query = window.matchMedia('(prefers-color-scheme: dark)');
         var onChange = function () {
-            if (!savedTheme()) {
+            if (!savedTheme() && !pageDefaultTheme()) {
                 applyTheme(deviceTheme());
                 updateButtons();
             }
