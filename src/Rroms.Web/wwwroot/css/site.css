@@ -1,73 +1,91 @@
 /* =============================================================================
-   Three Grills - site-wide theme ("Berry Bistro")
-   One design direction for customer, staff and admin pages.
+   Three Grills - site-wide theme ("Gilded")
+   Dark "noir" look for guests and customers, light "cream" look for staff and administrators
+   (the starting look is chosen in _Layout; the Dark mode button still switches between the two).
 
    Structure:
      1. Design tokens (colours, fonts, radii) as CSS custom properties
      2. Bootstrap overrides (so normal Bootstrap classes pick up our palette)
      3. Layout: navbar, main, footer
-     4. Reusable components: hero, cards, tiles, badges
+     4. Reusable components: hero banner, cards, tiles, badges, tables, forms
      5. Accessibility helpers
+     6. Theme switch: the dark token block (read by ThemeContrastTests)
+     7. Track my visit, chat sidebar, news, feedback, kitchen
+     8. Gilded page layouts (hubs, home, sign-in, menu cards, kitchen board, till ...)
+   Only the look is defined here. No page logic, form field or link depends on this file.
    ============================================================================= */
 
 /* -----------------------------------------------------------------------------
-   1. DESIGN TOKENS
-   Change a colour here and it changes everywhere.
+   1. DESIGN TOKENS (light = "cream")
+   Change a colour here and it changes everywhere. The old token names are kept so every page keeps working:
+   "raspberry" is now the deep brand colour (charcoal in light, gold in dark).
    ----------------------------------------------------------------------------- */
 :root {
-    --tg-raspberry: #d81159; /* primary: buttons, links, brand */
-    --tg-raspberry-dark: #a50d44; /* hover/pressed state, footer */
-    --tg-coral: #ff8c42; /* secondary accent */
-    --tg-gold: #ffbc42; /* highlights, badges */
-    --tg-teal: #12867a; /* success: confirmed, paid */
-    --tg-ink: #2b2d42; /* main text */
-    --tg-muted: #5c5f77; /* secondary text (passes WCAG AA on cream) */
-    --tg-cream: #fffdf7; /* page background */
-    --tg-blush: #ffe8ef; /* soft raspberry tint for panels */
-    --tg-peach: #fff1e6; /* soft coral tint for panels */
+    --tg-raspberry: #1a1612; /* deep brand: active pills, chips, chat bubbles */
+    --tg-raspberry-dark: #0f0d0b; /* pressed state, skip link */
+    --tg-coral: #c77a3a; /* warm accent: warnings, diet notes */
+    --tg-gold: #c9a45c; /* primary buttons and highlights */
+    --tg-teal: #2f7d5b; /* success: confirmed, paid */
+    --tg-ink: #221c15; /* main text */
+    --tg-muted: #675b4d; /* secondary text (WCAG AA on cream and surface) */
+    --tg-cream: #f3ece1; /* page background */
+    --tg-blush: #efe3cf; /* soft gold tint for panels */
+    --tg-peach: #f4e9d6; /* soft warm tint for panels */
     --tg-white: #ffffff;
-    /* YJ-6 theme tokens. Light values here; the dark values are in the [data-bs-theme="dark"] block below. */
-    --tg-surface: #ffffff; /* cards and the navbar */
-    --tg-on-brand: #ffffff; /* text on raspberry buttons and badges */
-    --tg-on-gold: #2b2d42; /* text on gold chips and buttons */
-    --tg-link: #d81159; /* links and brand-coloured text */
-    --tg-link-hover: #a50d44;
-    --tg-focus: #a50d44; /* keyboard focus outline (needs 3:1 against the page) */
-    --tg-gradient: linear-gradient(135deg, var(--tg-raspberry) 0%, var(--tg-coral) 60%, var(--tg-gold) 100%);
-    --tg-font-heading: "Fraunces", Georgia, "Times New Roman", serif;
-    --tg-font-body: "Nunito", "Segoe UI", Roboto, Arial, sans-serif;
-    --tg-radius: 1rem;
+    --tg-surface: #fffcf7; /* cards */
+    --tg-on-brand: #f1dba6; /* text on the deep brand colour */
+    --tg-on-gold: #14110d; /* text on gold buttons and chips */
+    --tg-link: #7a5418; /* links and gold text */
+    --tg-link-hover: #5c3e10;
+    --tg-focus: #8a6424; /* keyboard focus outline (needs 3:1 against the page) */
+}
+
+:root {
+    --tg-night: #14110d; /* navbar, footer and photo banners in both looks */
+    --tg-night-ink: #f4eee6;
+    --tg-night-muted: #c9bba6;
+    --tg-gold-soft: #e2c27e;
+    --tg-line: rgba(90, 70, 40, 0.14);
+    --tg-gradient: linear-gradient(135deg, #e7d3a6 0%, #c9a45c 55%, #8a6424 100%);
+    --tg-font-heading: "Playfair Display", Georgia, "Times New Roman", serif;
+    --tg-font-body: "Jost", "Segoe UI", Roboto, Arial, sans-serif;
+    --tg-font-script: "Pinyon Script", "Playfair Display", cursive;
+    --tg-radius: 1.4rem;
     --tg-radius-pill: 999px;
-    --tg-shadow: 0 10px 30px rgba(216, 17, 89, 0.10);
-    --tg-shadow-hover: 0 16px 40px rgba(216, 17, 89, 0.18);
+    --tg-shadow: 0 12px 34px rgba(70, 50, 25, 0.08);
+    --tg-shadow-hover: 0 20px 46px rgba(120, 80, 30, 0.16);
+    --hero-img: url("../images/gilded/steak-sliced.webp");
 }
 
 /* -----------------------------------------------------------------------------
    2. BOOTSTRAP OVERRIDES
-   Bootstrap 5.3 reads these variables, so .btn-primary, .text-primary, links,
-   form focus rings etc. all use the Three Grills palette automatically.
    ----------------------------------------------------------------------------- */
 :root {
-    --bs-primary: var(--tg-raspberry);
-    --bs-primary-rgb: 216, 17, 89;
+    --bs-primary: var(--tg-link);
+    --bs-primary-rgb: 122, 84, 24;
     --bs-success: var(--tg-teal);
-    --bs-success-rgb: 18, 134, 122;
+    --bs-success-rgb: 47, 125, 91;
     --bs-warning: var(--tg-gold);
-    --bs-warning-rgb: 255, 188, 66;
+    --bs-warning-rgb: 201, 164, 92;
     --bs-body-color: var(--tg-ink);
     --bs-body-bg: var(--tg-cream);
     --bs-body-font-family: var(--tg-font-body);
     --bs-link-color: var(--tg-link);
-    --bs-link-color-rgb: 216, 17, 89;
+    --bs-link-color-rgb: 122, 84, 24;
     --bs-link-hover-color: var(--tg-link-hover);
-    --bs-link-hover-color-rgb: 165, 13, 68;
-    --bs-border-radius: 0.75rem;
+    --bs-link-hover-color-rgb: 92, 62, 16;
+    --bs-border-radius: 0.85rem;
+    --bs-border-color: rgba(90, 70, 40, 0.18);
+    --bs-secondary-color: var(--tg-muted);
 }
 
 body {
     background-color: var(--tg-cream);
     color: var(--tg-ink);
     font-family: var(--tg-font-body);
+    font-weight: 400;
+    line-height: 1.65;
+    font-variant-numeric: lining-nums; /* Playfair's old-style numbers make "0" look like "o" in table labels */
     display: flex;
     flex-direction: column;
     min-height: 100vh;
@@ -75,264 +93,507 @@ body {
 
 h1, h2, h3, h4, .display-heading {
     font-family: var(--tg-font-heading);
-    font-weight: 700;
-    letter-spacing: -0.01em;
+    font-weight: 400;
+    letter-spacing: -0.005em;
+}
+
+h5, h6, .h5, .h6 {
+    font-family: var(--tg-font-heading);
+    font-weight: 500;
+}
+
+.fw-semibold, .fw-bold, strong, b, th {
+    font-weight: 500 !important;
+}
+
+.text-secondary {
+    color: var(--tg-muted) !important;
 }
 
 .btn {
     border-radius: var(--tg-radius-pill);
-    font-weight: 700;
-    padding: 0.6rem 1.4rem;
+    font-weight: 500;
+    font-size: 0.8rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 0.7rem 1.45rem;
+    transition: box-shadow 0.25s ease, transform 0.25s ease, background-color 0.2s ease;
 }
 
-.btn-primary {
-    --bs-btn-bg: var(--tg-raspberry);
-    --bs-btn-border-color: var(--tg-raspberry);
-    --bs-btn-hover-bg: var(--tg-raspberry-dark);
-    --bs-btn-hover-border-color: var(--tg-raspberry-dark);
-    --bs-btn-active-bg: var(--tg-raspberry-dark);
-    --bs-btn-active-border-color: var(--tg-raspberry-dark);
-    --bs-btn-disabled-bg: var(--tg-raspberry);
-    --bs-btn-disabled-border-color: var(--tg-raspberry);
-    box-shadow: 0 6px 16px rgba(216, 17, 89, 0.25);
+    .btn:hover {
+        transform: translateY(-1px);
+    }
+
+.btn-sm {
+    font-size: 0.7rem;
+    padding: 0.45rem 0.95rem;
 }
 
-.btn-outline-primary {
-    --bs-btn-color: var(--tg-link);
-    --bs-btn-border-color: var(--tg-raspberry);
-    --bs-btn-hover-bg: var(--tg-raspberry);
-    --bs-btn-hover-border-color: var(--tg-raspberry);
-    --bs-btn-active-bg: var(--tg-raspberry-dark);
-    --bs-btn-active-border-color: var(--tg-raspberry-dark);
-    --bs-btn-disabled-color: var(--tg-link);
-    --bs-btn-disabled-border-color: var(--tg-raspberry);
+.btn-lg {
+    font-size: 0.85rem;
+    padding: 0.9rem 1.8rem;
 }
 
-/* Gold call-to-action button with dark text for contrast. */
+.btn-link {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: inherit;
+}
+
+/* Primary = gold pill with dark text, in both looks. */
+.btn-primary,
 .btn-gold {
     --bs-btn-color: var(--tg-on-gold);
     --bs-btn-bg: var(--tg-gold);
     --bs-btn-border-color: var(--tg-gold);
     --bs-btn-hover-color: var(--tg-on-gold);
-    --bs-btn-hover-bg: #ffaa14;
-    --bs-btn-hover-border-color: #ffaa14;
-    --bs-btn-active-bg: #ffaa14;
+    --bs-btn-hover-bg: #d6b46d;
+    --bs-btn-hover-border-color: #d6b46d;
+    --bs-btn-active-color: var(--tg-on-gold);
+    --bs-btn-active-bg: #b8914a;
+    --bs-btn-active-border-color: #b8914a;
+    --bs-btn-disabled-color: var(--tg-on-gold);
+    --bs-btn-disabled-bg: var(--tg-gold);
+    --bs-btn-disabled-border-color: var(--tg-gold);
+    box-shadow: 0 8px 20px rgba(150, 110, 40, 0.22);
+}
+
+    .btn-primary:hover,
+    .btn-gold:hover {
+        box-shadow: 0 10px 28px rgba(201, 150, 70, 0.4);
+    }
+
+.btn-outline-primary {
+    --bs-btn-color: var(--tg-link);
+    --bs-btn-border-color: rgba(154, 115, 48, 0.6);
+    --bs-btn-hover-color: var(--tg-on-gold);
+    --bs-btn-hover-bg: var(--tg-gold);
+    --bs-btn-hover-border-color: var(--tg-gold);
+    --bs-btn-active-color: var(--tg-on-gold);
+    --bs-btn-active-bg: var(--tg-gold);
+    --bs-btn-active-border-color: var(--tg-gold);
+    --bs-btn-disabled-color: var(--tg-link);
+    --bs-btn-disabled-border-color: rgba(154, 115, 48, 0.6);
+}
+
+.btn-outline-secondary {
+    --bs-btn-color: var(--tg-ink);
+    --bs-btn-border-color: var(--bs-border-color);
+    --bs-btn-hover-color: var(--tg-ink);
+    --bs-btn-hover-bg: var(--tg-blush);
+    --bs-btn-hover-border-color: var(--tg-blush);
+}
+
+.btn-outline-danger {
+    --bs-btn-color: #9b3b33;
+    --bs-btn-border-color: rgba(155, 59, 51, 0.5);
+    --bs-btn-hover-bg: #9b3b33;
+    --bs-btn-hover-border-color: #9b3b33;
+}
+
+.btn-danger {
+    --bs-btn-bg: #9b3b33;
+    --bs-btn-border-color: #9b3b33;
+    --bs-btn-hover-bg: #82302a;
+    --bs-btn-hover-border-color: #82302a;
+}
+
+.btn-success {
+    --bs-btn-bg: var(--tg-teal);
+    --bs-btn-border-color: var(--tg-teal);
+    --bs-btn-hover-bg: #256548;
+    --bs-btn-hover-border-color: #256548;
+}
+
+.form-control,
+.form-select {
+    border-radius: 0.85rem;
+    border-color: rgba(60, 45, 25, 0.22);
+    background-color: #ffffff;
+    padding: 0.62rem 0.95rem;
+}
+
+.form-control-lg {
+    font-size: 1rem;
+    padding: 0.8rem 1.05rem;
 }
 
 .form-control:focus,
 .form-select:focus {
-    border-color: var(--tg-coral);
-    box-shadow: 0 0 0 0.25rem rgba(255, 140, 66, 0.30);
+    border-color: var(--tg-gold);
+    box-shadow: 0 0 0 0.25rem rgba(201, 164, 92, 0.3);
+}
+
+.form-label {
+    font-size: 0.74rem;
+    font-weight: 500 !important;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--tg-muted);
+    margin-bottom: 0.4rem;
+}
+
+.form-check-label,
+.form-check .form-label {
+    font-size: 0.95rem;
+    letter-spacing: 0;
+    text-transform: none;
+    color: inherit;
+}
+
+.form-check-input:checked {
+    background-color: var(--tg-gold);
+    border-color: var(--tg-gold);
+}
+
+.form-text {
+    color: var(--tg-muted);
+}
+
+/* Tables: quiet uppercase headings, hairline rows. */
+.table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--tg-ink);
+    --bs-table-border-color: var(--tg-line);
+    --bs-table-hover-bg: rgba(201, 164, 92, 0.08);
+    --bs-table-striped-bg: rgba(201, 164, 92, 0.05);
+}
+
+    .table > thead th,
+    .table > thead td {
+        font-family: var(--tg-font-body);
+        font-size: 0.7rem;
+        font-weight: 500 !important;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--tg-muted);
+        border-bottom-width: 1px;
+        padding-top: 0.4rem;
+        padding-bottom: 0.75rem;
+        white-space: nowrap;
+    }
+
+    .table > :not(caption) > * > * {
+        padding: 0.85rem 0.75rem;
+    }
+
+    .table caption {
+        color: var(--tg-muted);
+        font-size: 0.85rem;
+    }
+
+.table-light {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--tg-muted);
+}
+
+.table-warning,
+.table-active {
+    --bs-table-bg: rgba(201, 164, 92, 0.16);
+    --bs-table-active-bg: rgba(201, 164, 92, 0.16);
+}
+
+/* Badges: soft pills; the status is always in the word too, never only in the colour. */
+.badge {
+    border-radius: var(--tg-radius-pill);
+    font-weight: 500;
+    font-size: 0.74rem;
+    letter-spacing: 0.02em;
+    padding: 0.4em 0.85em;
+}
+
+.text-bg-success { background-color: #e2efdc !important; color: #2f6b33 !important; }
+.text-bg-secondary { background-color: #e7e0d5 !important; color: #5a5046 !important; }
+.text-bg-warning { background-color: #f7eac9 !important; color: #6e4d0e !important; }
+.text-bg-danger { background-color: #f6dfdb !important; color: #8f352d !important; }
+.text-bg-info { background-color: #dfe8f4 !important; color: #2f507c !important; }
+.text-bg-primary { background-color: var(--tg-raspberry) !important; color: var(--tg-on-brand) !important; }
+.text-bg-light { background-color: var(--tg-blush) !important; color: var(--tg-ink) !important; }
+.text-bg-dark { background-color: var(--tg-night) !important; color: var(--tg-on-brand) !important; }
+
+.alert {
+    border-radius: 1rem;
+    border: 1px solid var(--tg-line);
+}
+
+.alert-warning { background-color: #f7eac9; color: #5c400b; }
+.alert-success { background-color: #e2efdc; color: #24532a; }
+.alert-danger { background-color: #f6dfdb; color: #7a2c25; }
+.alert-info { background-color: #dfe8f4; color: #263f61; }
+
+.list-group {
+    --bs-list-group-bg: var(--tg-surface);
+    --bs-list-group-color: var(--tg-ink);
+    --bs-list-group-border-color: var(--tg-line);
+    --bs-list-group-action-hover-bg: var(--tg-blush);
+    --bs-list-group-action-hover-color: var(--tg-ink);
+    --bs-list-group-active-bg: var(--tg-raspberry);
+    --bs-list-group-active-border-color: var(--tg-raspberry);
+    --bs-list-group-active-color: var(--tg-on-brand);
+    border-radius: 1rem;
+}
+
+.dropdown-menu,
+.offcanvas,
+.modal-content {
+    --bs-dropdown-bg: var(--tg-surface);
+    --bs-offcanvas-bg: var(--tg-surface);
+    --bs-modal-bg: var(--tg-surface);
+}
+
+code {
+    color: var(--tg-link);
 }
 
 /* -----------------------------------------------------------------------------
    3. LAYOUT
    ----------------------------------------------------------------------------- */
 
-/* Navbar: white bar with a gradient stripe underneath. */
+/* Navbar: a dark bar in both looks, cream text, gold pill for the current section. */
 .site-navbar {
-    background-color: var(--tg-surface);
-    border-bottom: 4px solid transparent;
-    border-image: var(--tg-gradient) 1;
-    box-shadow: 0 2px 12px rgba(43, 45, 66, 0.06);
+    background-color: var(--tg-night);
+    border-bottom: 1px solid rgba(201, 164, 92, 0.22);
+    padding-top: 0.85rem;
+    padding-bottom: 0.85rem;
 }
 
     .site-navbar .nav-link {
-        color: var(--tg-ink);
-        font-weight: 700;
+        color: var(--tg-night-ink);
+        font-weight: 400;
+        font-size: 0.9rem;
+        letter-spacing: 0.05em;
         border-radius: var(--tg-radius-pill);
         padding: 0.45rem 0.95rem !important;
     }
 
         .site-navbar .nav-link:hover,
         .site-navbar .nav-link:focus-visible {
-            background-color: var(--tg-blush);
-            color: var(--tg-link-hover);
+            background-color: rgba(244, 238, 230, 0.08);
+            color: #ffffff;
         }
 
         .site-navbar .nav-link.active {
-            background-color: var(--tg-raspberry);
-            color: var(--tg-white);
+            background-color: var(--tg-gold);
+            color: var(--tg-on-gold);
+            font-weight: 500;
         }
+
+    .site-navbar .navbar-user {
+        color: var(--tg-night-muted) !important;
+        font-weight: 400 !important;
+        font-size: 0.9rem;
+    }
+
+    .site-navbar .btn-outline-primary {
+        --bs-btn-color: var(--tg-night-ink);
+        --bs-btn-border-color: rgba(244, 238, 230, 0.35);
+    }
+
+    .site-navbar .navbar-toggler {
+        border-color: rgba(244, 238, 230, 0.35);
+    }
+
+    .site-navbar .navbar-toggler-icon {
+        filter: invert(1);
+    }
 
 .brand {
     display: inline-flex;
-    align-items: center;
-    gap: 0.6rem;
-    color: var(--tg-ink);
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1;
+    color: var(--tg-night-ink);
     text-decoration: none;
 }
 
     .brand:hover {
-        color: var(--tg-ink);
+        color: #ffffff;
     }
-
-.brand-mark {
-    display: inline-grid;
-    place-items: center;
-    width: 2.6rem;
-    height: 2.6rem;
-    border-radius: 50%;
-    background: var(--tg-gradient);
-    box-shadow: 0 4px 12px rgba(216, 17, 89, 0.35);
-}
 
 .brand-name {
     font-family: var(--tg-font-heading);
     font-size: 1.45rem;
-    font-weight: 800;
-    line-height: 1;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
 }
 
-    .brand-name span {
-        color: var(--tg-link);
-    }
+.brand-sub {
+    font-size: 0.56rem;
+    letter-spacing: 0.42em;
+    text-transform: uppercase;
+    color: var(--tg-night-muted);
+    margin-top: 0.35rem;
+}
 
 .role-chip {
-    font-size: 0.75rem;
-    font-weight: 800;
+    font-size: 0.66rem;
+    font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    background-color: var(--tg-gold);
-    color: var(--tg-on-gold);
+    letter-spacing: 0.14em;
+    background-color: transparent;
+    color: var(--tg-gold-soft);
+    border: 1px solid rgba(201, 164, 92, 0.6);
     border-radius: var(--tg-radius-pill);
-    padding: 0.25rem 0.7rem;
+    padding: 0.28rem 0.75rem;
 }
 
 .site-main {
     flex: 1 0 auto;
     padding-top: 2rem;
-    padding-bottom: 3rem;
+    padding-bottom: 4rem;
+    position: relative;
 }
 
 .site-footer {
-    background-color: var(--tg-raspberry-dark);
-    background-image: linear-gradient(160deg, var(--tg-raspberry-dark) 0%, #7d0a35 100%);
-    color: #ffe3ec;
-    padding: 2.5rem 0 5rem; /* bottom room so the floating chat button does not cover the footer text */
+    background-color: var(--tg-night);
+    border-top: 1px solid rgba(201, 164, 92, 0.22);
+    color: var(--tg-night-muted);
+    padding: 2.6rem 0 5rem; /* bottom room so the floating chat button does not cover the footer text */
 }
 
     .site-footer a {
-        color: var(--tg-gold);
+        color: var(--tg-gold-soft);
     }
 
     .site-footer .footer-brand {
         font-family: var(--tg-font-heading);
         font-size: 1.5rem;
-        font-weight: 800;
-        color: var(--tg-white);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--tg-night-ink);
+        line-height: 1;
+    }
+
+    .site-footer .footer-sub {
+        display: block;
+        font-size: 0.6rem;
+        letter-spacing: 0.42em;
+        text-transform: uppercase;
+        margin-top: 0.4rem;
     }
 
     .site-footer small {
-        color: #ffd0de;
+        color: var(--tg-night-muted);
     }
 
 /* -----------------------------------------------------------------------------
    4. COMPONENTS
    ----------------------------------------------------------------------------- */
 
-/* Hero banner used on the home page and role dashboards. */
+/* Hero banner: a dark rounded panel with a photo fading in from the right. The photo for each page is picked
+   in section 8 from <body data-area data-page>, so the pages themselves did not need editing. */
 .hero {
     position: relative;
     overflow: hidden;
-    border-radius: calc(var(--tg-radius) * 1.5);
-    background: var(--tg-gradient);
-    color: var(--tg-white);
-    padding: 3.5rem 2.5rem;
-    box-shadow: var(--tg-shadow);
+    border-radius: 1.75rem;
+    background-color: #1a1612;
+    background-image: linear-gradient(90deg, rgba(20, 17, 13, 0.97) 0%, rgba(20, 17, 13, 0.86) 38%, rgba(20, 17, 13, 0.25) 75%, rgba(20, 17, 13, 0.05) 100%), var(--hero-img);
+    background-size: cover;
+    background-position: center 55%;
+    color: var(--tg-night-ink);
+    padding: 3.2rem 2.6rem;
+    box-shadow: 0 18px 46px rgba(20, 15, 10, 0.25);
+    border: 1px solid rgba(201, 164, 92, 0.22);
 }
 
-/* Decorative soft circles. Purely visual, so they are hidden from screen readers in the markup. */
+    .hero p {
+        color: #ddd0bd;
+    }
+
+    .hero a:not(.btn) {
+        color: var(--tg-gold-soft);
+    }
+
+/* The old decorative circles are not part of the new look. */
 .hero-bubble {
-    position: absolute;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.14);
+    display: none;
 }
-
-    .hero-bubble.one {
-        width: 18rem;
-        height: 18rem;
-        right: -4rem;
-        top: -5rem;
-    }
-
-    .hero-bubble.two {
-        width: 10rem;
-        height: 10rem;
-        right: 9rem;
-        bottom: -4rem;
-        background: rgba(255, 188, 66, 0.35);
-    }
 
 .hero h1 {
-    font-size: clamp(2.2rem, 5vw, 3.6rem);
+    font-size: clamp(2.2rem, 5vw, 3.8rem);
     line-height: 1.05;
+    font-weight: 400;
 }
 
 .hero .lead {
-    font-size: 1.2rem;
-    max-width: 36rem;
-    color: #fff4f7;
+    font-size: 1.12rem;
+    max-width: 38rem;
+    color: #ddd0bd;
 }
 
 .hero-compact {
-    padding: 2rem 2rem;
+    padding: 2.2rem 2.4rem;
 }
 
     .hero-compact h1 {
-        font-size: clamp(1.8rem, 4vw, 2.6rem);
+        font-size: clamp(1.9rem, 4vw, 2.75rem);
     }
 
-.hero-photo {
-    background-image: linear-gradient(90deg, rgba(25, 8, 12, 0.90) 0%, rgba(60, 10, 25, 0.65) 45%, rgba(0, 0, 0, 0) 80%), url("../images/hero-grill.webp");
-    background-size: cover;
-    background-position: center 60%;
-}
-
-    .hero-photo .hero-bubble {
-        display: none;
-    }
-
-/* On phones the text covers the whole width, so the overlay must be dark everywhere. */
 @media (max-width: 575.98px) {
-    .hero-photo {
-        background-image: linear-gradient(rgba(25, 8, 12, 0.85), rgba(25, 8, 12, 0.75)), url("../images/hero-grill.webp");
+    .hero {
+        background-image: linear-gradient(rgba(20, 17, 13, 0.88), rgba(20, 17, 13, 0.8)), var(--hero-img);
     }
 }
 
+/* Small gold label above a heading, with a short gold line in front. */
 .eyebrow {
-    display: inline-block;
-    font-weight: 800;
-    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-weight: 500;
+    font-size: 0.72rem;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
-    background-color: rgba(255, 255, 255, 0.22);
-    border-radius: var(--tg-radius-pill);
-    padding: 0.3rem 0.8rem;
-    margin-bottom: 1rem;
+    letter-spacing: 0.24em;
+    background: none;
+    color: var(--tg-gold-soft);
+    border-radius: 0;
+    padding: 0;
+    margin-bottom: 0.9rem;
 }
 
-/* Generic white card with a lift-on-hover effect. */
+    .eyebrow::before {
+        content: "";
+        width: 1.8rem;
+        height: 1px;
+        background-color: currentColor;
+    }
+
+.script {
+    font-family: var(--tg-font-script);
+    font-weight: 400;
+    color: var(--tg-gold-soft);
+    font-size: 1.2em;
+    letter-spacing: 0;
+}
+
+/* Card: soft surface with a hairline gold edge. */
 .tg-card {
     background-color: var(--tg-surface);
-    border: 0;
+    color: var(--tg-ink);
+    border: 1px solid var(--tg-line);
     border-radius: var(--tg-radius);
     box-shadow: var(--tg-shadow);
-    padding: 1.6rem;
+    padding: 1.7rem;
     height: 100%;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
     .tg-card:hover {
-        transform: translateY(-4px);
+        transform: translateY(-3px);
         box-shadow: var(--tg-shadow-hover);
+        border-color: rgba(201, 164, 92, 0.45);
+    }
+
+    .tg-card.p-0 {
+        padding: 0;
     }
 
 .tg-card-photo {
     display: block;
-    width: calc(100% + 3.2rem);
+    width: calc(100% + 3.4rem);
     max-width: none;
-    margin: -1.6rem -1.6rem 1.2rem;
+    margin: -1.7rem -1.7rem 1.3rem;
     aspect-ratio: 16 / 10;
     object-fit: cover;
     border-radius: var(--tg-radius) var(--tg-radius) 0 0;
@@ -341,34 +602,24 @@ h1, h2, h3, h4, .display-heading {
 .tg-icon {
     display: inline-grid;
     place-items: center;
-    width: 3.2rem;
-    height: 3.2rem;
-    border-radius: 0.9rem;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.95rem;
     margin-bottom: 1rem;
+    background-color: var(--tg-night);
+    color: var(--tg-gold-soft);
 }
 
-    .tg-icon.raspberry {
-        background-color: var(--tg-blush);
-        color: var(--tg-raspberry);
-    }
-
-    .tg-icon.coral {
-        background-color: var(--tg-peach);
-        color: #d4621a;
-    }
-
-    .tg-icon.gold {
-        background-color: #fff5d9;
-        color: #b77d00;
-    }
-
+    .tg-icon.raspberry,
+    .tg-icon.coral,
+    .tg-icon.gold,
     .tg-icon.teal {
-        background-color: #dff5f2;
-        color: var(--tg-teal);
+        background-color: var(--tg-night);
+        color: var(--tg-gold-soft);
     }
 
 .section-title {
-    font-size: 1.9rem;
+    font-size: 2.1rem;
     margin-bottom: 0.4rem;
 }
 
@@ -379,11 +630,11 @@ h1, h2, h3, h4, .display-heading {
 
 /* Sign-in and registration cards. */
 .auth-card {
-    padding: 2.2rem;
+    padding: 2.4rem 2.5rem;
 }
 
     .auth-card .form-control-lg {
-        border-radius: 0.75rem;
+        border-radius: 0.9rem;
     }
 
 /* The validation summary is only shown when there are errors to list. */
@@ -400,15 +651,15 @@ h1, h2, h3, h4, .display-heading {
     position: relative;
     display: inline-grid;
     place-items: center;
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 2.4rem;
+    height: 2.4rem;
     border-radius: 50%;
-    color: var(--tg-ink);
-    background-color: var(--tg-blush);
+    color: var(--tg-night-ink);
+    background-color: rgba(244, 238, 230, 0.08);
 }
 
     .notification-bell:hover {
-        color: var(--tg-link-hover);
+        color: var(--tg-gold-soft);
     }
 
 .notification-badge {
@@ -418,17 +669,17 @@ h1, h2, h3, h4, .display-heading {
     min-width: 1.3rem;
     padding: 0.1rem 0.35rem;
     border-radius: var(--tg-radius-pill);
-    background-color: var(--tg-raspberry);
-    color: var(--tg-white);
-    font-size: 0.72rem;
-    font-weight: 800;
+    background-color: #c0424b;
+    color: #ffffff;
+    font-size: 0.7rem;
+    font-weight: 600;
     text-align: center;
-    border: 2px solid var(--tg-surface);
+    border: 2px solid var(--tg-night);
 }
 
-/* Inbox items: unread ones get a raspberry edge so they stand out. */
+/* Inbox items: unread ones get a gold edge so they stand out. */
 .notification-item.is-unread {
-    border-left: 5px solid var(--tg-raspberry);
+    border-left: 4px solid var(--tg-gold);
 }
 
 .notification-item.is-read {
@@ -437,36 +688,40 @@ h1, h2, h3, h4, .display-heading {
 
 .tg-toast {
     border: 0;
-    border-left: 5px solid var(--tg-raspberry);
+    border-left: 4px solid var(--tg-gold);
     box-shadow: var(--tg-shadow-hover);
+    background-color: var(--tg-surface);
+    color: var(--tg-ink);
 }
 
 /* Numbered step used in "How it works". */
 .step-number {
     display: inline-grid;
     place-items: center;
-    width: 2.4rem;
-    height: 2.4rem;
+    width: 2.6rem;
+    height: 2.6rem;
     border-radius: 50%;
-    background-color: var(--tg-gold);
-    color: var(--tg-on-gold);
-    font-weight: 800;
-    margin-bottom: 0.8rem;
+    border: 1px solid var(--tg-gold);
+    background: transparent;
+    color: var(--tg-link);
+    font-family: var(--tg-font-heading);
+    font-size: 1.15rem;
+    margin-bottom: 0.9rem;
 }
 
-/* Module tile on role dashboards. */
+/* Module tile on role dashboards (see section 8 for the photo "bento" hubs). */
 .module-tile .sprint-badge {
-    font-size: 0.75rem;
-    font-weight: 800;
+    font-size: 0.72rem;
+    font-weight: 500;
     border-radius: var(--tg-radius-pill);
     padding: 0.25rem 0.7rem;
     background-color: var(--tg-peach);
-    color: #9a4a10;
+    color: #6e4d0e;
 }
 
 .module-tile.is-ready .sprint-badge {
-    background-color: #dff5f2;
-    color: var(--tg-teal);
+    background-color: #e2efdc;
+    color: #2f6b33;
 }
 
 .module-tile p {
@@ -506,13 +761,21 @@ summary:focus-visible {
     outline-offset: 2px;
 }
 
+.site-navbar a:focus-visible,
+.site-navbar button:focus-visible,
+.hero a:focus-visible {
+    outline-color: var(--tg-gold-soft);
+}
+
 /* Respect users who ask their operating system for less motion. */
 @media (prefers-reduced-motion: reduce) {
-    .tg-card {
+    .tg-card,
+    .btn {
         transition: none;
     }
 
-        .tg-card:hover {
+        .tg-card:hover,
+        .btn:hover {
             transform: none;
         }
 }
@@ -553,7 +816,7 @@ summary:focus-visible {
 }
 
     .password-toggle:hover {
-        color: var(--tg-raspberry);
+        color: var(--tg-link);
         background: var(--tg-blush);
     }
 
@@ -571,121 +834,133 @@ input[type="password"]::-ms-clear {
 /* -----------------------------------------------------------------------------
    6. THEME SWITCH (YJ-6)
    The page's <html> element carries data-bs-theme="light" or "dark" (set by wwwroot/js/theme.js before the page
-   paints). Dark mode only changes the colour tokens, so no page has to be edited. Bootstrap 5.3 also reads this
-   attribute and darkens its own tables, forms and alerts.
-   The first block below holds ONLY token values (a test reads it to check contrast), the rules after it fix the
-   few places that use a hard-coded colour.
+   paints). Dark mode is the Gilded "noir" look. The first block below holds ONLY token values
+   (ThemeContrastTests reads it to check contrast); the rules after it fix the places that need more than a token.
    ----------------------------------------------------------------------------- */
 [data-bs-theme="dark"] {
     color-scheme: dark;
-    --tg-cream: #14141f; /* page background */
-    --tg-surface: #1e1f2e; /* cards and navbar */
-    --tg-ink: #f1f1f6; /* main text */
-    --tg-muted: #b4b7cc; /* secondary text */
-    --tg-blush: #3a1a28;
-    --tg-peach: #3a2a1c;
-    --tg-link: #ff6b9d;
-    --tg-link-hover: #ff9ab9;
-    --tg-focus: #ffbc42;
-    --tg-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
-    --tg-shadow-hover: 0 16px 40px rgba(0, 0, 0, 0.60);
-    --bs-link-color-rgb: 255, 107, 157;
-    --bs-link-hover-color-rgb: 255, 154, 185;
+    --tg-cream: #0d0c0b; /* page background */
+    --tg-surface: #1a1714; /* cards */
+    --tg-ink: #f4eee6; /* main text */
+    --tg-muted: #b3a99c; /* secondary text */
+    --tg-blush: #2a2219;
+    --tg-peach: #2a2017;
+    --tg-raspberry: #c9a45c;
+    --tg-raspberry-dark: #b08a45;
+    --tg-on-brand: #14110d;
+    --tg-link: #e2c27e;
+    --tg-link-hover: #f1dba6;
+    --tg-focus: #e2c27e;
+    --tg-line: rgba(201, 164, 92, 0.2);
+    --tg-shadow: 0 18px 44px rgba(0, 0, 0, 0.4);
+    --tg-shadow-hover: 0 0 0 1px rgba(226, 194, 126, 0.4), 0 22px 54px rgba(201, 140, 60, 0.18);
+    --bs-primary-rgb: 226, 194, 126;
+    --bs-link-color-rgb: 226, 194, 126;
+    --bs-link-hover-color-rgb: 241, 219, 166;
     --bs-body-color: var(--tg-ink);
     --bs-body-bg: var(--tg-cream);
     --bs-secondary-color: var(--tg-muted);
-    --bs-border-color: #3a3c52;
+    --bs-border-color: rgba(244, 238, 230, 0.16);
 }
 
-    [data-bs-theme="dark"] .site-navbar {
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+    [data-bs-theme="dark"] body {
+        background-image: radial-gradient(ellipse 70% 40% at 85% 0%, rgba(201, 120, 50, 0.1), transparent 70%);
+        background-attachment: fixed;
     }
 
-    [data-bs-theme="dark"] .tg-card .table {
-        --bs-table-bg: transparent;
+    [data-bs-theme="dark"] .tg-card {
+        background-color: rgba(26, 23, 20, 0.92);
     }
 
-    [data-bs-theme="dark"] .tg-icon.coral {
-        background-color: var(--tg-peach);
-        color: #ff9d5c;
+    [data-bs-theme="dark"] .form-control,
+    [data-bs-theme="dark"] .form-select {
+        background-color: rgba(244, 238, 230, 0.05);
+        border-color: rgba(244, 238, 230, 0.2);
+        color: var(--tg-ink);
     }
 
-    [data-bs-theme="dark"] .tg-icon.gold {
-        background-color: #3a3010;
-        color: #ffcf66;
+        [data-bs-theme="dark"] .form-control::placeholder {
+            color: #8e8272;
+        }
+
+    [data-bs-theme="dark"] .form-select option {
+        background-color: #1a1714;
     }
 
-    [data-bs-theme="dark"] .tg-icon.teal {
-        background-color: #12332f;
-        color: #5fd3c4;
+    [data-bs-theme="dark"] .text-bg-success { background-color: rgba(120, 170, 120, 0.18) !important; color: #a9d4a4 !important; }
+    [data-bs-theme="dark"] .text-bg-secondary { background-color: rgba(244, 238, 230, 0.1) !important; color: #d4c9bb !important; }
+    [data-bs-theme="dark"] .text-bg-warning { background-color: rgba(226, 194, 126, 0.18) !important; color: #ecd08f !important; }
+    [data-bs-theme="dark"] .text-bg-danger { background-color: rgba(200, 80, 80, 0.2) !important; color: #f0a8a8 !important; }
+    [data-bs-theme="dark"] .text-bg-info { background-color: rgba(110, 150, 210, 0.2) !important; color: #b4cbee !important; }
+
+    [data-bs-theme="dark"] .alert-warning { background-color: rgba(226, 194, 126, 0.14); color: #f0d79c; border-color: rgba(226, 194, 126, 0.3); }
+    [data-bs-theme="dark"] .alert-success { background-color: rgba(120, 170, 120, 0.15); color: #bfe0ba; border-color: rgba(120, 170, 120, 0.3); }
+    [data-bs-theme="dark"] .alert-danger { background-color: rgba(200, 80, 80, 0.16); color: #f2b4b4; border-color: rgba(200, 80, 80, 0.32); }
+    [data-bs-theme="dark"] .alert-info { background-color: rgba(110, 150, 210, 0.15); color: #c4d5ef; border-color: rgba(110, 150, 210, 0.3); }
+
+    [data-bs-theme="dark"] .btn-outline-danger {
+        --bs-btn-color: #f0a8a8;
+        --bs-btn-border-color: rgba(240, 168, 168, 0.5);
+    }
+
+    [data-bs-theme="dark"] .btn-outline-secondary {
+        --bs-btn-color: var(--tg-ink);
+        --bs-btn-hover-color: var(--tg-ink);
     }
 
     [data-bs-theme="dark"] .module-tile .sprint-badge {
         background-color: var(--tg-peach);
-        color: #ffb27a;
+        color: #ecd08f;
     }
 
     [data-bs-theme="dark"] .module-tile.is-ready .sprint-badge {
-        background-color: #12332f;
-        color: #5fd3c4;
+        background-color: rgba(120, 170, 120, 0.18);
+        color: #a9d4a4;
     }
 
-    [data-bs-theme="dark"] .notification-bell {
-        color: var(--tg-ink);
+    [data-bs-theme="dark"] .step-number {
+        color: var(--tg-link);
     }
 
-/* The Light / Dark button in the navbar. */
+/* The Light / Dark button in the navbar (it sits on the dark bar in both looks). */
 .theme-toggle {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.4rem;
-    border: 2px solid var(--tg-link);
+    width: 2.4rem;
+    height: 2.4rem;
+    border: 1px solid rgba(244, 238, 230, 0.3);
     border-radius: var(--tg-radius-pill);
     background: transparent;
-    color: var(--tg-link);
-    font-weight: 700;
+    color: var(--tg-night-ink);
     font-size: 0.9rem;
-    padding: 0.3rem 0.85rem;
+    padding: 0;
     cursor: pointer;
 }
 
     .theme-toggle:hover {
-        background-color: var(--tg-blush);
-        color: var(--tg-link-hover);
-        border-color: var(--tg-link-hover);
+        border-color: var(--tg-gold-soft);
+        color: var(--tg-gold-soft);
     }
 
     /* Pressed = dark mode is on: the button is filled so the state is visible, not only announced. */
     .theme-toggle[aria-pressed="true"] {
-        background-color: var(--tg-link);
-        color: var(--tg-cream);
+        background-color: var(--tg-gold);
+        border-color: var(--tg-gold);
+        color: var(--tg-on-gold);
     }
 
-        .theme-toggle[aria-pressed="true"]:hover {
-            background-color: var(--tg-link-hover);
-            border-color: var(--tg-link-hover);
-            color: var(--tg-cream);
-        }
-
-/* Bootstrap only lightens the mobile menu icon inside .navbar[data-bs-theme=dark], not under <html>, so do it here. */
-[data-bs-theme="dark"] .site-navbar .navbar-toggler {
-    border-color: rgba(255, 255, 255, 0.35);
-}
-
-[data-bs-theme="dark"] .site-navbar .navbar-toggler-icon {
-    filter: invert(1);
-}
-
 /* -----------------------------------------------------------------------------
-   7. TRACK MY VISIT AND THE CHAT SIDEBAR
-   Colours come from the tokens above, so dark mode needs no extra rules.
+   7. TRACK MY VISIT, CHAT SIDEBAR, NEWS, FEEDBACK, KITCHEN
    ----------------------------------------------------------------------------- */
 .track-visit {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 1rem;
-    padding: 0.85rem 0;
-    border-bottom: 1px solid var(--bs-border-color);
+    padding: 1.1rem 0;
+    border-bottom: 1px solid var(--tg-line);
 }
 
     .track-visit:last-child {
@@ -693,52 +968,52 @@ input[type="password"]::-ms-clear {
     }
 
 .track-date {
-    flex: 0 0 3.25rem;
+    flex: 0 0 3.6rem;
     text-align: center;
-    border-radius: 0.75rem;
-    background-color: var(--tg-blush);
-    color: var(--tg-link);
-    padding: 0.35rem 0;
+    border-radius: 1rem;
+    background: var(--tg-gradient);
+    color: var(--tg-on-gold);
+    padding: 0.45rem 0;
     line-height: 1.1;
 }
 
     .track-date span {
         display: block;
-        font-size: 0.7rem;
-        font-weight: 700;
+        font-size: 0.66rem;
+        font-weight: 500;
+        letter-spacing: 0.16em;
         text-transform: uppercase;
     }
 
     .track-date strong {
         font-family: var(--tg-font-heading);
-        font-size: 1.35rem;
+        font-weight: 400 !important;
+        font-size: 1.6rem;
     }
 
 .track-past summary {
     cursor: pointer;
-    font-weight: 600;
     color: var(--tg-link);
-}
-
-.track-visit {
-    flex-wrap: wrap;
+    font-family: var(--tg-font-heading);
+    font-size: 1.1rem;
 }
 
 .track-orders {
     flex: 1 0 100%;
-    padding-left: 4.25rem;
+    padding-left: 4.6rem;
 }
 
 .track-order {
-    border: 1px solid var(--bs-border-color);
-    border-radius: 0.75rem;
-    padding: 0.75rem 1rem;
-    margin-top: 0.5rem;
+    border: 1px solid var(--tg-line);
+    border-radius: 1.1rem;
+    padding: 1rem 1.15rem;
+    margin-top: 0.6rem;
+    background-color: color-mix(in srgb, var(--tg-cream) 55%, transparent);
 }
 
 .track-past-visit {
-    padding: 0.5rem 0;
-    border-bottom: 1px solid var(--bs-border-color);
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--tg-line);
 }
 
     .track-past-visit:last-child {
@@ -750,95 +1025,144 @@ input[type="password"]::-ms-clear {
     }
 
 .track-dishes {
-    font-size: 0.9rem;
+    font-size: 0.92rem;
 }
 
-/* Order progress: done steps get a tick and the current step is bold, so colour is never the only signal. */
+/* Order progress: big connected steps. Done steps get a tick and the current step glows and is bold,
+   so colour is never the only signal. */
 .order-steps {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem 1rem;
+    position: relative;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 0.25rem;
     list-style: none;
-    padding: 0;
-    margin: 0 0 0.5rem;
-    font-size: 0.85rem;
-    color: var(--bs-secondary-color);
+    padding: 0.6rem 0 0;
+    margin: 0.4rem 0 0.8rem;
+    font-size: 0.82rem;
+    color: var(--tg-muted);
 }
+
+    .order-steps::before {
+        content: "";
+        position: absolute;
+        left: 8%;
+        right: 8%;
+        top: 1.75rem;
+        height: 2px;
+        background-color: var(--tg-line);
+    }
 
     .order-steps li {
+        position: relative;
         display: flex;
+        flex-direction: column;
         align-items: center;
-        gap: 0.35rem;
+        text-align: center;
+        gap: 0.45rem;
     }
 
     .order-steps .is-done {
-        color: var(--bs-body-color);
+        color: var(--tg-ink);
     }
 
     .order-steps .is-current {
         color: var(--tg-link);
-        font-weight: 700;
+        font-weight: 500;
     }
 
 .order-step-mark {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 1.4rem;
-    height: 1.4rem;
+    width: 2.3rem;
+    height: 2.3rem;
     border-radius: 50%;
-    border: 1px solid var(--bs-border-color);
-    font-size: 0.75rem;
+    border: 1px solid var(--tg-line);
+    background-color: var(--tg-surface);
+    font-size: 0.8rem;
 }
 
 .order-steps .is-done .order-step-mark {
-    background-color: var(--tg-blush);
-    border-color: var(--tg-blush);
-    color: var(--tg-link);
+    background-color: var(--tg-gold);
+    border-color: var(--tg-gold);
+    color: var(--tg-on-gold);
 }
 
 .order-steps .is-current .order-step-mark {
-    background-color: var(--tg-raspberry);
-    border-color: var(--tg-raspberry);
-    color: #fff;
-    box-shadow: 0 0 0 3px var(--tg-blush);
+    background-color: var(--tg-surface);
+    border: 2px solid var(--tg-gold);
+    color: var(--tg-link);
+    box-shadow: 0 0 0 5px rgba(201, 164, 92, 0.15), 0 0 22px rgba(226, 170, 90, 0.45);
+    animation: tg-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes tg-pulse {
+    50% {
+        box-shadow: 0 0 0 9px rgba(201, 164, 92, 0.06), 0 0 30px rgba(226, 170, 90, 0.6);
+    }
 }
 
 @media (max-width: 575.98px) {
     .track-orders {
         padding-left: 0;
     }
+
+    .order-steps {
+        grid-auto-flow: row;
+        grid-auto-columns: auto;
+    }
+
+        .order-steps::before {
+            display: none;
+        }
+
+        .order-steps li {
+            flex-direction: row;
+        }
 }
 
 .chat-launcher {
     z-index: 1030;
     border-radius: var(--tg-radius-pill);
-    box-shadow: var(--tg-shadow-hover);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    text-transform: none;
+    letter-spacing: 0.02em;
+    font-size: 0.9rem;
 }
 
 .chat-panel {
     background-color: var(--tg-cream);
+    color: var(--tg-ink);
+    border-left: 1px solid rgba(201, 164, 92, 0.3) !important;
 }
 
 .chat-header {
-    background: var(--tg-gradient);
-    color: var(--tg-on-brand);
+    background: linear-gradient(120deg, #2a1f15, var(--tg-night));
+    color: var(--tg-night-ink);
+    border-bottom: 1px solid rgba(201, 164, 92, 0.25);
 }
 
+    .chat-header .offcanvas-title {
+        font-family: var(--tg-font-heading);
+    }
+
 .chat-header-note {
-    opacity: 0.9;
+    color: var(--tg-night-muted);
 }
 
 .chat-clear {
     white-space: nowrap;
-    color: var(--tg-on-brand);
-    border: 1px solid rgba(255, 255, 255, 0.7);
+    color: var(--tg-night-ink);
+    border: 1px solid rgba(244, 238, 230, 0.35);
     border-radius: var(--tg-radius-pill);
+    text-transform: none;
+    letter-spacing: 0;
 }
 
     .chat-clear:hover {
-        background-color: rgba(255, 255, 255, 0.2);
-        color: var(--tg-on-brand);
+        background-color: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
     }
 
 .chat-body {
@@ -849,8 +1173,9 @@ input[type="password"]::-ms-clear {
 
 .chat-privacy {
     color: var(--tg-muted);
-    background-color: var(--tg-peach);
-    border-radius: 0.75rem;
+    background-color: transparent;
+    border: 1px solid var(--tg-line);
+    border-radius: 0.85rem;
     padding: 0.5rem 0.75rem;
     margin: 0;
 }
@@ -867,16 +1192,16 @@ input[type="password"]::-ms-clear {
         content: "Hi! Ask me how to book a table, order food or leave feedback, and I will walk you through it.";
         align-self: flex-start;
         max-width: 88%;
-        padding: 0.6rem 0.85rem;
-        border-radius: 1rem 1rem 1rem 0.25rem;
+        padding: 0.65rem 0.9rem;
+        border-radius: 1.1rem 1.1rem 1.1rem 0.3rem;
         background-color: var(--tg-surface);
-        box-shadow: var(--tg-shadow);
+        border: 1px solid var(--tg-line);
     }
 
 .chat-msg {
     max-width: 88%;
-    padding: 0.6rem 0.85rem;
-    border-radius: 1rem;
+    padding: 0.65rem 0.9rem;
+    border-radius: 1.1rem;
 }
 
     /* Keep the line breaks in a reply (e.g. one line per day of opening hours) and give lines room to breathe. */
@@ -887,24 +1212,30 @@ input[type="password"]::-ms-clear {
 
     .chat-msg.from-you {
         align-self: flex-end;
-        background-color: var(--tg-raspberry);
-        color: var(--tg-on-brand);
-        border-bottom-right-radius: 0.25rem;
+        background-color: var(--tg-gold);
+        color: var(--tg-on-gold);
+        border-bottom-right-radius: 0.3rem;
     }
 
     .chat-msg.from-bot {
         align-self: flex-start;
         background-color: var(--tg-surface);
-        box-shadow: var(--tg-shadow);
-        border-bottom-left-radius: 0.25rem;
+        border: 1px solid var(--tg-line);
+        border-bottom-left-radius: 0.3rem;
     }
 
 .chat-who {
     display: block;
-    font-size: 0.75rem;
-    font-weight: 700;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     color: var(--tg-link);
     margin-bottom: 0.15rem;
+}
+
+.chat-msg.from-you .chat-who {
+    color: var(--tg-on-gold);
 }
 
 .chat-steps {
@@ -921,12 +1252,12 @@ input[type="password"]::-ms-clear {
     background-color: var(--tg-blush);
     color: var(--tg-link);
     border-radius: var(--tg-radius-pill);
-    font-weight: 600;
+    font-weight: 500;
 }
 
     .chat-action:hover {
-        background-color: var(--tg-link);
-        color: var(--tg-on-brand);
+        background-color: var(--tg-gold);
+        color: var(--tg-on-gold);
     }
 
 .chat-suggestions {
@@ -940,12 +1271,12 @@ input[type="password"]::-ms-clear {
     }
 
 .chat-chip {
-    border: 1px solid var(--tg-link);
+    border: 1px solid rgba(201, 164, 92, 0.55);
     background-color: transparent;
     color: var(--tg-link);
     border-radius: var(--tg-radius-pill);
-    padding: 0.3rem 0.75rem;
-    font-size: 0.875rem;
+    padding: 0.32rem 0.8rem;
+    font-size: 0.86rem;
 }
 
     .chat-chip:hover {
@@ -966,6 +1297,10 @@ input[type="password"]::-ms-clear {
     gap: 0.5rem;
 }
 
+    .chat-form .form-control {
+        border-radius: var(--tg-radius-pill);
+    }
+
 /* News and offers: tabs and cards. Offers and news differ by a word badge as well as the top colour. */
 .news-tabs {
     display: flex;
@@ -976,34 +1311,34 @@ input[type="password"]::-ms-clear {
 .news-tab {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.4rem 1rem;
+    gap: 0.45rem;
+    padding: 0.45rem 1.1rem;
     border: 1px solid var(--bs-border-color);
     border-radius: 999px;
     background-color: var(--tg-surface);
-    color: var(--bs-body-color);
-    font-weight: 600;
+    color: var(--tg-ink);
+    font-weight: 400;
     text-decoration: none;
 }
 
     .news-tab:hover {
-        border-color: var(--tg-raspberry);
+        border-color: var(--tg-gold);
         color: var(--tg-link);
     }
 
     .news-tab.active {
-        background-color: var(--tg-raspberry);
-        border-color: var(--tg-raspberry);
-        color: #fff;
+        background-color: var(--tg-gold);
+        border-color: var(--tg-gold);
+        color: var(--tg-on-gold);
     }
 
 .news-tab-count {
     min-width: 1.5rem;
-    padding: 0 0.4rem;
+    padding: 0 0.45rem;
     border-radius: 999px;
-    background-color: var(--tg-blush);
-    color: var(--tg-link);
-    font-size: 0.8rem;
+    background-color: rgba(201, 164, 92, 0.22);
+    color: inherit;
+    font-size: 0.78rem;
     text-align: center;
 }
 
@@ -1011,12 +1346,16 @@ input[type="password"]::-ms-clear {
     display: flex;
     flex-direction: column;
     height: 100%;
-    padding: 1.25rem;
-    border-top: 4px solid var(--tg-teal);
+    padding: 1.5rem;
+    border-top: 3px solid rgba(201, 164, 92, 0.35);
 }
 
     .news-card.is-offer {
-        border-top-color: var(--tg-raspberry);
+        border-top-color: var(--tg-gold);
+    }
+
+    .news-card h2 {
+        font-size: 1.5rem;
     }
 
 .news-message {
@@ -1032,12 +1371,9 @@ input[type="password"]::-ms-clear {
     gap: 0.5rem;
 }
 
-
 /* ===== Top bar: one tidy line (WL) =====
-   With many links the labels wrapped onto two lines ("News and / offers", "Dark / mode").
-   Every item now stays on one line, the theme switch shows only its icon (the text is kept for
-   screen readers), a long name is shortened with "…", and below 1200px the menu folds into
-   the hamburger button (navbar-expand-xl in _Layout). */
+   Every item stays on one line, the theme switch shows only its icon (the text is kept for screen readers),
+   a long name is shortened with "…", and below 1200px the menu folds into the hamburger button. */
 .site-navbar .nav-link,
 .site-navbar .btn,
 .site-navbar .role-chip,
@@ -1060,12 +1396,12 @@ input[type="password"]::-ms-clear {
 .feedback-bars li {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.35rem;
+    gap: 0.6rem;
+    margin-bottom: 0.45rem;
 }
 
 .feedback-bar-label {
-    width: 2.5rem;
+    width: 2.6rem;
 }
 
 .feedback-bar {
@@ -1079,7 +1415,8 @@ input[type="password"]::-ms-clear {
     .feedback-bar > span {
         display: block;
         height: 100%;
-        background-color: var(--tg-raspberry);
+        border-radius: 999px;
+        background: linear-gradient(90deg, #e7d3a6, #a7803a);
     }
 
 .feedback-bar-count {
@@ -1088,29 +1425,39 @@ input[type="password"]::-ms-clear {
 }
 
 .feedback-hidden {
-    opacity: 0.75;
+    opacity: 0.72;
     border-left: 4px solid var(--bs-secondary);
 }
 
 .review-card {
     height: 100%;
-    padding: 1.25rem;
+    padding: 1.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
 }
 
+    .review-card blockquote p {
+        font-family: var(--tg-font-heading);
+        font-size: 1.2rem;
+        line-height: 1.45;
+    }
+
 .review-stars {
-    color: var(--tg-raspberry);
-    font-size: 1.1rem;
-    letter-spacing: 0.1rem;
+    color: var(--tg-gold);
+    font-size: 1.15rem;
+    letter-spacing: 0.15rem;
 }
 
 .review-stars-off {
-    color: var(--bs-border-color);
+    color: var(--tg-line);
 }
 
 .review-reply {
-    padding: 0.5rem 0.75rem;
-    border-left: 3px solid var(--tg-teal);
-    background-color: var(--tg-surface);
+    padding: 0.6rem 0.85rem;
+    border-left: 2px solid var(--tg-gold);
+    border-radius: 0 0.8rem 0.8rem 0;
+    background-color: rgba(201, 164, 92, 0.1);
     font-size: 0.9rem;
 }
 
@@ -1118,46 +1465,70 @@ input[type="password"]::-ms-clear {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    padding: 0.15rem 0.6rem;
-    border: 1px solid var(--bs-border-color);
+    padding: 0.2rem 0.7rem;
+    border: 0;
     border-radius: 999px;
-    background-color: var(--tg-blush);
+    background-color: #f6dfdb;
+    color: #8f352d;
+}
+
+[data-bs-theme="dark"] .blocked-word {
+    background-color: rgba(200, 80, 80, 0.2);
+    color: #f0a8a8;
 }
 
 /* Automatic kitchen (Alex): countdown cards, the queue, late orders and newly arrived orders. */
 .kitchen-card {
-    padding: 1rem;
+    padding: 1.1rem;
     border-left: 4px solid var(--bs-border-color);
 }
 
     .kitchen-card.is-cooking {
-        border-left-color: var(--tg-raspberry);
+        border-left-color: var(--tg-gold);
+        background-image: linear-gradient(170deg, rgba(255, 236, 196, 0.35), transparent 70%);
     }
 
 .kitchen-card.is-late,
 .kitchen-card-row.is-late {
-    border-left: 4px solid var(--bs-danger);
+    border-left: 4px solid #c0424b;
+    box-shadow: 0 0 0 1px rgba(192, 66, 75, 0.35), var(--tg-shadow);
 }
 
 .kitchen-card-row {
-    padding: 0.5rem 0 0.5rem 0.75rem;
-    border-top: 1px solid var(--bs-border-color);
+    padding: 0.6rem 0 0.6rem 0.8rem;
+    border-top: 1px solid var(--tg-line);
 }
 
 .kitchen-countdown {
-    font-size: 2rem;
-    font-weight: 700;
+    font-family: var(--tg-font-heading);
+    font-size: 2.4rem;
+    font-weight: 400;
+    line-height: 1;
+    color: #9b3b33;
     font-variant-numeric: tabular-nums;
+}
+
+[data-bs-theme="dark"] .kitchen-countdown {
+    color: #f2a39a;
 }
 
 .kitchen-dishes {
     padding-left: 1.1rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.6rem;
 }
 
+    .kitchen-dishes li {
+        padding: 0.12rem 0;
+    }
+
 .kitchen-table {
-    padding: 1rem;
+    padding: 1.1rem;
 }
+
+    .kitchen-table h3 {
+        font-family: var(--tg-font-heading);
+        font-size: 1.15rem;
+    }
 
 .is-new {
     animation: kitchen-new 1.2s ease-in-out 3;
@@ -1165,21 +1536,26 @@ input[type="password"]::-ms-clear {
 
 @keyframes kitchen-new {
     50% {
-        box-shadow: 0 0 0 4px var(--tg-raspberry);
+        box-shadow: 0 0 0 4px var(--tg-gold);
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .is-new {
         animation: none;
-        outline: 3px solid var(--tg-raspberry);
+        outline: 3px solid var(--tg-gold);
+    }
+
+    .order-steps .is-current .order-step-mark {
+        animation: none;
     }
 }
 
 .track-eta {
-    padding: 0.5rem 0.75rem;
-    border-left: 3px solid var(--tg-teal);
-    background-color: var(--tg-surface);
+    padding: 0.6rem 0.85rem;
+    border-left: 2px solid var(--tg-gold);
+    border-radius: 0 0.8rem 0.8rem 0;
+    background-color: rgba(201, 164, 92, 0.1);
     font-size: 0.95rem;
 }
 
@@ -1190,27 +1566,1465 @@ input[type="password"]::-ms-clear {
 
 /* Table requests and visit rating (Alex). */
 .table-request {
-    border-left: 4px solid var(--bs-danger);
+    border-left: 4px solid #c0424b;
 }
 
 .track-help {
-    padding: 0.5rem 0.75rem;
-    border-left: 3px solid var(--tg-raspberry);
-    background-color: var(--tg-surface);
+    padding: 0.7rem 0.9rem;
+    border-left: 2px solid var(--tg-gold);
+    border-radius: 0 0.8rem 0.8rem 0;
+    background-color: rgba(201, 164, 92, 0.08);
 }
 
 .rate-stars a {
-    font-size: 1.5rem;
+    font-size: 1.6rem;
     line-height: 1;
     text-decoration: none;
-    color: var(--tg-raspberry);
+    color: var(--tg-gold);
 }
 
     .rate-stars a:hover,
     .rate-stars a:focus-visible {
-        color: var(--tg-teal);
+        color: var(--tg-link-hover);
     }
 
+/* ======================================================================   8. GILDED PAGE LAYOUTS
+   Everything below only re-arranges and re-colours markup that the pages already have. The selectors use
+   <body data-area="..." data-page="..."> from _Layout, so no page logic, field name or link changed.
+   ============================================================================= */
+
+/* ----- 8.1 Banner photo for each section and page (used by .hero) ----- */
+body[data-area="Public"] { --hero-img: url("../images/gilded/steak-sliced.webp"); }
+body[data-area="Public"][data-page="/Announcements/Index"] { --hero-img: url("../images/gilded/bar.webp"); }
+body[data-area="Public"][data-page="/Visit/Index"] { --hero-img: url("../images/gilded/entrance.webp"); }
+body[data-area="Public"][data-page="/Menu/Index"] { --hero-img: url("../images/gilded/steak-board.webp"); }
+body[data-area="Public"][data-page="/Notifications/Index"] { --hero-img: url("../images/gilded/table-setting.webp"); }
+body[data-area="Public"][data-page^="/Account"] { --hero-img: url("../images/gilded/table-setting.webp"); }
+
+body[data-area="Customer"] { --hero-img: url("../images/gilded/steak-butter.webp"); }
+body[data-area="Customer"][data-page^="/Reservations"] { --hero-img: url("../images/gilded/table-setting.webp"); }
+body[data-area="Customer"][data-page="/Reservations/Book"] { --hero-img: url("../images/gilded/room-arches.webp"); }
+body[data-area="Customer"][data-page^="/Orders"] { --hero-img: url("../images/gilded/carbonara.webp"); }
+body[data-area="Customer"][data-page^="/Tracking"] { --hero-img: url("../images/gilded/grill.webp"); }
+body[data-area="Customer"][data-page^="/Feedback"] { --hero-img: url("../images/gilded/guests.webp"); }
+body[data-area="Customer"][data-page^="/History"] { --hero-img: url("../images/gilded/soup.webp"); }
+body[data-area="Customer"][data-page^="/Refunds"],
+body[data-area="Customer"][data-page^="/Receipts"] { --hero-img: url("../images/gilded/payment.webp"); }
+
+body[data-area="Staff"] { --hero-img: url("../images/gilded/staff.webp"); }
+body[data-area="Staff"][data-page^="/Reservations"] { --hero-img: url("../images/gilded/host-stand.webp"); }
+body[data-area="Staff"][data-page^="/Orders"] { --hero-img: url("../images/gilded/grill.webp"); }
+body[data-area="Staff"][data-page^="/Billing"] { --hero-img: url("../images/gilded/payment.webp"); }
+
+body[data-area="Admin"] { --hero-img: url("../images/gilded/dining-hall.webp"); }
+body[data-area="Admin"][data-page^="/Restaurant"] { --hero-img: url("../images/gilded/room-panelled.webp"); }
+body[data-area="Admin"][data-page="/Restaurant/Hours"] { --hero-img: url("../images/gilded/entrance.webp"); }
+body[data-area="Admin"][data-page="/Restaurant/Areas"],
+body[data-area="Admin"][data-page="/Restaurant/Tables"] { --hero-img: url("../images/gilded/patio.webp"); }
+body[data-area="Admin"][data-page="/Restaurant/Categories"],
+body[data-area="Admin"][data-page="/DietaryTags/Index"],
+body[data-area="Admin"][data-page="/Menu/Edit"] { --hero-img: url("../images/gilded/ingredients.webp"); }
+body[data-area="Admin"][data-page="/Menu/Index"] { --hero-img: url("../images/gilded/plating.webp"); }
+body[data-area="Admin"][data-page^="/Discounts"],
+body[data-area="Admin"][data-page^="/Announcements"],
+body[data-area="Admin"][data-page^="/ChatInsights"] { --hero-img: url("../images/gilded/bar.webp"); }
+body[data-area="Admin"][data-page^="/Accounts"] { --hero-img: url("../images/gilded/staff.webp"); }
+body[data-area="Admin"][data-page^="/Kitchen"],
+body[data-area="Admin"][data-page="/Monitoring/Orders"] { --hero-img: url("../images/gilded/grill.webp"); }
+body[data-area="Admin"][data-page="/Monitoring/Reservations"] { --hero-img: url("../images/gilded/host-stand.webp"); }
+body[data-area="Admin"][data-page="/Monitoring/Transactions"] { --hero-img: url("../images/gilded/payment.webp"); }
+body[data-area="Admin"][data-page^="/Feedback"] { --hero-img: url("../images/gilded/guests.webp"); }
+
+/* ----- 8.2 Role dashboards as a "bento" grid of photo, gold, dark and cream tiles ----- */
+body[data-page="/Index"]:is([data-area="Admin"], [data-area="Staff"], [data-area="Customer"]) .site-main .row.g-4 {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-auto-rows: 11rem;
+    grid-auto-flow: dense;
+    gap: 1rem;
+    margin: 0;
+}
+
+    body[data-page="/Index"]:is([data-area="Admin"], [data-area="Staff"], [data-area="Customer"]) .site-main .row.g-4 > * {
+        width: auto;
+        max-width: none;
+        padding: 0;
+        margin: 0;
+        position: relative;
+    }
+
+    body[data-page="/Index"]:is([data-area="Admin"], [data-area="Staff"], [data-area="Customer"]) .site-main .row.g-4 .module-tile {
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        height: 100%;
+        padding: 1.3rem 1.4rem;
+        border-radius: 1.5rem;
+        background-size: cover;
+        background-position: center;
+    }
+
+        body[data-page="/Index"]:is([data-area="Admin"], [data-area="Staff"], [data-area="Customer"]) .site-main .row.g-4 .module-tile .tg-icon {
+            position: absolute;
+            top: 1.1rem;
+            left: 1.2rem;
+            width: 2.6rem;
+            height: 2.6rem;
+            margin: 0;
+        }
+
+        body[data-page="/Index"]:is([data-area="Admin"], [data-area="Staff"], [data-area="Customer"]) .site-main .row.g-4 .module-tile h3 {
+            font-size: 1.35rem;
+            font-weight: 400;
+            margin-bottom: 0.25rem;
+        }
+
+        body[data-page="/Index"]:is([data-area="Admin"], [data-area="Staff"], [data-area="Customer"]) .site-main .row.g-4 .module-tile p {
+            font-size: 0.86rem;
+            line-height: 1.45;
+        }
+
+        body[data-page="/Index"]:is([data-area="Admin"], [data-area="Staff"], [data-area="Customer"]) .site-main .row.g-4 .module-tile:hover {
+            transform: translateY(-4px) rotate(-0.3deg);
+        }
+
+/* Tile looks */
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Restaurant"]) .module-tile,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Menu"]) .module-tile,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Announcements"]) .module-tile,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Staff/Orders"]) .module-tile,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Feedback"]) .module-tile,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Customer/Reservations/Book"]) .module-tile,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Menu"]) .module-tile,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Customer/Tracking"]) .module-tile,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Staff/Reservations"]) .module-tile {
+    color: #f4eee6 !important;
+    border-color: rgba(201, 164, 92, 0.3) !important;
+    background-image: linear-gradient(180deg, rgba(15, 12, 9, 0.05) 30%, rgba(15, 12, 9, 0.88)), var(--tile-img);
+}
+
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Restaurant"]) .module-tile p,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Menu"]) .module-tile p,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Announcements"]) .module-tile p,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Staff/Orders"]) .module-tile p,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Feedback"]) .module-tile p,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Customer/Reservations/Book"]) .module-tile p,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Menu"]) .module-tile p,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Customer/Tracking"]) .module-tile p,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Staff/Reservations"]) .module-tile p { color: #e2d6c4 !important; }
+
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Discounts"]) .module-tile,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Reports"]) .module-tile,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Customer/Feedback"]) .module-tile,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Staff/Billing"]) .module-tile {
+    background: linear-gradient(140deg, #d9b66e, #a7803a) !important;
+    color: #1a1612 !important;
+    border: 0 !important;
+}
+
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Discounts"]) .module-tile p,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Reports"]) .module-tile p,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Customer/Feedback"]) .module-tile p,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Staff/Billing"]) .module-tile p { color: #3b2e1c !important; }
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Discounts"]) .module-tile .tg-icon,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Reports"]) .module-tile .tg-icon,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Customer/Feedback"]) .module-tile .tg-icon,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Staff/Billing"]) .module-tile .tg-icon { background-color: rgba(20, 17, 13, 0.85) !important; }
+
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Accounts"]) .module-tile,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Analytics"]) .module-tile,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Customer/Notifications"]) .module-tile,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Notifications"]) .module-tile,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Staff/Reservations/History"]) .module-tile {
+    background: #1a1612 radial-gradient(circle at 85% 20%, rgba(201, 164, 92, 0.28), transparent 60%) !important;
+    color: #f4eee6 !important;
+    border-color: rgba(201, 164, 92, 0.25) !important;
+}
+
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Accounts"]) .module-tile p,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Analytics"]) .module-tile p,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Customer/Notifications"]) .module-tile p,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Notifications"]) .module-tile p,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Staff/Reservations/History"]) .module-tile p { color: #c9bba6 !important; }
+
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Restaurant"]) .module-tile a,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Menu"]) .module-tile a,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Announcements"]) .module-tile a,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Staff/Orders"]) .module-tile a,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Feedback"]) .module-tile a,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Customer/Reservations/Book"]) .module-tile a,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Menu"]) .module-tile a,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Customer/Tracking"]) .module-tile a,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Staff/Reservations"]) .module-tile a,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Discounts"]) .module-tile a,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Reports"]) .module-tile a,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Customer/Feedback"]) .module-tile a,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Staff/Billing"]) .module-tile a,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Accounts"]) .module-tile a,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Analytics"]) .module-tile a,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Customer/Notifications"]) .module-tile a,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Notifications"]) .module-tile a,
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Staff/Reservations/History"]) .module-tile a {
+    color: inherit !important;
+}
+
+/* Which tile gets which look and size (the tiles are found by their link, so the C# tile list is untouched). */
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Restaurant"]),
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Customer/Reservations/Book"]),
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Staff/Reservations"]) { grid-column: span 2; grid-row: span 2; }
+
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Menu"]),
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Menu"]),
+body[data-page="/Index"][data-area="Admin"] .row.g-4 > :has(a[href="/Staff/Orders"]) { grid-row: span 2; }
+
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Announcements"]),
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Analytics"]),
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Customer/Tracking"]) { grid-column: span 2; }
+
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Restaurant"]) { --tile-img: url("../images/gilded/room-panelled.webp"); }
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Menu"]) { --tile-img: url("../images/gilded/plating.webp"); }
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Announcements"]) { --tile-img: url("../images/gilded/bar.webp"); }
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Staff/Orders"]) { --tile-img: url("../images/gilded/grill.webp"); }
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Feedback"]) { --tile-img: url("../images/gilded/guests.webp"); }
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Customer/Reservations/Book"]) { --tile-img: url("../images/gilded/tbone.webp"); }
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Menu"]) { --tile-img: url("../images/gilded/carbonara.webp"); }
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Customer/Tracking"]) { --tile-img: url("../images/gilded/grill.webp"); }
+body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Staff/Reservations"]) { --tile-img: url("../images/gilded/host-stand.webp"); }
+
+@media (max-width: 991.98px) {
+    body[data-page="/Index"]:is([data-area="Admin"], [data-area="Staff"], [data-area="Customer"]) .site-main .row.g-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 575.98px) {
+    body[data-page="/Index"]:is([data-area="Admin"], [data-area="Staff"], [data-area="Customer"]) .site-main .row.g-4 {
+        grid-template-columns: 1fr;
+        grid-auto-rows: minmax(10rem, auto);
+    }
+
+        body[data-page="/Index"]:is([data-area="Admin"], [data-area="Staff"], [data-area="Customer"]) .site-main .row.g-4 > * {
+            grid-column: auto !important;
+            grid-row: auto !important;
+        }
+}
+
+/* Staff hub: the "unpaid bills" count sits on its tile. */
+body[data-page="/Index"][data-area="Staff"] .site-main .row.g-4 > * > .badge {
+    position: absolute;
+    right: 1rem;
+    top: 1rem;
+    z-index: 2;
+    margin: 0 !important;
+    background-color: #1a1612 !important;
+    color: #f1dba6 !important;
+}
+
+/* ----- 8.3 Home page ----- */
+.home-hero {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 1rem;
+    min-height: 32rem;
+}
+
+    .home-hero h1 {
+        font-size: clamp(2.6rem, 6vw, 4.6rem);
+        line-height: 1.02;
+        font-weight: 400;
+    }
+
+    .home-hero .lead {
+        color: var(--tg-muted);
+        max-width: 34rem;
+    }
+
+.home-hero-photo {
+    position: relative;
+    justify-self: center;
+    width: min(100%, 34rem);
+    aspect-ratio: 1;
+}
+
+    .home-hero-photo img:first-child {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+        -webkit-mask-image: radial-gradient(closest-side, #000 62%, transparent 100%);
+        mask-image: radial-gradient(closest-side, #000 62%, transparent 100%);
+    }
+
+.home-smoke {
+    position: absolute;
+    left: 10%;
+    bottom: 45%;
+    width: 80%;
+    opacity: 0.22;
+    mix-blend-mode: screen;
+    pointer-events: none;
+    animation: tg-smoke 9s ease-in-out infinite;
+}
+
+@keyframes tg-smoke {
+    0% { opacity: 0; transform: translateY(14px) scale(0.97); }
+    35% { opacity: 0.26; }
+    70% { opacity: 0.18; }
+    100% { opacity: 0; transform: translateY(-24px) scale(1.05); }
+}
+
+[data-bs-theme="light"] .home-smoke {
+    display: none;
+}
+
+[data-bs-theme="light"] .home-hero .btn-outline-light {
+    --bs-btn-color: var(--tg-ink);
+    --bs-btn-border-color: rgba(60, 45, 25, 0.35);
+    --bs-btn-hover-bg: var(--tg-ink);
+    --bs-btn-hover-color: var(--tg-cream);
+}
+
+.home-hero .eyebrow,
+.home-signature .eyebrow,
+.home-steps .eyebrow {
+    color: var(--tg-link);
+}
+
+.home-signature {
+    position: relative;
+    overflow: hidden;
+    border-radius: 2rem;
+    padding: 3.2rem 2.4rem;
+    color: #f4eee6;
+    background-color: #1a1612;
+    background-image: linear-gradient(rgba(20, 17, 13, 0.72), rgba(20, 17, 13, 0.9)), url("../images/gilded/room-panelled.webp");
+    background-size: cover;
+    background-position: center;
+    border: 1px solid rgba(201, 164, 92, 0.25);
+}
+
+    .home-signature .section-title { color: #f4eee6; }
+    .home-signature .section-subtitle { color: #c9bba6; }
+    .home-signature .eyebrow { color: #e2c27e; }
+
+.home-dish {
+    height: 100%;
+    text-align: center;
+    border-radius: 1.6rem;
+    padding: 1.6rem 1.4rem 1.8rem;
+    background: rgba(20, 17, 13, 0.62);
+    border: 1px solid rgba(201, 164, 92, 0.25);
+    backdrop-filter: blur(4px);
+    transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+
+    .home-dish:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 0 0 1px rgba(226, 194, 126, 0.5), 0 20px 50px rgba(201, 140, 60, 0.2);
+    }
+
+    .home-dish img {
+        width: 11rem;
+        height: 11rem;
+        object-fit: cover;
+        border-radius: 50%;
+        border: 2px solid rgba(201, 164, 92, 0.7);
+        margin-bottom: 1.1rem;
+    }
+
+    .home-dish h3 {
+        color: #f4eee6;
+        font-size: 1.5rem;
+        font-weight: 400;
+    }
+
+    .home-dish p {
+        color: #d8cbb8;
+    }
+
+@media (max-width: 767.98px) {
+    .home-hero {
+        grid-template-columns: 1fr;
+        min-height: 0;
+    }
+
+    .home-hero-photo {
+        grid-row: 1;
+        width: min(100%, 20rem);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .home-smoke,
+    .home-dish {
+        animation: none;
+        transition: none;
+    }
+}
+
+[data-bs-theme="light"] .script {
+    color: var(--tg-link);
+}
+
+[data-bs-theme="light"] .hero .script,
+[data-bs-theme="light"] .home-signature .script {
+    color: var(--tg-gold-soft);
+}
+
+/* ----- 8.4 Page titles on pages without a banner ----- */
+.site-main .container > h1,
+.site-main .container > div > h1.section-title,
+.site-main .container > .d-flex > div > h1.section-title,
+.site-main .container > .d-flex > h1 {
+    font-size: clamp(2rem, 4vw, 2.9rem);
+    line-height: 1.1;
+    margin-bottom: 0.6rem;
+}
+
+/* ----- 8.5 Admin: Accounts as people cards (the table is still a table for screen readers) ----- */
+body[data-area="Admin"][data-page="/Accounts/Index"] .tg-card.p-0 {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
+    body[data-area="Admin"][data-page="/Accounts/Index"] .tg-card.p-0:hover {
+        transform: none;
+    }
+
+body[data-area="Admin"][data-page="/Accounts/Index"] table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+}
+
+body[data-area="Admin"][data-page="/Accounts/Index"] table tbody {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+body[data-area="Admin"][data-page="/Accounts/Index"] table tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "name role" "email email" "status joined" "edit edit";
+    gap: 0.35rem 0.8rem;
+    padding: 1.3rem 1.4rem;
+    border-radius: 1.4rem;
+    background-color: var(--tg-surface);
+    border: 1px solid var(--tg-line);
+    border-left: 4px solid var(--tg-gold);
+    box-shadow: var(--tg-shadow);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+    body[data-area="Admin"][data-page="/Accounts/Index"] table tr:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--tg-shadow-hover);
+    }
+
+    body[data-area="Admin"][data-page="/Accounts/Index"] table tr:has(.text-bg-secondary) {
+        border-left-color: #b9afa2;
+        background-image: repeating-linear-gradient(135deg, transparent 0 10px, rgba(90, 70, 40, 0.04) 10px 20px);
+        opacity: 0.85;
+    }
+
+    body[data-area="Admin"][data-page="/Accounts/Index"] table td {
+        display: block;
+        padding: 0 !important;
+        border: 0 !important;
+        background: none !important;
+    }
+
+        body[data-area="Admin"][data-page="/Accounts/Index"] table td:nth-child(1) { grid-area: name; font-family: var(--tg-font-heading); font-size: 1.25rem; font-weight: 400 !important; }
+        body[data-area="Admin"][data-page="/Accounts/Index"] table td:nth-child(2) { grid-area: email; color: var(--tg-muted); font-size: 0.88rem; overflow: hidden; text-overflow: ellipsis; }
+        body[data-area="Admin"][data-page="/Accounts/Index"] table td:nth-child(3) { grid-area: role; align-self: start; }
+        body[data-area="Admin"][data-page="/Accounts/Index"] table td:nth-child(4) { grid-area: status; }
+        body[data-area="Admin"][data-page="/Accounts/Index"] table td:nth-child(5) { grid-area: joined; color: var(--tg-muted); font-size: 0.85rem; align-self: center; }
+        body[data-area="Admin"][data-page="/Accounts/Index"] table td:nth-child(6) { grid-area: edit; text-align: left !important; margin-top: 0.6rem; }
+        body[data-area="Admin"][data-page="/Accounts/Index"] table td[colspan] { grid-column: 1 / -1; }
+
+body[data-area="Admin"][data-page="/Accounts/Index"] .role-chip {
+    color: var(--tg-link);
+    border-color: rgba(154, 115, 48, 0.5);
+}
+
+body[data-area="Admin"][data-page="/Accounts/Index"] form[role="search"] {
+    border-radius: 2rem;
+}
+
+/* ----- 8.6 Admin: Menu items — filter rail on the left, photo cards on the right ----- */
+/* Same form fields and the same table as before; only the look changes. */
+.am-layout {
+    display: grid;
+    grid-template-columns: 14.5rem minmax(0, 1fr);
+    gap: 1.75rem;
+    align-items: start;
+}
+
+.am-rail {
+    position: sticky;
+    top: 1.5rem;
+}
+
+    .am-rail fieldset { border: 0; padding: 0; margin-left: 0; margin-right: 0; }
+
+    .am-rail .am-search {
+        border-radius: 999px;
+        padding: 0.55rem 1.1rem;
+    }
+
+.am-label {
+    display: block;
+    float: none;
+    width: auto;
+    margin: 0 0 0.5rem 0.4rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--tg-muted);
+}
+
+.am-cat {
+    display: block;
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 0.2rem;
+    border-radius: 0.8rem;
+    font-size: 0.92rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+    .am-cat:hover { background-color: rgba(201, 164, 92, 0.14); }
+
+.btn-check:checked + .am-cat {
+    background-color: var(--tg-night);
+    color: #f4eee6;
+}
+
+.am-seg {
+    display: flex;
+    gap: 0.2rem;
+    padding: 0.25rem;
+    border-radius: 999px;
+    background-color: rgba(90, 70, 40, 0.08);
+}
+
+    .am-seg label {
+        flex: 1;
+        text-align: center;
+        padding: 0.45rem 0.4rem;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        cursor: pointer;
+    }
+
+    .am-seg .btn-check:checked + label {
+        background-color: var(--tg-night);
+        color: #f4eee6;
+    }
+
+.am-rail .btn-check:focus-visible + label {
+    outline: 3px solid var(--tg-focus);
+    outline-offset: 2px;
+}
+
+.am-note {
+    font-family: var(--tg-font-body, inherit);
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: var(--tg-muted);
+}
+
+.am-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.1rem;
+}
+
+    /* The table, its body and its rows stay in the HTML (screen readers still get a table);
+       the rows simply become cards in the grid next to the "Add a dish" card. */
+    .am-grid > table,
+    .am-grid > table > tbody {
+        display: contents;
+    }
+
+.am-add {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.9rem;
+    min-height: 20rem;
+    border: 1.5px dashed rgba(138, 100, 36, 0.45);
+    border-radius: 1.5rem;
+    color: var(--tg-ink);
+    font-family: var(--tg-font-heading);
+    font-size: 1.15rem;
+    text-decoration: none;
+    transition: background-color 0.25s ease, transform 0.25s ease;
+}
+
+    .am-add:hover {
+        background-color: rgba(201, 164, 92, 0.1);
+        transform: translateY(-4px);
+        color: var(--tg-ink);
+    }
+
+.am-plus {
+    display: grid;
+    place-items: center;
+    width: 3.2rem;
+    height: 3.2rem;
+    border-radius: 50%;
+    background-color: var(--tg-night);
+    color: #f1dba6;
+    font-family: var(--tg-font-body, sans-serif);
+    font-size: 1.6rem;
+    line-height: 1;
+}
+
+body[data-area="Admin"][data-page="/Menu/Index"] table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+}
+
+body[data-area="Admin"][data-page="/Menu/Index"] table tr {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "photo photo" "cat cat" "name name" "price price" "extra actions";
+    gap: 0.3rem 0.6rem;
+    padding: 0 1.1rem 1.1rem;
+    overflow: hidden;
+    border-radius: 1.5rem;
+    background-color: var(--tg-surface);
+    border: 1px solid var(--tg-line);
+    box-shadow: var(--tg-shadow);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+    body[data-area="Admin"][data-page="/Menu/Index"] table tr:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--tg-shadow-hover);
+    }
+
+    body[data-area="Admin"][data-page="/Menu/Index"] table tr > * {
+        display: block;
+        padding: 0 !important;
+        border: 0 !important;
+        background: none !important;
+    }
+
+        /* Photo (or the letter tile when a dish has no photo yet). */
+        body[data-area="Admin"][data-page="/Menu/Index"] table tr > :nth-child(1) { grid-area: photo; margin: 0 -1.1rem 0.8rem; }
+        body[data-area="Admin"][data-page="/Menu/Index"] table tr > :nth-child(1) img,
+        body[data-area="Admin"][data-page="/Menu/Index"] table tr > :nth-child(1) .am-tile {
+            width: 100% !important;
+            height: 11rem !important;
+            border-radius: 0 !important;
+            object-fit: cover;
+            font-size: 3.5rem;
+        }
+
+        /* Code badge sits on the bottom-right corner of the photo. */
+        body[data-area="Admin"][data-page="/Menu/Index"] table tr > :nth-child(2) {
+            grid-area: photo;
+            justify-self: end;
+            align-self: end;
+            z-index: 1;
+            margin: 0 -0.3rem 1.5rem 0;
+            padding: 0.15rem 0.6rem !important;
+            border-radius: 999px;
+            background: rgba(20, 17, 13, 0.82) !important;
+            color: #f1dba6;
+            font-size: 0.72rem;
+            letter-spacing: 0.1em;
+        }
+
+        body[data-area="Admin"][data-page="/Menu/Index"] table tr > :nth-child(3) { grid-area: name; font-family: var(--tg-font-heading); font-size: 1.3rem; font-weight: 400 !important; }
+        body[data-area="Admin"][data-page="/Menu/Index"] table tr > :nth-child(4) { grid-area: cat; font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--tg-link); }
+        body[data-area="Admin"][data-page="/Menu/Index"] table tr > :nth-child(5) { grid-area: price; font-family: var(--tg-font-heading); font-size: 1.2rem; }
+        body[data-area="Admin"][data-page="/Menu/Index"] table tr > :nth-child(5)::before { content: "RM "; font-size: 0.8em; color: var(--tg-muted); }
+
+        /* Availability switch floats on the top-left corner of the photo. */
+        body[data-area="Admin"][data-page="/Menu/Index"] table tr > :nth-child(6) {
+            grid-area: photo;
+            justify-self: start;
+            align-self: start;
+            z-index: 1;
+            margin: 0.8rem 0 0 -0.3rem;
+            padding: 0.3rem 0.75rem 0.3rem 0.35rem !important;
+            border-radius: 999px;
+            background: rgba(255, 252, 246, 0.92) !important;
+            box-shadow: 0 4px 14px rgba(20, 17, 13, 0.18);
+            color: #1a1612;
+            font-size: 0.82rem;
+        }
+
+        body[data-area="Admin"][data-page="/Menu/Index"] table tr > :nth-child(7) { grid-area: actions; align-self: center; margin-top: 0.4rem; }
+
+    /* Offer price: old price struck through, new price in raspberry, and an "offer" ribbon across the corner. */
+    body[data-area="Admin"][data-page="/Menu/Index"] table tr .am-was { font-size: 0.8em; }
+    body[data-area="Admin"][data-page="/Menu/Index"] table tr > :nth-child(5) strong { color: #a3263f; font-weight: 400; }
+    body[data-area="Admin"][data-page="/Menu/Index"] table tr > :nth-child(5) .badge {
+        position: absolute;
+        top: 1.1rem;
+        right: -2.4rem;
+        z-index: 2;
+        width: 8.5rem;
+        transform: rotate(45deg);
+        border-radius: 0;
+        background-color: #a3263f !important;
+        color: #fff !important;
+        font-family: var(--tg-font-body, sans-serif);
+        font-size: 0.68rem;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+    }
+
+    /* Unavailable dishes look switched off. */
+    body[data-area="Admin"][data-page="/Menu/Index"] table tr:has(.am-switch[aria-checked="false"]) > :nth-child(1) img {
+        filter: grayscale(0.85) brightness(0.85);
+    }
+
+body[data-area="Admin"][data-page="/Menu/Index"] .am-switch[aria-checked="true"] .am-track {
+    background: var(--tg-teal);
+}
+
+@media (min-width: 992px) and (max-width: 1199.98px) {
+    .am-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 991.98px) {
+    .am-layout { grid-template-columns: 1fr; }
+    .am-rail { position: static; }
+    .am-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 575.98px) {
+    .am-grid { grid-template-columns: 1fr; }
+    .am-add { min-height: 8rem; }
+}
+
+@media (max-width: 991.98px) {
+    body[data-area="Admin"]:is([data-page="/Menu/Index"], [data-page="/Accounts/Index"]) table tbody {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 575.98px) {
+    body[data-area="Admin"]:is([data-page="/Menu/Index"], [data-page="/Accounts/Index"]) table tbody {
+        grid-template-columns: 1fr;
+    }
+}
+
+body[data-area="Admin"]:is([data-page="/Menu/Index"], [data-page="/Accounts/Index"]) .table-responsive {
+    overflow: visible;
+}
+
+/* ----- 8.7 Admin: Announcements as a composer next to a timeline ----- */
+@media (min-width: 992px) {
+    body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container {
+        display: grid;
+        grid-template-columns: 26rem minmax(0, 1fr);
+        column-gap: 2rem;
+        align-items: start;
+    }
+
+        body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > * {
+            grid-column: 2;
+        }
+
+        body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > h1,
+        body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > p:first-of-type,
+        body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > :not(h1):not(form):not(nav):not(article):not(p) {
+            grid-column: 1 / -1;
+        }
+
+        body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > form {
+            grid-column: 1;
+            grid-row: span 40;
+            position: sticky;
+            top: 1rem;
+        }
+}
+
+body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > form {
+    background: var(--tg-night) !important;
+    color: #f4eee6;
+    border-color: var(--tg-night) !important;
+    padding: 1.8rem !important;
+    border-radius: 1.8rem;
+}
+
+    body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > form .form-label,
+    body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > form legend,
+    body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > form .form-text {
+        color: #c9bba6;
+    }
+
+    body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > form .form-control,
+    body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > form .form-select {
+        background-color: rgba(244, 238, 230, 0.06);
+        border-color: rgba(244, 238, 230, 0.2);
+        color: #f4eee6;
+    }
+
+    body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > form .btn-outline-primary {
+        --bs-btn-color: #e2c27e;
+        --bs-btn-border-color: rgba(226, 194, 126, 0.5);
+    }
+
+    body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > form:hover {
+        transform: none;
+    }
+
+body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > article {
+    position: relative;
+    margin-left: 2.6rem;
+    border-left: 3px solid var(--tg-gold);
+}
+
+    body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > article::before {
+        content: "";
+        position: absolute;
+        left: -2.75rem;
+        top: 1.2rem;
+        width: 1.1rem;
+        height: 1.1rem;
+        border-radius: 50%;
+        background: var(--tg-gold);
+        box-shadow: 0 0 0 5px var(--tg-cream);
+    }
+
+    body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > article::after {
+        content: "";
+        position: absolute;
+        left: -2.25rem;
+        top: 2.3rem;
+        bottom: -1.6rem;
+        width: 2px;
+        background: linear-gradient(var(--tg-gold), rgba(201, 164, 92, 0.1));
+    }
+
+/* ----- 8.8 Score bands and KPI cards: the first number on a dashboard gets the dark gold treatment ----- */
+body[data-area="Admin"][data-page="/Feedback/Index"] .site-main .container > section.row:first-of-type > :first-child > .tg-card,
+body[data-area="Admin"][data-page="/Kitchen/Index"] .site-main .container > section.row:first-of-type > :first-child > .tg-card,
+body[data-area="Admin"][data-page="/ChatInsights/Index"] .site-main .container > section.row:first-of-type > :first-child > .tg-card,
+body[data-area="Admin"][data-page="/Analytics/Index"] .site-main .container > .row.g-4.mb-4:first-of-type > :first-child > .tg-card,
+body[data-area="Staff"][data-page="/Billing/Index"] .billing-stats > :first-child {
+    background: #1a1612 radial-gradient(circle at 85% 15%, rgba(201, 164, 92, 0.3), transparent 60%);
+    color: #f4eee6;
+    border-color: #1a1612;
+}
+
+    body[data-area="Admin"] .site-main .container > section.row:first-of-type > :first-child > .tg-card :is(h2, p, .small),
+    body[data-area="Admin"][data-page="/Analytics/Index"] .site-main .container > .row.g-4.mb-4:first-of-type > :first-child > .tg-card :is(h2, p),
+    body[data-area="Staff"][data-page="/Billing/Index"] .billing-stats > :first-child :is(span, small) {
+        color: #c9bba6 !important;
+    }
+
+    body[data-area="Admin"] .site-main .container > section.row:first-of-type > :first-child > .tg-card .display-6,
+    body[data-area="Admin"][data-page="/Analytics/Index"] .site-main .container > .row.g-4.mb-4:first-of-type > :first-child > .tg-card .display-6,
+    body[data-area="Staff"][data-page="/Billing/Index"] .billing-stats > :first-child strong {
+        color: #f1dba6 !important;
+    }
+
+.display-6 {
+    font-family: var(--tg-font-heading);
+    font-weight: 400 !important;
+}
+
+.billing-stats strong,
+.report-metric strong {
+    font-family: var(--tg-font-heading);
+    font-weight: 400 !important;
+}
+
+/* Kitchen performance: the four numbers look like order tickets pinned to a rail. */
+body[data-area="Admin"][data-page="/Kitchen/Index"] .site-main .container > section.row:first-of-type {
+    position: relative;
+    margin: 0 0 1.5rem;
+    padding: 2.6rem 1rem 1.4rem;
+    border-radius: 1.8rem;
+    background: #14110d;
+}
+
+    body[data-area="Admin"][data-page="/Kitchen/Index"] .site-main .container > section.row:first-of-type::before {
+        content: "";
+        position: absolute;
+        left: 1.4rem;
+        right: 1.4rem;
+        top: 1.2rem;
+        height: 6px;
+        border-radius: 99px;
+        background: linear-gradient(90deg, #5a4632, #8a6424, #5a4632);
+    }
+
+    body[data-area="Admin"][data-page="/Kitchen/Index"] .site-main .container > section.row:first-of-type .tg-card {
+        position: relative;
+        border-radius: 0.4rem 0.4rem 1.2rem 1.2rem;
+        background: #fffcf7 !important;
+        color: #221c15 !important;
+        border: 0;
+        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+    }
+
+        body[data-area="Admin"][data-page="/Kitchen/Index"] .site-main .container > section.row:first-of-type .tg-card::before {
+            content: "";
+            position: absolute;
+            top: -0.55rem;
+            left: 50%;
+            width: 0.9rem;
+            height: 0.9rem;
+            margin-left: -0.45rem;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #f1dba6, #8a6424);
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+        }
+
+        body[data-area="Admin"][data-page="/Kitchen/Index"] .site-main .container > section.row:first-of-type .tg-card :is(h2, p, .small) {
+            color: #675b4d !important;
+        }
+
+        body[data-area="Admin"][data-page="/Kitchen/Index"] .site-main .container > section.row:first-of-type .tg-card .display-6 {
+            color: #1a1612 !important;
+        }
+
+    body[data-area="Admin"][data-page="/Kitchen/Index"] .site-main .container > section.row:first-of-type > :nth-child(odd) .tg-card { transform: rotate(-1deg); }
+    body[data-area="Admin"][data-page="/Kitchen/Index"] .site-main .container > section.row:first-of-type > :nth-child(even) .tg-card { transform: rotate(0.8deg); }
+
+/* ----- 8.9 Staff: kitchen orders as a dark kitchen display with four columns of paper tickets ----- */
+body[data-area="Staff"][data-page="/Orders/Index"] .site-main {
+    background: #14110d radial-gradient(ellipse 60% 40% at 80% 0%, rgba(224, 106, 59, 0.12), transparent 70%);
+    color: #f4eee6;
+}
+
+    body[data-area="Staff"][data-page="/Orders/Index"] .site-main > .container > :is(h1, p, .d-flex) {
+        color: #f4eee6;
+    }
+
+    body[data-area="Staff"][data-page="/Orders/Index"] .site-main .text-muted,
+    body[data-area="Staff"][data-page="/Orders/Index"] .site-main > .container > p {
+        color: #c9bba6 !important;
+    }
+
+    body[data-area="Staff"][data-page="/Orders/Index"] .site-main .btn-outline-primary {
+        --bs-btn-color: #f4eee6;
+        --bs-btn-border-color: rgba(244, 238, 230, 0.35);
+    }
+
+    body[data-area="Staff"][data-page="/Orders/Index"] .site-main .btn-outline-danger {
+        --bs-btn-color: #f2a39a;
+        --bs-btn-border-color: rgba(242, 163, 154, 0.5);
+    }
+
+@media (min-width: 992px) {
+    body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] {
+        display: grid;
+        grid-template-columns: 1.25fr 1fr 1fr 1fr;
+        gap: 1rem;
+        align-items: start;
+    }
+
+        body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > .alert,
+        body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section[aria-labelledby="requests-heading"] {
+            grid-column: 1 / -1;
+        }
+}
+
+body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section {
+    border-radius: 1.5rem;
+    background: rgba(244, 238, 230, 0.04);
+    border: 1px solid rgba(244, 238, 230, 0.08);
+    padding: 1rem;
+    min-height: 12rem;
+    margin-bottom: 1rem;
+}
+
+    body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section[aria-labelledby="cooking-heading"] {
+        background: rgba(224, 106, 59, 0.08);
+        border-color: rgba(224, 106, 59, 0.3);
+    }
+
+    body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section[aria-labelledby="ready-heading"] {
+        background: rgba(47, 125, 91, 0.12);
+        border-color: rgba(47, 125, 91, 0.35);
+    }
+
+    body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section[aria-labelledby="requests-heading"] {
+        background: transparent;
+        border: 0;
+        padding: 0;
+        min-height: 0;
+    }
+
+    body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section h2 {
+        font-family: var(--tg-font-heading);
+        font-size: 1.35rem;
+        color: #f4eee6;
+    }
+
+    body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section > .text-secondary {
+        color: #b3a99c !important;
+    }
+
+    body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section .row.g-3 {
+        --bs-gutter-x: 0;
+    }
+
+        body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section .row.g-3 > * {
+            width: 100%;
+        }
+
+/* Tickets */
+body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-card,
+body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-table {
+    background: #f4eee6 !important;
+    color: #1a1612 !important;
+    border-radius: 0.9rem;
+    border: 0;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+    body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-card.is-cooking {
+        background: linear-gradient(170deg, #fff6e2, #f4e2bc) !important;
+    }
+
+    body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-card .text-secondary,
+    body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-table .text-secondary {
+        color: #675b4d !important;
+    }
+
+    body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-card .btn-outline-primary,
+    body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-table .btn-outline-primary,
+    body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-card .btn-outline-secondary {
+        --bs-btn-color: #3b3127;
+        --bs-btn-border-color: rgba(60, 45, 25, 0.35);
+    }
+
+    body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-card .btn-outline-danger,
+    body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-table .btn-outline-danger {
+        --bs-btn-color: #9b3b33;
+        --bs-btn-border-color: rgba(155, 59, 51, 0.45);
+    }
+
+    body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-dishes li {
+        border-bottom: 1px dashed rgba(60, 45, 25, 0.18);
+    }
+
+body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-countdown {
+    color: #9b3b33 !important;
+}
+
+body[data-area="Staff"][data-page="/Orders/Index"] .table-request {
+    background: #c0424b !important;
+    color: #ffffff !important;
+    border: 0;
+    animation: tg-ring 2s ease-in-out infinite;
+}
+
+    body[data-area="Staff"][data-page="/Orders/Index"] .table-request .text-secondary {
+        color: rgba(255, 255, 255, 0.85) !important;
+    }
+
+    body[data-area="Staff"][data-page="/Orders/Index"] .table-request .btn-outline-primary {
+        --bs-btn-color: #ffffff;
+        --bs-btn-border-color: rgba(255, 255, 255, 0.6);
+    }
+
+@keyframes tg-ring {
+    50% { box-shadow: 0 0 0 6px rgba(192, 66, 75, 0.25); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body[data-area="Staff"][data-page="/Orders/Index"] .table-request { animation: none; }
+}
+
+/* ----- 8.10 Staff: the table bill looks like a till receipt next to a dark payment panel ----- */
+body[data-area="Staff"]:is([data-page="/Billing/Visit"], [data-page="/Billing/Details"]) .billing-columns > section:first-child {
+    position: relative;
+    background: #fffdf8 !important;
+    color: #221c15;
+    border-radius: 0.5rem;
+    border: 0;
+    box-shadow: 0 20px 50px rgba(70, 50, 25, 0.18);
+    padding: 2rem 2rem 2.6rem;
+}
+
+    body[data-area="Staff"]:is([data-page="/Billing/Visit"], [data-page="/Billing/Details"]) .billing-columns > section:first-child::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -10px;
+        height: 20px;
+        background: radial-gradient(circle at 10px 0, #fffdf8 9px, transparent 9.5px) repeat-x;
+        background-size: 20px 20px;
+    }
+
+    body[data-area="Staff"]:is([data-page="/Billing/Visit"], [data-page="/Billing/Details"]) .billing-columns > section:first-child:hover {
+        transform: none;
+    }
+
+    body[data-area="Staff"]:is([data-page="/Billing/Visit"], [data-page="/Billing/Details"]) .billing-columns > section:first-child .h4.text-end {
+        font-family: var(--tg-font-heading);
+        font-weight: 400;
+        border-top: 2px solid #1a1612;
+        padding-top: 0.9rem;
+    }
+
+body[data-area="Staff"] .billing-pay-panel {
+    background: #1a1612 !important;
+    color: #f4eee6 !important;
+    border-color: #1a1612 !important;
+    border-radius: 1.8rem;
+}
+
+    body[data-area="Staff"] .billing-pay-panel:hover {
+        transform: none;
+    }
+
+    body[data-area="Staff"] .billing-pay-panel :is(.text-secondary, legend, .form-label, .small) {
+        color: #c9bba6 !important;
+    }
+
+    body[data-area="Staff"] .billing-pay-panel h2 {
+        font-family: var(--tg-font-heading);
+        color: #f4eee6;
+    }
+
+    body[data-area="Staff"] .billing-pay-panel .form-control {
+        background-color: rgba(244, 238, 230, 0.06);
+        border-color: rgba(244, 238, 230, 0.2);
+        color: #f4eee6;
+        font-family: var(--tg-font-heading);
+        font-size: 1.6rem;
+    }
+
+    body[data-area="Staff"] .billing-pay-panel .btn-outline-primary {
+        --bs-btn-color: #f4eee6;
+        --bs-btn-border-color: rgba(244, 238, 230, 0.35);
+    }
+
+    body[data-area="Staff"] .billing-pay-panel .alert-success {
+        background: rgba(47, 125, 91, 0.25);
+        color: #bfe3c9;
+        border-color: transparent;
+    }
+
+    body[data-area="Staff"] .billing-pay-panel .alert-info {
+        background: rgba(53, 89, 138, 0.3);
+        color: #d5e2f5;
+        border-color: transparent;
+    }
+
+.payment-method {
+    background-color: var(--tg-surface);
+    color: var(--tg-ink);
+    border-radius: 1.2rem !important;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+    .payment-method:has(input:checked) {
+        background-color: var(--tg-gold) !important;
+        color: var(--tg-on-gold) !important;
+        border-color: var(--tg-gold) !important;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25) !important;
+    }
+
+        .payment-method:has(input:checked) small {
+            color: #3b2e1c !important;
+        }
+
+body[data-area="Staff"] .billing-pay-panel .payment-method {
+    background-color: rgba(244, 238, 230, 0.05);
+    color: #f4eee6;
+    border-color: rgba(244, 238, 230, 0.2);
+}
+
+.terminal-device {
+    background: #1a1612 !important;
+    border: 1px solid rgba(201, 164, 92, 0.35);
+}
+
+.terminal-display {
+    background: #f4eee6 !important;
+    color: #1a1612 !important;
+}
+
+/* ----- 8.11 Sign in as a split screen ----- */
+.login-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    min-height: 38rem;
+    border-radius: 2rem;
+    overflow: hidden;
+    border: 1px solid rgba(201, 164, 92, 0.25);
+    box-shadow: 0 40px 90px rgba(0, 0, 0, 0.35);
+}
+
+.login-photo {
+    position: relative;
+    overflow: hidden;
+    background-color: #14110d;
+    background-image: linear-gradient(180deg, rgba(13, 12, 11, 0.15), rgba(13, 12, 11, 0.9)), url("../images/gilded/entrance.webp");
+    background-size: cover;
+    background-position: center;
+    color: #f4eee6;
+}
+
+.login-photo-dish {
+    position: absolute;
+    right: -4rem;
+    top: 2rem;
+    width: 21rem;
+    -webkit-mask-image: radial-gradient(closest-side, #000 50%, transparent 100%);
+    mask-image: radial-gradient(closest-side, #000 50%, transparent 100%);
+}
+
+.login-photo-text {
+    position: absolute;
+    left: 2.5rem;
+    right: 2.5rem;
+    bottom: 2.5rem;
+}
+
+    .login-photo-text p {
+        color: #d8cbb8;
+    }
+
+.login-photo-title {
+    font-family: var(--tg-font-heading);
+    font-size: 2.5rem;
+    line-height: 1.1;
+    color: #f4eee6 !important;
+    margin-bottom: 0.7rem;
+}
+
+    .login-photo-title .script {
+        color: #e2c27e;
+    }
+
+.login-form .auth-card {
+    height: 100%;
+    border-radius: 0;
+    border: 0;
+    box-shadow: none;
+    padding: 3.2rem 3.2rem 2.8rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+    .login-form .auth-card:hover {
+        transform: none;
+        box-shadow: none;
+    }
+
+    .login-form .auth-card h1 {
+        font-size: 2.8rem;
+    }
+
+@media (max-width: 767.98px) {
+    .login-split {
+        grid-template-columns: 1fr;
+    }
+
+    .login-photo {
+        min-height: 19rem;
+    }
+
+    .login-photo-title {
+        font-size: 2rem;
+    }
+
+    .login-photo-text {
+        left: 1.5rem;
+        right: 1.5rem;
+        bottom: 1.5rem;
+    }
+
+    .login-photo-dish {
+        width: 12rem;
+        top: 0;
+        right: -2rem;
+    }
+
+    .login-form .auth-card {
+        padding: 2rem 1.5rem;
+    }
+}
+
+/* ----- 8.12 News and offers: the first post is a large feature, reviews are quote cards ----- */
+@media (min-width: 768px) {
+    body[data-area="Public"][data-page="/Announcements/Index"] .site-main .container > .row.g-3:first-of-type > :first-child {
+        width: 100%;
+    }
+
+        body[data-area="Public"][data-page="/Announcements/Index"] .site-main .container > .row.g-3:first-of-type > :first-child .news-card {
+            min-height: 20rem;
+            justify-content: flex-end;
+            padding: 2.6rem;
+            color: #f4eee6;
+            background-color: #1a1612;
+            background-image: linear-gradient(90deg, rgba(13, 12, 11, 0.95) 30%, rgba(13, 12, 11, 0.2)), url("../images/gilded/carbonara.webp");
+            background-size: cover;
+            background-position: center;
+            border: 1px solid rgba(201, 164, 92, 0.3);
+        }
+
+            body[data-area="Public"][data-page="/Announcements/Index"] .site-main .container > .row.g-3:first-of-type > :first-child .news-card :is(h2, .news-message) {
+                max-width: 36rem;
+            }
+
+            body[data-area="Public"][data-page="/Announcements/Index"] .site-main .container > .row.g-3:first-of-type > :first-child .news-card h2 {
+                font-size: 2.8rem;
+                color: #f4eee6;
+            }
+
+            body[data-area="Public"][data-page="/Announcements/Index"] .site-main .container > .row.g-3:first-of-type > :first-child .news-card .news-message {
+                flex-grow: 0;
+                font-size: 1.1rem;
+                color: #d8cbb8;
+            }
+
+            body[data-area="Public"][data-page="/Announcements/Index"] .site-main .container > .row.g-3:first-of-type > :first-child .news-card .text-secondary {
+                color: #c9bba6 !important;
+            }
+
+            body[data-area="Public"][data-page="/Announcements/Index"] .site-main .container > .row.g-3:first-of-type > :first-child .news-card .btn-outline-primary {
+                --bs-btn-color: #e2c27e;
+                --bs-btn-border-color: rgba(226, 194, 126, 0.55);
+            }
+}
+
+body[data-area="Public"][data-page="/Announcements/Index"] #reviews-heading {
+    font-size: 2.2rem;
+}
+
+/* ----- 8.13 Opening hours: today glows, the contact card gets a photo ----- */
+body[data-area="Public"][data-page="/Visit/Index"] .table tr.table-active > * {
+    background-color: rgba(201, 164, 92, 0.16) !important;
+    box-shadow: none;
+}
+
+    body[data-area="Public"][data-page="/Visit/Index"] .table tr.table-active > th {
+        border-radius: 0.9rem 0 0 0.9rem;
+    }
+
+    body[data-area="Public"][data-page="/Visit/Index"] .table tr.table-active > td {
+        border-radius: 0 0.9rem 0.9rem 0;
+    }
+
+body[data-area="Public"][data-page="/Visit/Index"] .table th {
+    font-family: var(--tg-font-heading);
+    font-weight: 400 !important;
+    font-size: 1.05rem;
+}
+
+body[data-area="Public"][data-page="/Visit/Index"] section[aria-labelledby="contact-heading"] {
+    overflow: hidden;
+    padding-top: 12.5rem;
+    position: relative;
+}
+
+    body[data-area="Public"][data-page="/Visit/Index"] section[aria-labelledby="contact-heading"]::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 11rem;
+        background: url("../images/gilded/patio.webp") center / cover;
+    }
+
+    body[data-area="Public"][data-page="/Visit/Index"] section[aria-labelledby="contact-heading"] dt {
+        font-size: 0.7rem;
+        font-weight: 500;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--tg-muted);
+    }
+
+    body[data-area="Public"][data-page="/Visit/Index"] section[aria-labelledby="contact-heading"] dd {
+        margin-bottom: 0.9rem;
+    }
+
+/* ----- 8.14 Profile: dietary choices as large tap targets that turn gold when ticked ----- */
+.form-check:has(input[name="AvoidTagIds"]) {
+    position: relative;
+    padding: 0.9rem 1rem 0.9rem 2.8rem;
+    border-radius: 1.1rem;
+    border: 1px solid var(--tg-line);
+    background-color: color-mix(in srgb, var(--tg-surface) 70%, transparent);
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+    .form-check:has(input[name="AvoidTagIds"]) .form-check-input {
+        margin-left: -1.8rem;
+    }
+
+    .form-check:has(input[name="AvoidTagIds"]:checked) {
+        border-color: var(--tg-gold);
+        background-color: rgba(201, 164, 92, 0.16);
+    }
+
+        .form-check:has(input[name="AvoidTagIds"]:checked) .form-check-label::after {
+            content: "Avoid";
+            margin-left: 0.6rem;
+            font-size: 0.66rem;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            border-radius: 999px;
+            padding: 0.15rem 0.55rem;
+            background: var(--tg-gold);
+            color: var(--tg-on-gold);
+        }
+
+/* ----- 8.15 Customer: My reservations and the booking pages feel like tickets ----- */
+body[data-area="Customer"] .track-date,
+body[data-area="Customer"] .hx-cal {
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+}
+
+body[data-area="Customer"][data-page="/Reservations/Book"] .list-group-item:has(input:checked),
+body[data-area="Customer"][data-page="/Reservations/Change"] .list-group-item:has(input:checked),
+body[data-area="Staff"][data-page="/Reservations/Edit"] .list-group-item:has(input:checked) {
+    border-color: var(--tg-gold);
+    background-color: rgba(201, 164, 92, 0.12);
+    box-shadow: inset 3px 0 0 var(--tg-gold);
+}
+
+/* ----- 8.16 Reports: the headline figure is the dark gold card; status chips match the badges ----- */
+.report-metric-primary {
+    background: #1a1612 radial-gradient(circle at 85% 15%, rgba(201, 164, 92, 0.3), transparent 60%) !important;
+    border-color: #1a1612 !important;
+    color: #c9bba6 !important;
+}
+
+    .report-metric-primary :is(span, small) { color: #c9bba6 !important; }
+    .report-metric-primary strong { color: #f1dba6 !important; }
+
+.report-status { font-weight: 500 !important; }
+.report-status:is(.status-confirmed, .status-seated, .status-completed) { color: #2f6b33 !important; background: #e2efdc !important; }
+.report-status:is(.status-cancelled, .status-noshow) { color: #8f352d !important; background: #f6dfdb !important; }
+
+[data-bs-theme="dark"] .report-status { background: rgba(226, 194, 126, 0.16) !important; color: #ecd08f; }
+[data-bs-theme="dark"] .report-status:is(.status-confirmed, .status-seated, .status-completed) { color: #a9d4a4 !important; background: rgba(120, 170, 120, 0.18) !important; }
+[data-bs-theme="dark"] .report-status:is(.status-cancelled, .status-noshow) { color: #f0a8a8 !important; background: rgba(200, 80, 80, 0.2) !important; }
+=======
 /* -----------------------------------------------------------------------------
    Site-wide consistency (Alex_18)
    ----------------------------------------------------------------------------- */
@@ -1228,7 +3042,7 @@ input[type="password"]::-ms-clear {
 
 .form-check-input:focus {
     border-color: var(--tg-raspberry);
-    box-shadow: 0 0 0 0.25rem rgba(216, 17, 89, 0.25);
+    box-shadow: 0 0 0 0.25rem rgba(201, 164, 92, 0.3);
 }
 
 .list-group {
@@ -1361,4 +3175,30 @@ input[type="password"]::-ms-clear {
 [data-bs-theme="dark"] .tg-status.is-noshow {
     color: #ff9a9a;
     background-color: #3b1d1d;
+}
+
+/* Gilded look for the Part 18 additions: the name button sits on the dark navigation bar in both themes. */
+.site-navbar .navbar-user-pill {
+    border-color: rgba(201, 164, 92, 0.45);
+    color: #f4eee6;
+    font-weight: 500;
+}
+
+    .site-navbar .navbar-user-pill:hover,
+    .site-navbar .navbar-user-pill:focus-visible {
+        background-color: rgba(201, 164, 92, 0.16);
+        color: #f1dba6;
+    }
+
+.site-navbar .navbar-role {
+    background-color: var(--tg-gold);
+    color: #1a1612;
+    letter-spacing: 0.14em;
+}
+
+/* Card-style tables (Accounts, Menu items): no Bootstrap row-hover shading inside the cards. */
+body[data-area="Admin"]:is([data-page="/Menu/Index"], [data-page="/Accounts/Index"]) table tr > * {
+    box-shadow: none !important;
+    --bs-table-bg-state: transparent;
+    --bs-table-accent-bg: transparent;
 }
