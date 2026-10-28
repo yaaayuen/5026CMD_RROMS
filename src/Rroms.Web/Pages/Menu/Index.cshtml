@@ -9,6 +9,13 @@
 	// because ASP.NET Core stops reading a list at the first missing number.
 	List<MenuItemCard> orderable = Model.Dishes.Where(dish => dish.CanOrder).ToList();
 
+	// What clicking a dish card on the plain menu does: "order" (start ordering for the booked table),
+	// "book" (customer without a reservation that can order), "signin" (visitor), or null (staff and administrators).
+	string? orderTarget = Model.OrderingOn ? null
+		: !Model.IsSignedIn ? "signin"
+		: !Model.IsCustomer ? null
+		: Model.Selected != null ? "order" : "book";
+
 	OrderBarView barView = new OrderBarView
 	{
 		AddingTo = Model.Selected == null ? null : Model.Describe(Model.Selected),
@@ -69,7 +76,7 @@ else if (Model.IsCustomer && !Model.OrderingOn)
 }
 else if (Model.OrderingOn)
 {
-	<section class="tg-card h-auto mb-4" aria-label="Ordering">
+	<section class="tg-card h-auto mb-4 @(Model.StartDishId != null ? "mn-ordering-just-started" : null)" id="orderingCard" aria-label="Ordering">
 		<div class="ox-strip">
 			<label for="orderingFor" class="fw-semibold mb-0">Ordering for</label>
 			<select id="orderingFor" class="form-select" style="max-width: 24rem;">
@@ -80,13 +87,22 @@ else if (Model.OrderingOn)
 			</select>
 			<a class="btn btn-outline-secondary ms-auto" asp-page="/Menu/Index">Stop ordering</a>
 		</div>
+		@if (Model.StartDishId is int startDish)
+		{
+			<p class="mn-added-note mt-2 mb-0" role="status">
+				&#10003; 1 &times; @Model.Dishes.First(d => d.Id == startDish).Name added to your order for the table above.
+				Add more dishes below, or change the table if you have another booking.
+			</p>
+		}
 		<p class="small text-secondary mt-2 mb-0" id="switchNote" hidden>
 			Your picks stay in your order when you change reservation. They will be added to the one chosen above.
 		</p>
 	</section>
 }
 
-<section class="tg-card h-auto mb-4" aria-labelledby="filter-heading">
+@* Plain menu: the filter stays at the top of the screen while the dish list scrolls (site.css .mn-filter-sticky).
+   Not in the ordering view, which already keeps its category chips at the top. *@
+<section class="tg-card h-auto mb-4 @(Model.OrderingOn ? null : "mn-filter-sticky")" aria-labelledby="filter-heading">
 	<h2 id="filter-heading" class="h5 mb-3">Find a dish</h2>
 
 	<form method="get" class="row g-3 align-items-end">
@@ -117,7 +133,7 @@ else if (Model.OrderingOn)
 			<label for="menuMaxPrice" class="form-label fw-semibold">Max price (RM)</label>
 			<input id="menuMaxPrice" name="maxPrice" type="number" min="0" step="0.01" class="form-control" value="@Model.MaxPrice" />
 		</div>
-		<div class="col-12">
+		<div class="col-12 col-md">
 			<fieldset>
 				<legend class="form-label fw-semibold fs-6 mb-1">Hide dishes that contain</legend>
 				@foreach (DietaryTag tag in Model.TagChoices)
@@ -129,8 +145,9 @@ else if (Model.OrderingOn)
 				}
 			</fieldset>
 		</div>
-		<div class="col-12 col-md-2 d-grid">
-			<button type="submit" class="btn btn-primary">Filter</button>
+		@* Same row as the dietary boxes, at the right, so the box stays short. *@
+		<div class="col-12 col-md-auto d-grid">
+			<button type="submit" class="btn btn-primary px-4">Filter</button>
 		</div>
 	</form>
 
@@ -140,6 +157,7 @@ else if (Model.OrderingOn)
 	}
 </section>
 
+@{ ViewData["SuggestionLinksToDish"] = true; }
 <partial name="_DishSuggestions" model="Model.Popular" />
 
 @if (Model.Dishes.Count == 0)
@@ -207,7 +225,7 @@ else
 				@foreach (MenuItemCard dish in group)
 				{
 					<div class="col-sm-6 col-lg-4">
-						<article class="tg-card h-100 @(dish.IsAvailable ? "" : "opacity-75")">
+						<article id="dish-@dish.Id" class="tg-card h-100 position-relative @(dish.IsAvailable ? "" : "opacity-75") @(dish.CanOrder && orderTarget != null ? "mn-orderable" : null)">
 							@if (dish.PhotoUrl != null)
 							{
 								<img src="@dish.PhotoUrl" alt="Photo of @dish.Name" class="rounded mb-3 w-100" style="object-fit: cover; height: 12rem;" />
@@ -262,6 +280,16 @@ else
 							{
 								<span class="badge text-bg-light border">@tagName</span>
 							}
+
+							@* Click anywhere on the card to order it (customers and visitors only; staff see the plain menu). *@
+							@if (dish.CanOrder && orderTarget == "order")
+							{
+								<a class="stretched-link mn-order-link" href="@Model.OrderLinkFor(dish.Id)" aria-label="Order @dish.Name"><span class="mn-order-hint" aria-hidden="true">Tap to order</span></a>
+							}
+							else if (dish.CanOrder && orderTarget != null)
+							{
+								<a class="stretched-link mn-order-link js-order-prompt" href="@(orderTarget == "book" ? "/Customer/Reservations/Book" : "/Account/Login?returnUrl=%2FMenu")" aria-label="Order @dish.Name" aria-haspopup="dialog"><span class="mn-order-hint" aria-hidden="true">Tap to order</span></a>
+							}
 						</article>
 					</div>
 				}
@@ -270,7 +298,119 @@ else
 	}
 }
 
+@if (orderTarget is "book" or "signin")
+{
+	<dialog id="orderPrompt" class="tg-card mn-order-prompt" aria-labelledby="orderPromptTitle">
+		@if (orderTarget == "book")
+		{
+			<h2 id="orderPromptTitle" class="h4">Book a table first</h2>
+			<p>You can order food once you have a reservation. Book a table, then come back to the menu to order.</p>
+			<div class="d-flex flex-wrap gap-2">
+				<a class="btn btn-primary" href="/Customer/Reservations/Book">Book a table</a>
+				<button type="button" class="btn btn-outline-secondary" data-close-prompt>Keep browsing</button>
+			</div>
+		}
+		else
+		{
+			<h2 id="orderPromptTitle" class="h4">Sign in to order</h2>
+			<p>Sign in, or create a free account, to book a table and order from the menu.</p>
+			<div class="d-flex flex-wrap gap-2">
+				<a class="btn btn-primary" href="/Account/Login?returnUrl=%2FMenu">Sign in</a>
+				<a class="btn btn-outline-primary" href="/Account/Register">Create an account</a>
+				<button type="button" class="btn btn-outline-secondary" data-close-prompt>Keep browsing</button>
+			</div>
+		}
+	</dialog>
+}
+
+@* Menu page only: back to the top of the long dish list. Sits just above the "Ask Three Grills" chat button. *@
+<button type="button" id="scrollTopButton" class="mn-scroll-top @(Model.OrderingOn ? "is-ordering" : null)" title="Scroll to top" aria-label="Scroll to top">
+	<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+		<path d="M12 19V5M5 12l7-7 7 7" />
+	</svg>
+</button>
+
 @section Scripts {
+	<script>
+		(function () {
+			var button = document.getElementById('scrollTopButton');
+			if (!button) { return; }
+			var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+			// Only show it once the visitor has scrolled down a screen or so.
+			function update() { button.classList.toggle('is-visible', window.scrollY > 600); }
+			window.addEventListener('scroll', update, { passive: true });
+			update();
+
+			button.addEventListener('click', function () {
+				window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+			});
+		})();
+	</script>
+	@if (!Model.OrderingOn && Model.Popular.Items.Count > 0)
+	{
+		<script>
+			(function () {
+				// "Popular this month": scroll down to the dish's card and highlight it for a moment.
+				document.querySelectorAll('.js-jump-dish').forEach(function (link) {
+					link.addEventListener('click', function (event) {
+						var card = document.querySelector(link.getAttribute('href'));
+						if (!card) { return; }
+						event.preventDefault();
+						card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+						card.classList.remove('mn-jump-highlight');
+						void card.offsetWidth; // restart the animation when the same dish is clicked again
+						card.classList.add('mn-jump-highlight');
+						setTimeout(function () { card.classList.remove('mn-jump-highlight'); }, 2600);
+						try { window.history.replaceState(null, '', link.getAttribute('href')); } catch (e) { }
+					});
+				});
+			})();
+		</script>
+	}
+	@if (orderTarget is "book" or "signin")
+	{
+		<script>
+			(function () {
+				var dialog = document.getElementById('orderPrompt');
+				// Without <dialog> support the links simply open the booking or sign-in page.
+				if (!dialog || typeof dialog.showModal !== 'function') { return; }
+
+				document.querySelectorAll('.js-order-prompt').forEach(function (link) {
+					link.addEventListener('click', function (event) {
+						event.preventDefault();
+						dialog.showModal();
+					});
+				});
+				dialog.querySelector('[data-close-prompt]').addEventListener('click', function () { dialog.close(); });
+				// A click on the dark backdrop closes it too.
+				dialog.addEventListener('click', function (event) { if (event.target === dialog) { dialog.close(); } });
+			})();
+		</script>
+	}
+	@if (Model.OrderingOn && Model.StartDishId != null)
+	{
+		<script>
+			(function () {
+				// Came from a dish card: bring that dish into view and show which table the order is for.
+				var card = document.querySelector('.ox-dish[data-dish="@Model.StartDishId"]');
+				if (!card) { return; }
+				card.classList.add('mn-just-picked');
+				var ordering = document.getElementById('orderingCard');
+				if (ordering) { ordering.scrollIntoView({ block: 'start' }); }
+				setTimeout(function () {
+					card.classList.remove('mn-just-picked');
+					if (ordering) { ordering.classList.remove('mn-ordering-just-started'); }
+				}, 4000);
+				// Clean the address so a refresh does not add the dish again.
+				try {
+					var url = new URL(window.location.href);
+					url.searchParams.delete('dish');
+					window.history.replaceState(null, '', url);
+				} catch (e) { }
+			})();
+		</script>
+	}
 	@if (Model.OrderingOn)
 	{
 		<partial name="_OrderScripts" />

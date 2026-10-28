@@ -1,5 +1,9 @@
 ﻿@model Rroms.Web.Models.ViewModels.DishSuggestionSection
 @using Rroms.Web.Models.ViewModels
+@{
+	// The Menu page sets this: each suggestion then links down to the same dish's card on that page (id="dish-N").
+	bool linkToDish = ViewData["SuggestionLinksToDish"] is true;
+}
 @if (Model.Items.Count > 0)
 {
 	<section class="mb-5" aria-labelledby="suggest-@Model.Key">
@@ -9,7 +13,7 @@
 			@foreach (DishRecommendation item in Model.Items)
 			{
 				<div class="col-sm-6 col-lg-3">
-					<article class="tg-card h-100">
+					<article class="tg-card h-100 position-relative @(linkToDish ? "mn-suggest-link" : null)">
 						<h3 class="h6 mb-1">
 							@if (!string.IsNullOrEmpty(item.Dish.Code))
 							{
@@ -25,6 +29,10 @@
 							<strong>RM @item.Dish.CurrentPrice.ToString("N2")</strong>
 						</p>
 						<p class="small text-secondary mb-0">@item.Reason</p>
+						@if (linkToDish)
+						{
+							<a class="stretched-link js-jump-dish" href="#dish-@item.Dish.Id" aria-label="Show @item.Dish.Name on the menu"></a>
+						}
 					</article>
 				</div>
 			}

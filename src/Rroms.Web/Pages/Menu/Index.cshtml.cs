@@ -1,6 +1,7 @@
 using System.Globalization;
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Options;
 
@@ -100,6 +101,13 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true, Name = "reservationId")]
     public int? ReservationId { get; set; }
 
+    /// <summary>
+    /// Address part ?dish=: the dish a customer clicked on the plain menu. The ordering view then starts with one of it
+    /// in the order and scrolls to it. Cleared when the dish cannot be ordered.
+    /// </summary>
+    [BindProperty(SupportsGet = true, Name = "dish")]
+    public int? StartDishId { get; set; }
+
     /// <summary>The quantities (and notes) from the order form, one entry per orderable dish shown.</summary>
     [BindProperty]
     public List<PlaceOrderLine> Lines { get; set; } = new List<PlaceOrderLine>();
@@ -177,6 +185,45 @@ public class IndexModel : PageModel
         OrderingOn = OrderFlag == 1 && Selected != null;
 
         await LoadMenuAsync();
+
+        // Clicked from the plain menu: start with one of that dish (nothing is saved until Place order).
+        if (OrderingOn && StartDishId is int dishId && Lines.Count == 0 && Dishes.Any(d => d.Id == dishId && d.CanOrder))
+        {
+            Lines.Add(new PlaceOrderLine { MenuItemId = dishId, Quantity = 1 });
+        }
+        else
+        {
+            StartDishId = null;
+        }
+    }
+
+    /// <summary>
+    /// The link behind a dish card on the plain menu for a customer who can order: the ordering view for their selected
+    /// reservation, starting with this dish. The search and filters in the address are kept.
+    /// </summary>
+    /// <param name="dishId">The dish that was clicked.</param>
+    public string OrderLinkFor(int dishId)
+    {
+        List<KeyValuePair<string, string?>> query = new List<KeyValuePair<string, string?>>();
+
+        foreach (KeyValuePair<string, Microsoft.Extensions.Primitives.StringValues> pair in Request.Query)
+        {
+            if (pair.Key is "order" or "reservationId" or "dish")
+            {
+                continue;
+            }
+
+            foreach (string? value in pair.Value)
+            {
+                query.Add(new KeyValuePair<string, string?>(pair.Key, value));
+            }
+        }
+
+        query.Add(new KeyValuePair<string, string?>("order", "1"));
+        query.Add(new KeyValuePair<string, string?>("reservationId", Selected!.Id.ToString(CultureInfo.InvariantCulture)));
+        query.Add(new KeyValuePair<string, string?>("dish", dishId.ToString(CultureInfo.InvariantCulture)));
+
+        return QueryHelpers.AddQueryString("/Menu", query);
     }
 
     /// <summary>Handles POST /Menu?handler=PlaceOrder: adds an order to the selected reservation.</summary>

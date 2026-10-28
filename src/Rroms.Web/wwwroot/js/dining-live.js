@@ -76,8 +76,14 @@
             if (!response.ok) { throw new Error("Update failed"); }
             // This is a Razor-rendered same-origin partial; Razor encodes all stored text.
             const open = Array.from(content.querySelectorAll("details[open][id]"), d => d.id);
+            // Kitchen columns scroll on their own; keep each one where staff left it.
+            const scrolled = Array.from(content.querySelectorAll("section[aria-labelledby]"), s => [s.getAttribute("aria-labelledby"), s.scrollTop]);
             content.innerHTML = await response.text();
             open.forEach(id => document.getElementById(id)?.setAttribute("open", ""));
+            scrolled.forEach(function ([label, top]) {
+                const column = content.querySelector('section[aria-labelledby="' + label + '"]');
+                if (column) { column.scrollTop = top; }
+            });
             state.textContent = "Last checked " + new Date().toLocaleTimeString();
             tick();
             announceNewOrders();
@@ -85,6 +91,16 @@
             state.textContent = "Connection interrupted. Retrying automatically.";
         } finally { busy = false; }
     }
+    // Column scrollbars stay hidden and only show while a column is being scrolled (site.css .is-scrolling).
+    // Scroll events do not bubble, so listen in the capture phase; this survives the refreshes above.
+    content.addEventListener("scroll", function (event) {
+        const column = event.target;
+        if (!(column instanceof Element) || !column.matches("section[aria-labelledby]")) { return; }
+        column.classList.add("is-scrolling");
+        clearTimeout(column.scrollHideTimer);
+        column.scrollHideTimer = setTimeout(() => column.classList.remove("is-scrolling"), 900);
+    }, true);
+
     tick();
     window.setInterval(tick, 1000);
     window.setInterval(refresh, 5000);
