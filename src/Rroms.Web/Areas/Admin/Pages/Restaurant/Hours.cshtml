@@ -43,12 +43,22 @@
 							<tr>
 								<th scope="row">@hour.DayOfWeek</th>
 								<td>
-									<input form="@formId" type="time" name="day.OpensAt" class="form-control"
-										   value="@hour.OpensAt.ToString("HH:mm")" aria-label="@hour.DayOfWeek opens" />
+									@* A scrolling list of half-hour times (the same 30-minute grid as bookings), so no odd minutes can be typed. *@
+									<select form="@formId" name="day.OpensAt" class="form-select" aria-label="@hour.DayOfWeek opens">
+										@foreach (TimeOnly choice in Rroms.Web.Areas.Admin.Pages.Restaurant.HoursModel.TimeChoices(hour.OpensAt))
+										{
+											<option value="@choice.ToString("HH:mm")" selected="@(choice == hour.OpensAt)">@choice.ToString("h:mm tt")</option>
+										}
+									</select>
 								</td>
 								<td>
-									<input form="@formId" type="time" name="day.ClosesAt" class="form-control"
-										   value="@hour.ClosesAt.ToString("HH:mm")" aria-label="@hour.DayOfWeek closes" />
+									@* A scrolling list of half-hour times (the same 30-minute grid as bookings), so no odd minutes can be typed. *@
+									<select form="@formId" name="day.ClosesAt" class="form-select" aria-label="@hour.DayOfWeek closes">
+										@foreach (TimeOnly choice in Rroms.Web.Areas.Admin.Pages.Restaurant.HoursModel.TimeChoices(hour.ClosesAt))
+										{
+											<option value="@choice.ToString("HH:mm")" selected="@(choice == hour.ClosesAt)">@choice.ToString("h:mm tt")</option>
+										}
+									</select>
 								</td>
 								<td>
 									<input form="@formId" type="checkbox" name="day.IsClosed" value="true" class="form-check-input"
