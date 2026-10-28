@@ -74,7 +74,15 @@
                 <dd><a href="mailto:@Model.Profile.Email">@Model.Profile.Email</a></dd>
             </dl>
             <p class="small text-secondary">Groups larger than our biggest table: please call us.</p>
-            <a class="btn btn-primary" asp-area="Customer" asp-page="/Reservations/Book">Book a table</a>
+            @* Booking is a customer page. Staff and administrators get their own reservations page instead. *@
+            @if (User.IsInRole(Rroms.Web.Constants.RoleNames.Staff) || User.IsInRole(Rroms.Web.Constants.RoleNames.Administrator))
+            {
+                <a class="btn btn-primary" asp-area="Staff" asp-page="/Reservations/Index">Today's reservations</a>
+            }
+            else
+            {
+                <a class="btn btn-primary" asp-area="Customer" asp-page="/Reservations/Book">Book a table</a>
+            }
         </section>
     </div>
 </div>

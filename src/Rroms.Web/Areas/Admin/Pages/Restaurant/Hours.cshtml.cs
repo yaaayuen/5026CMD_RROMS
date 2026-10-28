@@ -31,6 +31,22 @@ public class HoursModel : PageModel
     /// <summary>The seven weekday rows, Monday first.</summary>
     public IReadOnlyList<OperatingHour> Hours { get; private set; } = new List<OperatingHour>();
 
+    /// <summary>
+    /// Times offered in the opening/closing lists: every half hour of the day (12:00 AM - 11:30 PM), matching the
+    /// 30-minute booking slots. A saved time that is not on the half hour is kept in the list so it is not lost.
+    /// </summary>
+    /// <param name="current">The time saved now for that day.</param>
+    public static IReadOnlyList<TimeOnly> TimeChoices(TimeOnly current)
+    {
+        List<TimeOnly> times = Enumerable.Range(0, 48).Select(i => new TimeOnly(i / 2, i % 2 * 30)).ToList();
+        if (!times.Contains(current))
+        {
+            times.Add(current);
+            times.Sort();
+        }
+        return times;
+    }
+
     /// <summary>All special closures, earliest first.</summary>
     public IReadOnlyList<SpecialClosure> Closures { get; private set; } = new List<SpecialClosure>();
 
