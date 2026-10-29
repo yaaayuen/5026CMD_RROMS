@@ -26,7 +26,11 @@
             {
                 <a class="btn btn-gold btn-lg" asp-area="Customer" asp-page="/Index">Go to my dining</a>
             }
-            else if (User.IsInRole(RoleNames.Staff) || User.IsInRole(RoleNames.Administrator))
+            else if (User.IsInRole(RoleNames.Administrator))
+            {
+                <a class="btn btn-gold btn-lg" asp-area="Admin" asp-page="/Index">Open the admin desk</a>
+            }
+            else if (User.IsInRole(RoleNames.Staff))
             {
                 <a class="btn btn-gold btn-lg" asp-area="Staff" asp-page="/Index">Open the staff desk</a>
             }

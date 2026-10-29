@@ -94,6 +94,19 @@ public class IndexModel : PageModel
                 "calendar",
                 "Sprint 5 · Darren",
                 "/Admin/Monitoring/Reservations"),
+            // The two Staff desk pages an administrator also needs (the Staff area allows administrators).
+            new ModuleTileViewModel(
+                "Billing and payments",
+                "Generate bills and record cash, card or e-wallet payments.",
+                "receipt",
+                "Sprint 5 · Darren",
+                "/Staff/Billing"),
+            new ModuleTileViewModel(
+                "Reservation history and filters",
+                "Filter bookings, read dining preferences and view customer history.",
+                "calendar",
+                "Sprint 5 · Darren",
+                "/Staff/Reservations/History"),
             new ModuleTileViewModel(
                 "Customer feedback",
                 "Ratings and comments from completed visits.",

@@ -8,30 +8,39 @@
     // The ids let the page script spot orders that arrived since the last refresh.
     string ids = string.Join(",", board.Cooking.Concat(board.Queue).Select(e => e.Order.Id));
 
-    void Dishes(KitchenEntry entry)
+    // compact: Ready to serve only needs what to carry out, so cooking times are left out (one line per dish).
+    void Dishes(KitchenEntry entry, bool compact = false)
     {
-        <ul class="kitchen-dishes">
+        <ul class="kitchen-dishes @(compact ? "is-compact" : null)">
         @foreach (var item in entry.Order.Items)
         {
             <li>@item.Quantity × @item.MenuItem?.Name
-                @if (item.MenuItem?.CookingMinutes is int minutes) { <span class="text-secondary small">(@minutes min)</span> }
-                else { <span class="text-secondary small">(no cooking)</span> }
+                @if (!compact && item.MenuItem?.CookingMinutes is int minutes) { <span class="text-secondary small">(@minutes min)</span> }
+                else if (!compact) { <span class="text-secondary small">(no cooking)</span> }
                 @if (!string.IsNullOrWhiteSpace(item.Notes)) { <strong>(@item.Notes)</strong> }</li>
         }
         </ul>
         @if (!string.IsNullOrWhiteSpace(entry.Order.Notes)) { <p class="small mb-2"><strong>Customer note:</strong> @entry.Order.Notes</p> }
     }
 
-    async Task Buttons(KitchenEntry entry)
+    // compact: the main move stays a full button and Cancel becomes a small ✕ at the end of the same row.
+    async Task Buttons(KitchenEntry entry, bool compact = false)
     {
-        <div class="d-flex flex-wrap gap-2">
+        <div class="d-flex flex-wrap gap-2 @(compact ? "kitchen-actions-compact" : null)">
         @foreach (var next in Rroms.Web.Areas.Staff.Pages.Orders.IndexModel.StaffMoves(entry.Order.Status))
         {
             <form method="post" asp-page="/Orders/Index" asp-area="Staff">
                 <input type="hidden" name="id" value="@entry.Order.Id" />
                 <input type="hidden" name="expected" value="@entry.Order.Status" />
                 <input type="hidden" name="next" value="@next" />
-                <button class="btn btn-sm @(next == Rroms.Web.Contracts.OrderStatus.Cancelled ? "btn-outline-danger" : "btn-primary")">@(next == Rroms.Web.Contracts.OrderStatus.Cancelled ? "Cancel" : "Mark " + OrderStatusRules.Label(next).ToLowerInvariant())</button>
+                @if (compact && next == Rroms.Web.Contracts.OrderStatus.Cancelled)
+                {
+                    <button class="btn btn-sm btn-outline-danger kitchen-cancel-x" title="Cancel order #@entry.Order.Id" aria-label="Cancel order #@entry.Order.Id">✕</button>
+                }
+                else
+                {
+                    <button class="btn btn-sm @(next == Rroms.Web.Contracts.OrderStatus.Cancelled ? "btn-outline-danger" : "btn-primary")">@(next == Rroms.Web.Contracts.OrderStatus.Cancelled ? "Cancel" : "Mark " + OrderStatusRules.Label(next).ToLowerInvariant())</button>
+                }
             </form>
         }
         </div>
@@ -120,20 +129,21 @@
 <section class="mb-4" aria-labelledby="ready-heading">
     <h2 id="ready-heading" class="h4">Ready to serve <span class="badge text-bg-secondary">@board.Ready.Count</span></h2>
     @if (board.Ready.Count == 0) { <p class="text-secondary">No food waiting at the pass.</p> }
-    @foreach (var table in board.Ready.GroupBy(e => e.TableLabel))
+    @* Oldest-waiting first, so the food that has been at the pass longest is always at the top. *@
+    @foreach (var table in board.Ready.OrderBy(e => e.Order.UpdatedAtUtc).GroupBy(e => e.TableLabel))
     {
-        <div class="tg-card kitchen-table mb-2">
-            <h3 class="h6">Table @table.Key</h3>
+        <div class="tg-card kitchen-table kitchen-ready mb-2">
+            <h3 class="h6 mb-1">Table @table.Key</h3>
             @foreach (var entry in table)
             {
                 int waiting = MinutesBetween(entry.Order.UpdatedAtUtc, now);
                 bool cold = waiting >= Rroms.Web.Areas.Staff.Pages.Orders.IndexModel.LongReadyMinutes;
                 <div class="kitchen-card-row @(cold ? "is-late" : null)" data-order-id="@entry.Order.Id">
-                    <div class="d-flex flex-wrap gap-2 align-items-baseline">
-                        <strong>Order #@entry.Order.Id</strong>
-                        <span class="small @(cold ? "text-danger fw-semibold" : "text-secondary")">ready for @waiting min</span>
+                    <div class="d-flex gap-2 align-items-center">
+                        <strong>#@entry.Order.Id</strong>
+                        <span class="kitchen-wait ms-auto @(cold ? "is-cold" : null)">@waiting min</span>
                     </div>
-                    @{ Dishes(entry); await Buttons(entry); }
+                    @{ Dishes(entry, compact: true); await Buttons(entry, compact: true); }
                 </div>
             }
         </div>

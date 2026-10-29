@@ -33,7 +33,7 @@
 <div class="am-layout">
 	@* Left rail: the same GET filter as before (q, categoryId, status). Categories and status are radio buttons
 	   with the same names and values as the old drop-downs, so the page model reads them exactly the same way. *@
-	<form method="get" class="am-rail" aria-label="Filter dishes">
+	<form method="get" id="menuFilter" class="am-rail" aria-label="Filter dishes">
 		<label for="searchBox" class="visually-hidden">Search</label>
 		<input id="searchBox" name="q" type="search" class="form-control am-search" placeholder="Name or code" value="@Model.Search" />
 
@@ -60,8 +60,37 @@
 			</div>
 		</fieldset>
 
-		<button type="submit" class="btn btn-outline-primary btn-sm mt-4">Filter</button>
+		@* Filters apply as soon as they change (script below); the button is only needed without JavaScript. *@
+		<noscript><button type="submit" class="btn btn-outline-primary btn-sm mt-4">Filter</button></noscript>
 	</form>
+	<script>
+		(function () {
+			var form = document.getElementById('menuFilter');
+			var search = document.getElementById('searchBox');
+			var timer = null;
+
+			// Category and status: reload the list straight away.
+			form.querySelectorAll('input[type="radio"]').forEach(function (radio) {
+				radio.addEventListener('change', function () { form.submit(); });
+			});
+
+			// Search: reload once typing pauses, and put the cursor back in the box afterwards.
+			search.addEventListener('input', function () {
+				clearTimeout(timer);
+				timer = setTimeout(function () {
+					try { sessionStorage.setItem('menuSearchFocus', '1'); } catch (e) { }
+					form.submit();
+				}, 600);
+			});
+			try {
+				if (sessionStorage.getItem('menuSearchFocus') === '1') {
+					sessionStorage.removeItem('menuSearchFocus');
+					search.focus();
+					search.setSelectionRange(search.value.length, search.value.length);
+				}
+			} catch (e) { }
+		})();
+	</script>
 
 	<section class="am-list" aria-labelledby="list-heading">
 		<h2 id="list-heading" class="h4 mb-3">

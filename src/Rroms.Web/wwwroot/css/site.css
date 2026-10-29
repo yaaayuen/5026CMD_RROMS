@@ -951,6 +951,16 @@ input[type="password"]::-ms-clear {
         color: var(--tg-on-gold);
     }
 
+    /* Icon follows the current look: sun in light mode, moon in dark mode. */
+    .theme-toggle .theme-icon-moon,
+    [data-bs-theme="dark"] .theme-toggle .theme-icon-sun {
+        display: none;
+    }
+
+    [data-bs-theme="dark"] .theme-toggle .theme-icon-moon {
+        display: inline;
+    }
+
 /* -----------------------------------------------------------------------------
    7. TRACK MY VISIT, CHAT SIDEBAR, NEWS, FEEDBACK, KITCHEN
    ----------------------------------------------------------------------------- */
@@ -1783,6 +1793,10 @@ body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admi
 body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Analytics"]),
 body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Customer/Tracking"]) { grid-column: span 2; }
 
+/* Admin: 15 tiles fill 22 cells, so the last two are wide to complete the 4-column grid (6 rows x 4 = 24). */
+body[data-page="/Index"][data-area="Admin"] .row.g-4 > :has(a[href="/Staff/Reservations/History"]),
+body[data-page="/Index"][data-area="Admin"] .row.g-4 > :has(a[href="/Admin/Feedback"]) { grid-column: span 2; }
+
 body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Restaurant"]) { --tile-img: url("../images/gilded/room-panelled.webp"); }
 body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Menu"]) { --tile-img: url("../images/gilded/plating.webp"); }
 body[data-page="/Index"]:not([data-area="Public"]) .row.g-4 > :has(a[href="/Admin/Announcements"]) { --tile-img: url("../images/gilded/bar.webp"); }
@@ -2390,6 +2404,32 @@ body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container 
         transform: none;
     }
 
+/* Light mode: the composer is a bright gold-tinted card instead of the dark panel (dark mode keeps the panel). */
+[data-bs-theme="light"] body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > form {
+    background: linear-gradient(180deg, #fffaf0 0%, #f6e7c8 100%) !important;
+    color: var(--tg-ink);
+    border: 1px solid rgba(201, 164, 92, 0.55) !important;
+    box-shadow: 0 18px 40px -24px rgba(120, 88, 30, 0.45);
+}
+
+    [data-bs-theme="light"] body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > form .form-label,
+    [data-bs-theme="light"] body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > form legend,
+    [data-bs-theme="light"] body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > form .form-text {
+        color: var(--tg-muted);
+    }
+
+    [data-bs-theme="light"] body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > form .form-control,
+    [data-bs-theme="light"] body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > form .form-select {
+        background-color: var(--tg-surface);
+        border-color: rgba(201, 164, 92, 0.5);
+        color: var(--tg-ink);
+    }
+
+    [data-bs-theme="light"] body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > form .btn-outline-primary {
+        --bs-btn-color: #7a5a1c;
+        --bs-btn-border-color: rgba(122, 90, 28, 0.5);
+    }
+
 body[data-area="Admin"][data-page="/Announcements/Index"] .site-main .container > article {
     position: relative;
     margin-left: 2.6rem;
@@ -2624,6 +2664,102 @@ body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-table {
         border-bottom: 1px dashed rgba(60, 45, 25, 0.18);
     }
 
+/* Ready to serve: compact tickets (one line per dish, Mark served and a small ✕ on one row). */
+body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-ready {
+    padding: 0.7rem 0.85rem;
+}
+
+    body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-ready .kitchen-card-row + .kitchen-card-row {
+        margin-top: 0.6rem;
+        padding-top: 0.6rem;
+        border-top: 1px solid rgba(60, 45, 25, 0.12);
+    }
+
+    body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-dishes.is-compact {
+        margin: 0.3rem 0 0.5rem;
+        padding-left: 1rem;
+        font-size: 0.9rem;
+        line-height: 1.35;
+    }
+
+        body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-dishes.is-compact li {
+            border-bottom: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+    body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-actions-compact {
+        flex-wrap: nowrap !important;
+        align-items: center;
+    }
+
+        body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-actions-compact form:has(.kitchen-cancel-x) {
+            margin-left: auto;
+        }
+
+    /* Waiting-time pill: fixed colours because the ticket is paper-white in both looks. */
+    body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-wait {
+        padding: 0.15rem 0.6rem;
+        border-radius: 999px;
+        background: #efe4d3;
+        color: #4a3b29;
+        font-size: 0.78rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+        body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-wait.is-cold {
+            background: #b8323c;
+            color: #ffffff;
+        }
+
+    body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-cancel-x {
+        width: 2rem;
+        height: 2rem;
+        padding: 0;
+        border-radius: 50%;
+        line-height: 1;
+    }
+
+/* Wide screens: each column stops at 75% of the screen and scrolls inside; its heading and count stay visible. */
+@media (min-width: 992px) {
+    body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section:not([aria-labelledby="requests-heading"]) {
+        max-height: 75vh;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-top: 0;
+        /* Scrollbar is invisible until the column is scrolled (dining-live.js adds .is-scrolling for a moment). */
+        scrollbar-width: thin;
+        scrollbar-color: transparent transparent;
+        transition: scrollbar-color 0.3s;
+    }
+
+        body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section.is-scrolling {
+            scrollbar-color: rgba(244, 238, 230, 0.4) transparent;
+        }
+
+        [data-bs-theme="light"] body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section.is-scrolling {
+            scrollbar-color: rgba(60, 45, 25, 0.35) transparent;
+        }
+
+        body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section:not([aria-labelledby="requests-heading"]) > h2 {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            margin: 0 -1rem 0.75rem;
+            padding: 1rem 1rem 0.6rem;
+            background: #1c1915; /* solid version of each column's see-through dark tint */
+        }
+
+        body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section[aria-labelledby="cooking-heading"] > h2 { background: #241811; }
+        body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section[aria-labelledby="ready-heading"] > h2 { background: #171e16; }
+
+        [data-bs-theme="light"] body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section:not([aria-labelledby="requests-heading"]) > h2 { background: var(--tg-surface); }
+        [data-bs-theme="light"] body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section[aria-labelledby="cooking-heading"] > h2 { background: #fdf0e6; }
+        [data-bs-theme="light"] body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section[aria-labelledby="ready-heading"] > h2 { background: #eaf5ee; }
+}
+
 body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-countdown {
     color: #9b3b33 !important;
 }
@@ -2642,6 +2778,58 @@ body[data-area="Staff"][data-page="/Orders/Index"] .table-request {
     body[data-area="Staff"][data-page="/Orders/Index"] .table-request .btn-outline-primary {
         --bs-btn-color: #ffffff;
         --bs-btn-border-color: rgba(255, 255, 255, 0.6);
+    }
+
+/* Light mode: the same kitchen layout on the cream page (the photo banner stays dark in both looks). */
+[data-bs-theme="light"] body[data-area="Staff"][data-page="/Orders/Index"] .site-main {
+    background: var(--tg-cream);
+    color: var(--tg-ink);
+}
+
+    [data-bs-theme="light"] body[data-area="Staff"][data-page="/Orders/Index"] .site-main > .container > :is(h1, p, .d-flex) {
+        color: var(--tg-ink);
+    }
+
+    [data-bs-theme="light"] body[data-area="Staff"][data-page="/Orders/Index"] .site-main > .container > p,
+    [data-bs-theme="light"] body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] .text-muted,
+    [data-bs-theme="light"] body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section > .text-secondary {
+        color: var(--tg-muted) !important;
+    }
+
+    [data-bs-theme="light"] body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section {
+        background: var(--tg-surface);
+        border-color: rgba(60, 45, 25, 0.12);
+        box-shadow: 0 12px 30px -22px rgba(60, 45, 25, 0.5);
+    }
+
+    [data-bs-theme="light"] body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section[aria-labelledby="cooking-heading"] {
+        background: #fdf0e6;
+        border-color: rgba(224, 106, 59, 0.35);
+    }
+
+    [data-bs-theme="light"] body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section[aria-labelledby="ready-heading"] {
+        background: #eaf5ee;
+        border-color: rgba(47, 125, 91, 0.35);
+    }
+
+    [data-bs-theme="light"] body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section[aria-labelledby="requests-heading"] {
+        background: transparent;
+        box-shadow: none;
+    }
+
+    [data-bs-theme="light"] body[data-area="Staff"][data-page="/Orders/Index"] [data-order-ids] > section h2 {
+        color: var(--tg-ink);
+    }
+
+    [data-bs-theme="light"] body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-card:not(.is-cooking),
+    [data-bs-theme="light"] body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-table {
+        background: #ffffff !important;
+    }
+
+    [data-bs-theme="light"] body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-card,
+    [data-bs-theme="light"] body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-table {
+        box-shadow: 0 8px 20px -10px rgba(60, 45, 25, 0.35);
+        border: 1px solid rgba(60, 45, 25, 0.1);
     }
 
 @keyframes tg-ring {
@@ -3201,4 +3389,199 @@ body[data-area="Admin"]:is([data-page="/Menu/Index"], [data-page="/Accounts/Inde
     box-shadow: none !important;
     --bs-table-bg-state: transparent;
     --bs-table-accent-bg: transparent;
+}
+
+/* -----------------------------------------------------------------------------
+   Menu: click a dish card to order it (Pages/Menu/Index.cshtml)
+   ----------------------------------------------------------------------------- */
+.mn-orderable {
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+    .mn-orderable:hover,
+    .mn-orderable:focus-within {
+        transform: translateY(-3px);
+        box-shadow: 0 14px 30px -18px rgba(120, 88, 30, 0.6);
+    }
+
+/* "Tap to order" pill, shown on hover or keyboard focus. */
+.mn-order-hint {
+    position: absolute;
+    top: 0.9rem;
+    right: 0.9rem;
+    z-index: 2;
+    padding: 0.3rem 0.8rem;
+    border-radius: 999px;
+    background: var(--tg-gold);
+    color: var(--tg-on-gold);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    pointer-events: none;
+}
+
+.mn-orderable:hover .mn-order-hint,
+.mn-order-link:focus-visible .mn-order-hint {
+    opacity: 1;
+    transform: none;
+}
+
+.mn-order-link:focus-visible {
+    outline: none;
+}
+
+    .mn-order-link:focus-visible::after {
+        outline: 3px solid var(--tg-gold);
+        outline-offset: 2px;
+        border-radius: inherit;
+    }
+
+/* Ordering view opened from a dish card: the table box glows and the clicked dish is outlined for a few seconds. */
+.mn-ordering-just-started {
+    border-color: var(--tg-gold) !important;
+    animation: mn-glow 1.4s ease-in-out 3;
+}
+
+.mn-just-picked {
+    outline: 3px solid var(--tg-gold);
+    outline-offset: 3px;
+}
+
+.mn-added-note {
+    padding: 0.5rem 0.8rem;
+    border-radius: 0.75rem;
+    background: rgba(201, 164, 92, 0.16);
+    color: var(--tg-ink);
+    font-size: 0.92rem;
+}
+
+@keyframes mn-glow {
+    50% { box-shadow: 0 0 0 6px rgba(201, 164, 92, 0.35); }
+}
+
+/* "Book a table first" / "Sign in to order" pop-up. */
+.mn-order-prompt {
+    height: fit-content !important; /* .tg-card fills its column elsewhere; a dialog only needs its content */
+    max-height: calc(100vh - 2rem);
+    max-width: 28rem;
+    width: calc(100% - 2rem);
+    padding: 1.6rem;
+    border: 1px solid rgba(201, 164, 92, 0.5);
+    color: var(--tg-ink);
+    background: var(--tg-surface);
+}
+
+    .mn-order-prompt::backdrop {
+        background: rgba(20, 17, 13, 0.6);
+    }
+
+@media (prefers-reduced-motion: reduce) {
+    .mn-orderable,
+    .mn-order-hint { transition: none; }
+
+    .mn-ordering-just-started { animation: none; }
+}
+
+/* Menu: "Popular this month" cards jump down to the dish's card, which is highlighted for a moment. */
+.mn-suggest-link {
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+    .mn-suggest-link:hover,
+    .mn-suggest-link:focus-within {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 26px -18px rgba(120, 88, 30, 0.6);
+    }
+
+.mn-jump-highlight,
+.tg-card[id^="dish-"]:target {
+    outline: 3px solid var(--tg-gold);
+    outline-offset: 3px;
+    animation: mn-glow 0.9s ease-in-out 3;
+}
+
+/* Keep the jumped-to card clear of the top edge when the browser scrolls to #dish-N without JavaScript. */
+.tg-card[id^="dish-"] {
+    scroll-margin-top: 6rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mn-suggest-link { transition: none; }
+    .mn-jump-highlight,
+    .tg-card[id^="dish-"]:target { animation: none; }
+}
+
+/* Menu: "Scroll to top" button, stacked just above the "Ask Three Grills" chat button (bottom-right). */
+.mn-scroll-top {
+    position: fixed;
+    right: 1rem;
+    bottom: 4.4rem; /* chat button: 1rem from the bottom, about 2.75rem tall */
+    z-index: 1030;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    border: 1px solid rgba(201, 164, 92, 0.6);
+    border-radius: 50%;
+    background: var(--tg-night);
+    color: var(--tg-gold-soft);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(8px);
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+}
+
+    .mn-scroll-top.is-visible {
+        opacity: 1;
+        visibility: visible;
+        transform: none;
+    }
+
+    .mn-scroll-top:hover,
+    .mn-scroll-top:focus-visible {
+        background: var(--tg-gold);
+        color: var(--tg-on-gold);
+    }
+
+    .mn-scroll-top:focus-visible {
+        outline: 3px solid var(--tg-gold-soft);
+        outline-offset: 2px;
+    }
+
+    /* Ordering view: the chat button is lifted above the order bar (bottom 4.75rem), so lift this one too. */
+    .mn-scroll-top.is-ordering {
+        bottom: 9.2rem;
+    }
+
+@media (prefers-reduced-motion: reduce) {
+    .mn-scroll-top { transition: none; }
+}
+
+/* Menu: "Find a dish" stays at the top of the screen while the dish list scrolls (plain menu only).
+   Tablet width and up: on a phone the stacked fields would cover most of the screen. */
+@media (min-width: 768px) {
+    .mn-filter-sticky {
+        position: sticky;
+        top: 0.75rem;
+        z-index: 1020; /* above the dish cards, below the chat button and dialogs */
+        box-shadow: 0 16px 34px -22px rgba(20, 17, 13, 0.55);
+    }
+
+        .mn-filter-sticky .form-label,
+        .mn-filter-sticky legend {
+            margin-bottom: 0.2rem;
+        }
+}
+
+/* Cards jumped to from "Popular this month" or #dish-N must land below the stuck filter box. */
+body[data-page="/Menu/Index"] .tg-card[id^="dish-"] {
+    scroll-margin-top: 15rem;
 }
