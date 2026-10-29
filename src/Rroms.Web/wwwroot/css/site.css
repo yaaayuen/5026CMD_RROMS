@@ -309,7 +309,8 @@ h5, h6, .h5, .h6 {
 .text-bg-info { background-color: #dfe8f4 !important; color: #2f507c !important; }
 .text-bg-primary { background-color: var(--tg-raspberry) !important; color: var(--tg-on-brand) !important; }
 .text-bg-light { background-color: var(--tg-blush) !important; color: var(--tg-ink) !important; }
-.text-bg-dark { background-color: var(--tg-night) !important; color: var(--tg-on-brand) !important; }
+/* --tg-night is dark in both looks, so the text keeps the light gold (--tg-on-brand turns dark in dark mode). */
+.text-bg-dark { background-color: var(--tg-night) !important; color: #f1dba6 !important; }
 
 .alert {
     border-radius: 1rem;
@@ -558,6 +559,11 @@ code {
         height: 1px;
         background-color: currentColor;
     }
+
+/* The receipt heading sits on the card, not a dark banner, so it uses the darker gold text colour. */
+.receipt-heading .eyebrow {
+    color: var(--tg-link);
+}
 
 .script {
     font-family: var(--tg-font-script);
@@ -1459,8 +1465,10 @@ input[type="password"]::-ms-clear {
     letter-spacing: 0.15rem;
 }
 
+/* Empty stars must still read as stars, so a 3-star review does not look like 3 out of 3. */
 .review-stars-off {
-    color: var(--tg-line);
+    color: var(--tg-muted);
+    opacity: 0.45;
 }
 
 .review-reply {
@@ -2069,6 +2077,8 @@ body[data-area="Admin"][data-page="/Accounts/Index"] table tr {
         body[data-area="Admin"][data-page="/Accounts/Index"] table td:nth-child(6) { grid-area: edit; text-align: left !important; margin-top: 0.6rem; }
         body[data-area="Admin"][data-page="/Accounts/Index"] table td[colspan] { grid-column: 1 / -1; }
 
+/* Outside the dark navbar the pale gold chip is too faint on cream (My profile, Accounts). */
+main .role-chip,
 body[data-area="Admin"][data-page="/Accounts/Index"] .role-chip {
     color: var(--tg-link);
     border-color: rgba(154, 115, 48, 0.5);
@@ -2671,13 +2681,19 @@ body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-table {
 
 /* Ready to serve: compact tickets (one line per dish, Mark served and a small ✕ on one row). */
 body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-ready {
-    padding: 0.7rem 0.85rem;
+    padding: 0.7rem 1.1rem; /* same side padding as the Served cards */
 }
 
     body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-ready .kitchen-card-row + .kitchen-card-row {
         margin-top: 0.6rem;
         padding-top: 0.6rem;
         border-top: 1px solid rgba(60, 45, 25, 0.12);
+    }
+
+    /* A late order is a plain row like Served (the red minutes pill shows it is late), not a box inside the table card. */
+    body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-table .kitchen-card-row.is-late {
+        border-left: 0;
+        box-shadow: none;
     }
 
     body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-dishes.is-compact {
@@ -2687,11 +2703,10 @@ body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-ready {
         line-height: 1.35;
     }
 
+        /* Long dish names wrap instead of being cut off, so staff can read the whole dish. */
         body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-dishes.is-compact li {
             border-bottom: 0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            overflow-wrap: anywhere;
         }
 
     body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-actions-compact {
@@ -2701,6 +2716,10 @@ body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-ready {
 
         body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-actions-compact form:has(.kitchen-cancel-x) {
             margin-left: auto;
+        }
+
+        body[data-area="Staff"][data-page="/Orders/Index"] .kitchen-actions-compact .btn {
+            white-space: nowrap;
         }
 
     /* Waiting-time pill: fixed colours because the ticket is paper-white in both looks. */
@@ -2848,12 +2867,30 @@ body[data-area="Staff"][data-page="/Orders/Index"] .table-request {
 /* ----- 8.10 Staff: the table bill looks like a till receipt next to a dark payment panel ----- */
 body[data-area="Staff"]:is([data-page="/Billing/Visit"], [data-page="/Billing/Details"]) .billing-columns > section:first-child {
     position: relative;
-    background: #fffdf8 !important;
+    --tg-paper: #fffdf8;
+    background: var(--tg-paper) !important;
     color: #221c15;
+    /* The paper stays light in dark mode, so its text keeps the light-theme ink. */
+    --tg-ink: #221c15;
+    --tg-muted: #675b4d;
+    --tg-line: rgba(90, 70, 40, 0.14);
     border-radius: 0.5rem;
     border: 0;
     box-shadow: 0 20px 50px rgba(70, 50, 25, 0.18);
     padding: 2rem 2rem 2.6rem;
+}
+
+/* Bootstrap's yellow warning text vanishes on the paper ("Order #… is still … in the kitchen"). */
+body[data-area="Staff"]:is([data-page="/Billing/Visit"], [data-page="/Billing/Details"]) .billing-columns > section:first-child .text-warning {
+    color: #6a3d00 !important;
+}
+
+/* Dark mode: a dimmer paper so the bill does not glare next to the dark panel. */
+[data-bs-theme="dark"] body[data-area="Staff"]:is([data-page="/Billing/Visit"], [data-page="/Billing/Details"]) .billing-columns > section:first-child {
+    --tg-paper: #c8bfad;
+    --tg-muted: #3f362c;
+    --tg-line: rgba(50, 35, 20, 0.28);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
 }
 
     body[data-area="Staff"]:is([data-page="/Billing/Visit"], [data-page="/Billing/Details"]) .billing-columns > section:first-child::after {
@@ -2863,7 +2900,7 @@ body[data-area="Staff"]:is([data-page="/Billing/Visit"], [data-page="/Billing/De
         right: 0;
         bottom: -10px;
         height: 20px;
-        background: radial-gradient(circle at 10px 0, #fffdf8 9px, transparent 9.5px) repeat-x;
+        background: radial-gradient(circle at 10px 0, var(--tg-paper) 9px, transparent 9.5px) repeat-x;
         background-size: 20px 20px;
     }
 
@@ -3678,7 +3715,8 @@ body[data-page="/Menu/Index"] .tg-card[id^="dish-"] {
 .fp-areas a { padding: 6px 16px; border-radius: 999px; border: 1px solid rgba(201, 164, 92, 0.45); text-decoration: none; color: inherit; }
 .fp-areas a.is-current { background: var(--tg-gold); border-color: var(--tg-gold); color: var(--tg-on-gold); }
 .fp-editor { display: grid; grid-template-columns: minmax(0, 1fr) 17rem; gap: 1rem; align-items: start; }
-@media (max-width: 991.98px) { .fp-editor { grid-template-columns: minmax(0, 1fr); } }
+/* The side panel moves under the map until the screen is wide enough for both (a laptop squeezed the map). */
+@media (max-width: 1399.98px) { .fp-editor { grid-template-columns: minmax(0, 1fr); } }
 .fp-toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
 .fp-status { color: var(--tg-muted); }
 .fp-status.is-dirty { color: var(--tg-ink); font-weight: 600; }
@@ -3691,6 +3729,7 @@ body[data-page="/Menu/Index"] .tg-card[id^="dish-"] {
 .fp-map .is-edit.is-inactive .fp-sub { fill: var(--tg-muted); }
 .fp-map .is-edit.is-bad .fp-top { stroke: #b8323c; stroke-width: 0.16; }
 .fp-palette { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
+@media (max-width: 1399.98px) { .fp-palette { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .fp-palette button { display: grid; justify-items: center; gap: 4px; padding: 0.6rem 0.25rem; border-radius: 0.75rem; border: 1px dashed rgba(201, 164, 92, 0.6); background: none; color: inherit; font-size: 0.85rem; }
 .fp-palette button:hover { border-style: solid; border-color: var(--tg-gold); }
 .fp-palette-shape { display: block; background: var(--tg-gold); border-radius: 4px; height: 18px; }
