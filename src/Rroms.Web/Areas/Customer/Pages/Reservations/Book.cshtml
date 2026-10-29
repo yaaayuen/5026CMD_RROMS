@@ -102,6 +102,26 @@
 				<input type="hidden" name="Search.Time" value="@Model.Search.Time.ToString("HH:mm")" />
 				<input type="hidden" name="Search.PartySize" value="@Model.Search.PartySize" />
 
+				@* Floor plan (Alex, Part 20): click a gold table to pick it. It sets the same radio buttons as the list below. *@
+				@if (Model.FloorPlanJson != null)
+				{
+					<div class="fp-pick mb-3" data-floor-plan="pick" data-source="floorPlanData" data-input="DiningTableId">
+						<div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+							<div class="fp-area-tabs" data-areas role="group" aria-label="Dining areas"></div>
+							<p class="fp-summary mb-0 ms-auto" data-summary aria-live="polite"></p>
+						</div>
+						<div class="fp-mapbox"><svg class="fp-map" id="bookMap" role="radiogroup" aria-label="Floor plan: choose a table"></svg></div>
+						<ul class="fp-legend list-unstyled small mb-0 mt-2">
+							<li><span class="fp-key is-free" aria-hidden="true"></span>Free for your group</li>
+							<li><span class="fp-key is-best" aria-hidden="true">★</span>Best fit</li>
+							<li><span class="fp-key is-small" aria-hidden="true"></span>Too small for your group</li>
+							<li><span class="fp-key is-taken" aria-hidden="true"></span>Already booked</li>
+						</ul>
+					</div>
+					<script type="application/json" id="floorPlanData">@Html.Raw(Model.FloorPlanJson)</script>
+					<p class="small text-secondary mb-2">Or choose from the list:</p>
+				}
+
 				<div class="list-group mb-3">
 					@for (int i = 0; i < Model.Results.Count; i++)
 					{
@@ -135,3 +155,10 @@
 }
 
 <p class="mt-4"><a asp-page="Index">See my reservations</a></p>
+
+@section Scripts {
+	@if (Model.FloorPlanJson != null)
+	{
+		<script src="~/js/floor-plan.js" asp-append-version="true"></script>
+	}
+}

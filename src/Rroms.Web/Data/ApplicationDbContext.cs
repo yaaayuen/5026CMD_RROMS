@@ -78,6 +78,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ChatQuestionLog> ChatQuestionLogs => Set<ChatQuestionLog>();
     public DbSet<TableRequest> TableRequests => Set<TableRequest>();
     public DbSet<DishRating> DishRatings => Set<DishRating>();
+    // Part 20: floor plan (table positions, area sizes, bar/kitchen/doors)
+    public DbSet<TablePlacement> TablePlacements => Set<TablePlacement>();
+    public DbSet<FloorArea> FloorAreas => Set<FloorArea>();
+    public DbSet<FloorFeature> FloorFeatures => Set<FloorFeature>();
 
     // ----- Sprint 5 (Darren): payments -----
 
@@ -162,6 +166,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         // YJ (Sprint 3): order rules
         OrderConfiguration.Configure(builder);
         DiningExperienceConfiguration.Configure(builder);
+        FloorPlanConfiguration.Configure(builder);
 
         // ----- Sprint 5 (Darren): payment safeguards (DA-1) -----
         PaymentConfiguration.Configure(builder);

@@ -3590,3 +3590,114 @@ body[data-area="Admin"]:is([data-page="/Menu/Index"], [data-page="/Accounts/Inde
 body[data-page="/Menu/Index"] .tg-card[id^="dish-"] {
     scroll-margin-top: 15rem;
 }
+
+/* -----------------------------------------------------------------------------
+   Floor plan (Alex, Part 20): Book a table picker and the admin layout editor (floor-plan.js)
+   ----------------------------------------------------------------------------- */
+.fp-map {
+    --fp-floor: #ece2d1;
+    --fp-wall: #3b3127;
+    --fp-block: #d9cab0;
+    --fp-block-ink: #5a4a36;
+    --fp-chair: #b9a88d;
+    --fp-taken: #4a4038;
+    --fp-grid: rgba(60, 45, 25, 0.08);
+    display: block;
+    width: 100%;
+    min-width: 520px;
+    height: auto;
+    max-height: 30rem; /* the plan scales to fit; a wide screen must not blow it up to full width */
+    touch-action: none;
+    user-select: none;
+    font-family: var(--tg-font-body, inherit);
+}
+
+[data-bs-theme="dark"] .fp-map {
+    --fp-floor: #1f1b17;
+    --fp-wall: #c9bba6;
+    --fp-block: #2e2720;
+    --fp-block-ink: #c9bba6;
+    --fp-chair: #5c5145;
+    --fp-taken: #4f463d;
+    --fp-grid: rgba(244, 238, 230, 0.06);
+}
+
+.fp-mapbox { overflow-x: auto; border-radius: 0.75rem; }
+.fp-map .fp-floor { fill: var(--fp-floor); }
+.fp-map .fp-wall { fill: none; stroke: var(--fp-wall); stroke-width: 0.18; }
+.fp-map .fp-grid line { stroke: var(--fp-grid); stroke-width: 0.03; }
+.fp-map .fp-window { stroke: var(--tg-gold); stroke-width: 0.35; }
+.fp-map .fp-door { stroke: var(--fp-floor); stroke-width: 0.4; }
+.fp-map .fp-block { fill: var(--fp-block); }
+.fp-map .fp-block-label { fill: var(--fp-block-ink); font-weight: 500; }
+.fp-map .fp-note { fill: var(--tg-muted); font-weight: 500; }
+.fp-map .fp-taken-bg { fill: var(--fp-taken); }
+.fp-map .fp-taken-stripe { stroke: #f4eee6; stroke-opacity: 0.25; stroke-width: 0.18; }
+.fp-map .fp-chair { fill: var(--fp-chair); }
+.fp-map .fp-label { font-weight: 600; fill: var(--tg-ink); }
+.fp-map .fp-sub { fill: var(--tg-ink); }
+.fp-map .fp-best { fill: var(--tg-surface); stroke: var(--tg-gold); stroke-width: 0.08; }
+.fp-map .fp-best-star { fill: var(--tg-gold); }
+.fp-map .fp-table:focus { outline: none; }
+.fp-map .fp-table:focus-visible .fp-top { stroke: var(--tg-gold); stroke-width: 0.18; }
+
+/* Book a table: free (gold), too small (hollow, dashed), taken (striped dark), selected (darker gold, outlined). */
+.fp-map .is-free { cursor: pointer; }
+.fp-map .is-free .fp-top { fill: var(--tg-gold); }
+.fp-map .is-free .fp-label,
+.fp-map .is-free .fp-sub { fill: var(--tg-on-gold); }
+.fp-map .is-free:hover .fp-top { fill: var(--tg-gold-soft); }
+.fp-map .is-free.is-selected .fp-top { fill: #8a6a2a; stroke: var(--tg-ink); stroke-width: 0.14; }
+.fp-map .is-free.is-selected .fp-label,
+.fp-map .is-free.is-selected .fp-sub { fill: #fffcf7; }
+.fp-map .is-small .fp-top { fill: var(--fp-floor); stroke: var(--tg-muted); stroke-width: 0.07; stroke-dasharray: 0.25 0.18; }
+.fp-map .is-small .fp-chair { fill-opacity: 0.35; }
+.fp-map .is-small .fp-label,
+.fp-map .is-small .fp-sub { fill: var(--tg-muted); }
+.fp-map .is-taken .fp-chair { fill: var(--fp-taken); }
+.fp-map .is-taken .fp-label,
+.fp-map .is-taken .fp-sub { fill: #f4eee6; }
+.fp-map .is-small,
+.fp-map .is-taken { cursor: not-allowed; }
+.fp-map .fp-sub { font-weight: 500; }
+
+.fp-area-tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px; border: 1px solid rgba(201, 164, 92, 0.4); }
+.fp-area-tabs button { border: 0; background: none; padding: 4px 14px; border-radius: 999px; font-size: 0.9rem; color: inherit; }
+.fp-area-tabs button[aria-pressed="true"] { background: var(--tg-gold); color: var(--tg-on-gold); }
+.fp-summary { font-weight: 600; }
+.fp-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.fp-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.fp-key { width: 16px; height: 16px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; }
+.fp-key.is-free { background: var(--tg-gold); }
+.fp-key.is-best { border: 1.5px solid var(--tg-gold); color: var(--tg-gold); border-radius: 50%; }
+.fp-key.is-small { border: 2px dashed var(--tg-muted); }
+.fp-key.is-taken { background: repeating-linear-gradient(45deg, #4a4038 0 4px, #6b6058 4px 6px); }
+
+/* Admin editor */
+.fp-areas { display: flex; flex-wrap: wrap; gap: 6px; }
+.fp-areas a { padding: 6px 16px; border-radius: 999px; border: 1px solid rgba(201, 164, 92, 0.45); text-decoration: none; color: inherit; }
+.fp-areas a.is-current { background: var(--tg-gold); border-color: var(--tg-gold); color: var(--tg-on-gold); }
+.fp-editor { display: grid; grid-template-columns: minmax(0, 1fr) 17rem; gap: 1rem; align-items: start; }
+@media (max-width: 991.98px) { .fp-editor { grid-template-columns: minmax(0, 1fr); } }
+.fp-toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
+.fp-status { color: var(--tg-muted); }
+.fp-status.is-dirty { color: var(--tg-ink); font-weight: 600; }
+.fp-map.is-editing .fp-table { cursor: grab; }
+.fp-map.is-editing .fp-table.is-dragging { cursor: grabbing; }
+.fp-map .is-edit .fp-top { fill: var(--tg-surface); stroke: rgba(60, 45, 25, 0.25); stroke-width: 0.06; }
+.fp-map .is-edit.is-selected .fp-top { stroke: var(--tg-gold); stroke-width: 0.16; }
+.fp-map .is-edit.is-inactive .fp-top { fill: transparent; stroke-dasharray: 0.25 0.18; }
+.fp-map .is-edit.is-inactive .fp-label,
+.fp-map .is-edit.is-inactive .fp-sub { fill: var(--tg-muted); }
+.fp-map .is-edit.is-bad .fp-top { stroke: #b8323c; stroke-width: 0.16; }
+.fp-palette { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
+.fp-palette button { display: grid; justify-items: center; gap: 4px; padding: 0.6rem 0.25rem; border-radius: 0.75rem; border: 1px dashed rgba(201, 164, 92, 0.6); background: none; color: inherit; font-size: 0.85rem; }
+.fp-palette button:hover { border-style: solid; border-color: var(--tg-gold); }
+.fp-palette-shape { display: block; background: var(--tg-gold); border-radius: 4px; height: 18px; }
+.fp-palette-2 { width: 18px; border-radius: 50%; }
+.fp-palette-4 { width: 22px; height: 22px; }
+.fp-palette-6 { width: 32px; }
+.fp-palette-8 { width: 42px; }
+.fp-message { margin: 0.75rem 0 0; padding: 0.5rem 0.75rem; border-left: 3px solid #2f7d5b; border-radius: 0 0.5rem 0.5rem 0; background: rgba(47, 125, 91, 0.08); }
+.fp-message.is-bad { border-left-color: #b8323c; background: rgba(184, 50, 60, 0.08); }
+.fp-props { display: grid; gap: 0.35rem; }

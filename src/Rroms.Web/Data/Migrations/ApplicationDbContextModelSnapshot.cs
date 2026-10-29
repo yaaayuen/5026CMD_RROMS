@@ -674,6 +674,161 @@ namespace Rroms.Web.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Rroms.Web.Models.FloorArea", b =>
+                {
+                    b.Property<int>("DiningAreaId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Height")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Width")
+                        .HasColumnType("int");
+
+                    b.HasKey("DiningAreaId");
+
+                    b.ToTable("FloorAreas", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_FloorAreas_Size", "[Width] BETWEEN 8 AND 60 AND [Height] BETWEEN 8 AND 60");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            DiningAreaId = 1,
+                            Height = 15,
+                            Width = 24
+                        },
+                        new
+                        {
+                            DiningAreaId = 2,
+                            Height = 10,
+                            Width = 16
+                        });
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.FloorFeature", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DiningAreaId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Height")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int>("Width")
+                        .HasColumnType("int");
+
+                    b.Property<int>("X")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Y")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DiningAreaId");
+
+                    b.ToTable("FloorFeatures", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_FloorFeatures_Size", "[X] >= 0 AND [Y] >= 0 AND [Width] >= 0 AND [Height] >= 0");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            DiningAreaId = 1,
+                            Height = 8,
+                            Kind = "Block",
+                            Label = "Bar",
+                            Width = 3,
+                            X = 0,
+                            Y = 0
+                        },
+                        new
+                        {
+                            Id = 2,
+                            DiningAreaId = 1,
+                            Height = 5,
+                            Kind = "Block",
+                            Label = "Kitchen",
+                            Width = 6,
+                            X = 18,
+                            Y = 0
+                        },
+                        new
+                        {
+                            Id = 3,
+                            DiningAreaId = 1,
+                            Height = 0,
+                            Kind = "Window",
+                            Label = "Windows",
+                            Width = 14,
+                            X = 3,
+                            Y = 0
+                        },
+                        new
+                        {
+                            Id = 4,
+                            DiningAreaId = 1,
+                            Height = 0,
+                            Kind = "Door",
+                            Label = "Entrance",
+                            Width = 4,
+                            X = 10,
+                            Y = 15
+                        },
+                        new
+                        {
+                            Id = 5,
+                            DiningAreaId = 1,
+                            Height = 3,
+                            Kind = "Door",
+                            Label = "To patio",
+                            Width = 0,
+                            X = 24,
+                            Y = 9
+                        },
+                        new
+                        {
+                            Id = 6,
+                            DiningAreaId = 2,
+                            Height = 1,
+                            Kind = "Block",
+                            Label = "Planters",
+                            Width = 16,
+                            X = 0,
+                            Y = 0
+                        },
+                        new
+                        {
+                            Id = 7,
+                            DiningAreaId = 2,
+                            Height = 3,
+                            Kind = "Door",
+                            Label = "From hall",
+                            Width = 0,
+                            X = 0,
+                            Y = 4
+                        });
+                });
+
             modelBuilder.Entity("Rroms.Web.Models.KitchenStatus", b =>
                 {
                     b.Property<int>("Id")
@@ -1558,6 +1713,88 @@ namespace Rroms.Web.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Rroms.Web.Models.TablePlacement", b =>
+                {
+                    b.Property<int>("DiningTableId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Rotation")
+                        .HasColumnType("int");
+
+                    b.Property<int>("X")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Y")
+                        .HasColumnType("int");
+
+                    b.HasKey("DiningTableId");
+
+                    b.ToTable("TablePlacements", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_TablePlacements_Position", "[X] >= 0 AND [Y] >= 0");
+
+                            t.HasCheckConstraint("CK_TablePlacements_Rotation", "[Rotation] IN (0, 90)");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            DiningTableId = 1,
+                            Rotation = 0,
+                            X = 3,
+                            Y = 11
+                        },
+                        new
+                        {
+                            DiningTableId = 2,
+                            Rotation = 0,
+                            X = 7,
+                            Y = 11
+                        },
+                        new
+                        {
+                            DiningTableId = 3,
+                            Rotation = 0,
+                            X = 4,
+                            Y = 2
+                        },
+                        new
+                        {
+                            DiningTableId = 4,
+                            Rotation = 0,
+                            X = 9,
+                            Y = 2
+                        },
+                        new
+                        {
+                            DiningTableId = 5,
+                            Rotation = 0,
+                            X = 12,
+                            Y = 7
+                        },
+                        new
+                        {
+                            DiningTableId = 6,
+                            Rotation = 0,
+                            X = 18,
+                            Y = 11
+                        },
+                        new
+                        {
+                            DiningTableId = 7,
+                            Rotation = 0,
+                            X = 3,
+                            Y = 3
+                        },
+                        new
+                        {
+                            DiningTableId = 8,
+                            Rotation = 0,
+                            X = 8,
+                            Y = 3
+                        });
+                });
+
             modelBuilder.Entity("Rroms.Web.Models.TableRequest", b =>
                 {
                     b.Property<int>("Id")
@@ -1749,6 +1986,28 @@ namespace Rroms.Web.Data.Migrations
                     b.Navigation("Reservation");
                 });
 
+            modelBuilder.Entity("Rroms.Web.Models.FloorArea", b =>
+                {
+                    b.HasOne("Rroms.Web.Models.DiningArea", "DiningArea")
+                        .WithOne()
+                        .HasForeignKey("Rroms.Web.Models.FloorArea", "DiningAreaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DiningArea");
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.FloorFeature", b =>
+                {
+                    b.HasOne("Rroms.Web.Models.DiningArea", "DiningArea")
+                        .WithMany()
+                        .HasForeignKey("DiningAreaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DiningArea");
+                });
+
             modelBuilder.Entity("Rroms.Web.Models.KitchenTicket", b =>
                 {
                     b.HasOne("Rroms.Web.Models.Order", "Order")
@@ -1901,6 +2160,17 @@ namespace Rroms.Web.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Reservation");
+                });
+
+            modelBuilder.Entity("Rroms.Web.Models.TablePlacement", b =>
+                {
+                    b.HasOne("Rroms.Web.Models.DiningTable", "DiningTable")
+                        .WithOne()
+                        .HasForeignKey("Rroms.Web.Models.TablePlacement", "DiningTableId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DiningTable");
                 });
 
             modelBuilder.Entity("Rroms.Web.Models.TableRequest", b =>

@@ -1,0 +1,83 @@
+@page
+@model LayoutModel
+@{
+	ViewData["Title"] = "Floor plan";
+}
+
+<section class="hero hero-compact mb-4" aria-labelledby="layout-heading">
+	<span class="hero-bubble one" aria-hidden="true"></span>
+	<div class="position-relative">
+		<span class="eyebrow">Restaurant setup</span>
+		<h1 id="layout-heading" class="mb-1">Floor plan</h1>
+		<p class="lead mb-0">Drag tables into place. Customers see this plan when they choose a table.</p>
+	</div>
+</section>
+
+<div class="row g-4">
+	<div class="col-lg-3">
+		<div class="sticky-lg-top" style="top: 1.5rem;">
+			<partial name="_RestaurantNav" model='"Layout"' />
+		</div>
+	</div>
+
+	<div class="col-lg-9">
+		<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+		@if (Model.Area == null)
+		{
+			<p>Add a dining area first, on the <a asp-page="/Restaurant/Areas">Dining areas</a> page.</p>
+		}
+		else
+		{
+			<nav class="fp-areas mb-3" aria-label="Dining areas">
+				@foreach (var area in Model.Areas)
+				{
+					<a class="@(area.Id == Model.Area.Id ? "is-current" : null)" aria-current="@(area.Id == Model.Area.Id ? "page" : null)"
+					   asp-page="/Restaurant/Layout" asp-route-areaId="@area.Id">@area.Name@(area.IsActive ? "" : " (closed)")</a>
+				}
+			</nav>
+
+			<form method="post" asp-route-areaId="@Model.Area.Id">
+				<input type="hidden" name="LayoutJson" />
+				<div class="fp-editor" data-floor-plan="edit" data-source="layoutData" data-other-labels="@Model.OtherLabels">
+					<div class="fp-editor-main tg-card h-auto">
+						<div class="fp-toolbar">
+							<button type="button" class="btn btn-outline-primary btn-sm" data-undo>Undo</button>
+							<button type="button" class="btn btn-outline-primary btn-sm" data-redo>Redo</button>
+							<button type="button" class="btn btn-outline-primary btn-sm" data-rotate>Turn 90°</button>
+							<button type="button" class="btn btn-outline-danger btn-sm" data-remove title="Only tables added since the last save can be removed">Remove new table</button>
+							<button type="submit" class="btn btn-primary btn-sm ms-auto" data-save>Save layout</button>
+						</div>
+						<p class="fp-status small mb-2" data-status role="status">All changes saved</p>
+						<div class="fp-mapbox"><svg class="fp-map is-editing" id="layoutMap" role="group" aria-label="Floor plan of @Model.Area.Name"></svg></div>
+						<p class="small text-secondary mb-0 mt-2">
+							Drag a table to move it; it snaps to the grid (one box = 0.5 m). Arrow keys move the selected table and R turns it.
+							Tables may stand against a wall, the bar or the kitchen, but two tables need one clear box between them.
+						</p>
+					</div>
+
+					<aside class="fp-editor-side tg-card h-auto">
+						<h2 class="h5">Add a table</h2>
+						<div class="fp-palette">
+							@foreach (int seats in new[] { 2, 4, 6, 8 })
+							{
+								<button type="button" data-add="@seats" aria-label="Add a @seats-seat table">
+									<span class="fp-palette-shape fp-palette-@seats" aria-hidden="true"></span>@seats seats
+								</button>
+							}
+						</div>
+						<p class="fp-message small" data-message role="status" hidden></p>
+						<h2 class="h5 mt-3">Selected table</h2>
+						<div data-props></div>
+					</aside>
+				</div>
+			</form>
+
+			<script type="application/json" id="layoutData">@Html.Raw(Model.AreaJson)</script>
+		}
+	</div>
+</div>
+
+@section Scripts {
+	<script src="~/js/floor-plan.js" asp-append-version="true"></script>
+}
