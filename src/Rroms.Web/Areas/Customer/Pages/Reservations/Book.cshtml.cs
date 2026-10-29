@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Options;
@@ -23,14 +24,17 @@ public class BookModel : PageModel
     private readonly IReservationService _reservationService;
     private readonly IRestaurantService _restaurantService;
     private readonly ReservationRulesOptions _rules;
+    private readonly IFloorPlanService _floorPlan;
 
     /// <summary>Receives the booking service, the restaurant set-up and the booking rules from dependency injection.</summary>
     /// <param name="reservationService">Availability search and booking.</param>
     /// <param name="restaurantService">Bookable tables, used to find the largest table when nothing fits.</param>
     /// <param name="rules">Party size limits and booking window, used for the form's min/max.</param>
+    /// <param name="floorPlan">The floor plan shown above the free tables (Alex, Part 20).</param>
     public BookModel(IReservationService reservationService, IRestaurantService restaurantService,
-        IOptions<ReservationRulesOptions> rules)
+        IOptions<ReservationRulesOptions> rules, IFloorPlanService floorPlan)
     {
+        _floorPlan = floorPlan;
         _reservationService = reservationService;
         _restaurantService = restaurantService;
         _rules = rules.Value;
@@ -57,6 +61,12 @@ public class BookModel : PageModel
 
     /// <summary>Free tables, or null when no search has been run yet.</summary>
     public IReadOnlyList<AvailableTable>? Results { get; private set; }
+
+    /// <summary>
+    /// The floor plan with each table marked Free, Small (too few seats) or Taken, as JSON for floor-plan.js.
+    /// Only filled when some table is free (Alex, Part 20).
+    /// </summary>
+    public string? FloorPlanJson { get; private set; }
 
     /// <summary>
     /// When nothing is free at the chosen time: other start times on the same day that still have a table
@@ -184,6 +194,10 @@ public class BookModel : PageModel
             {
                 await FindAlternativesAsync();
             }
+            else
+            {
+                await LoadFloorPlanAsync();
+            }
         }
         else
         {
@@ -192,5 +206,19 @@ public class BookModel : PageModel
                 ModelState.AddModelError(string.Empty, error);
             }
         }
+    }
+
+    /// <summary>Marks every bookable table on the plan: free (in the search results), too small, or taken at this time.</summary>
+    private async Task LoadFloorPlanAsync()
+    {
+        FloorPlanView plan = await _floorPlan.GetFloorPlanAsync(includeInactive: false);
+        HashSet<int> free = Results!.Select(t => t.DiningTableId).ToHashSet();
+        foreach (FloorTableView table in plan.Areas.SelectMany(a => a.Tables))
+        {
+            table.State = free.Contains(table.Id) ? "Free" : table.Capacity < Search.PartySize ? "Small" : "Taken";
+        }
+
+        plan.Areas.RemoveAll(a => a.Tables.Count == 0);
+        FloorPlanJson = JsonSerializer.Serialize(plan, new JsonSerializerOptions(JsonSerializerDefaults.Web));
     }
 }

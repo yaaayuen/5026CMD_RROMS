@@ -197,6 +197,7 @@ builder.Services.Configure<KitchenOptions>(builder.Configuration.GetSection(Kitc
 builder.Services.AddHostedService<KitchenScheduler>();
 builder.Services.AddScoped<IKitchenInsightsService, KitchenInsightsService>();
 builder.Services.AddScoped<ITableRequestService, TableRequestService>();
+builder.Services.AddScoped<IFloorPlanService, FloorPlanService>(); // Alex, Part 20: floor plan
 
 // ----- Sprint 5 (Darren): billing and receipts (DA-1) -----
 builder.Services.AddSingleton<IPaymentTerminal>(
