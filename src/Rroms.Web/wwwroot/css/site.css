@@ -1645,6 +1645,11 @@ body[data-area="Admin"][data-page="/Monitoring/Reservations"] { --hero-img: url(
 body[data-area="Admin"][data-page="/Monitoring/Transactions"] { --hero-img: url("../images/gilded/payment.webp"); }
 body[data-area="Admin"][data-page^="/Feedback"] { --hero-img: url("../images/gilded/guests.webp"); }
 
+/* YY: one shared grill photo for every page banner (consistent look) */
+body {
+    --hero-img: url("../images/tiles-grill.webp") !important;
+}
+
 /* ----- 8.2 Role dashboards as a "bento" grid of photo, gold, dark and cream tiles ----- */
 body[data-page="/Index"]:is([data-area="Admin"], [data-area="Staff"], [data-area="Customer"]) .site-main .row.g-4 {
     display: grid;
