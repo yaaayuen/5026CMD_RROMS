@@ -37,7 +37,7 @@
         @foreach (var row in Model.Results.Rows)
         {
             <tr><td>#@row.Id / #@row.OrderId</td><td>@row.CustomerName<br />Recorded by: @row.StaffName</td><td>@MalaysiaTime.FromUtc(row.PaidAtUtc).ToString("dd MMM yyyy HH:mm")</td>
-<td>@row.Method @if (row.Method == PaymentMethod.SimulatedOnline) { <span class="badge text-bg-warning">Demo — no real payment processed</span> }</td>
+<td>@Money.Method(row.Method) @if (row.Method == PaymentMethod.SimulatedOnline) { <span class="badge text-bg-warning">Demo — no real payment processed</span> }</td>
 <td><span class="tg-status @(row.Status switch { PaymentStatus.Paid => "is-confirmed", PaymentStatus.Voided => "is-cancelled", _ => "is-pending" })">@row.Status</span> @if(row.RefundStatus.HasValue) { <small class="d-block">Refund: @row.RefundStatus</small> } @if(row.Status == PaymentStatus.Voided) { <small class="d-block">@row.VoidReason</small><small class="d-block">By: @row.VoidedById</small>@if(row.VoidedAtUtc.HasValue) { <small class="d-block">@MalaysiaTime.FromUtc(row.VoidedAtUtc.Value).ToString("dd MMM yyyy HH:mm")</small> } }</td><td>@row.Amount.ToString("N2")</td><td>
 @if (row.Status == PaymentStatus.Paid || row.Status == PaymentStatus.Voided) { <a asp-area="Staff" asp-page="/Billing/Receipt" asp-route-id="@row.Id">Receipt</a><br /> }
 <a asp-area="Staff" asp-page="/Billing/Details" asp-route-id="@row.OrderId">Order / bill details</a></td></tr>
