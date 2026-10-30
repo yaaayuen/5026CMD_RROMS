@@ -67,6 +67,9 @@ public class AccessControlTests : IClassFixture<TestWebApplicationFactory>
     [InlineData(RoleNames.Staff, "/Admin/Accounts/Create")]
     [InlineData(RoleNames.Customer, "/Admin/DietaryTags")]
     [InlineData(RoleNames.Staff, "/Admin/DietaryTags")]
+    [InlineData(RoleNames.Staff, "/Admin/StaffDesk")]
+    [InlineData(RoleNames.Staff, "/Admin/Insights")]
+    [InlineData(RoleNames.Customer, "/Admin/OffersNews")]
     public async Task OtherRole_IsDenied(string roleName, string url)
     {
         HttpClient client = await ClientForRoleAsync(roleName);

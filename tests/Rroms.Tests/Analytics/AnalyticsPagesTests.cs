@@ -60,7 +60,8 @@ public class AnalyticsPagesTests : IClassFixture<TestWebApplicationFactory>
     {
         HttpClient client = await SignInAsAdministratorAsync();
 
-        string html = await client.GetStringAsync("/Admin");
+        // The dashboard groups Analytics under "Insights and reports".
+        string html = await client.GetStringAsync("/Admin/Insights");
 
         Assert.Contains($"href=\"{AnalyticsUrl}\"", html);
     }

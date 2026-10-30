@@ -55,6 +55,19 @@ public class DietaryTagAdminTests : IClassFixture<TestWebApplicationFactory>
     }
 
     [Fact]
+    public async Task AdminAddsTag_FromTheMenuItemsPage()
+    {
+        string tagName = ("Sesame " + Guid.NewGuid().ToString("N")).Substring(0, 12);
+        HttpClient admin = await AdminClientAsync();
+
+        HttpResponseMessage added = await FormHelper.PostFormAsync(admin, "/Admin/Menu", "/Admin/Menu?handler=AddTag",
+            new Dictionary<string, string> { ["newTagName"] = tagName });
+
+        Assert.Equal(HttpStatusCode.Redirect, added.StatusCode);
+        Assert.Contains(tagName, await admin.GetStringAsync("/Admin/Menu"));
+    }
+
+    [Fact]
     public async Task DuplicateName_InAnyCase_IsRejected()
     {
         HttpClient admin = await AdminClientAsync();

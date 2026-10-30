@@ -28,6 +28,7 @@ public class IndexModel : PageModel
     private readonly IMenuService _menuService;
     private readonly IRestaurantService _restaurantService;
     private readonly IMenuImageStorage _imageStorage;
+    private readonly IDietaryTagService _dietaryTags;
 
     private IReadOnlyDictionary<int, PriceQuote> _quotes = new Dictionary<int, PriceQuote>();
 
@@ -35,12 +36,18 @@ public class IndexModel : PageModel
     /// <param name="menuService">The menu item service.</param>
     /// <param name="restaurantService">Gives the menu categories for the filter.</param>
     /// <param name="imageStorage">Turns a stored photo name into a web address.</param>
-    public IndexModel(IMenuService menuService, IRestaurantService restaurantService, IMenuImageStorage imageStorage)
+    /// <param name="dietaryTags">The dietary tags shown and added in the left rail (YY-8a).</param>
+    public IndexModel(IMenuService menuService, IRestaurantService restaurantService, IMenuImageStorage imageStorage,
+        IDietaryTagService dietaryTags)
     {
         _menuService = menuService;
         _restaurantService = restaurantService;
         _imageStorage = imageStorage;
+        _dietaryTags = dietaryTags;
     }
+
+    /// <summary>Every dietary tag, in display order, for the "Dietary tags" box under the filters.</summary>
+    public IReadOnlyList<DietaryTag> Tags { get; private set; } = new List<DietaryTag>();
 
     /// <summary>The dishes to show (after the filters), in category then name order.</summary>
     public IReadOnlyList<MenuItem> Items { get; private set; } = new List<MenuItem>();
@@ -91,6 +98,25 @@ public class IndexModel : PageModel
         TotalCount = all.Count;
         Items = Filter(all);
         _quotes = await _menuService.GetCurrentPricesAsync(Items);
+        Tags = await _dietaryTags.GetAllAsync();
+    }
+
+    /// <summary>Handles "Add tag" in the Dietary tags box. The service checks the name (empty, too long, already used).</summary>
+    /// <param name="newTagName">The name typed in the box.</param>
+    public async Task<IActionResult> OnPostAddTagAsync(string? newTagName)
+    {
+        ServiceResult result = await _dietaryTags.AddAsync(newTagName ?? string.Empty);
+
+        if (result.Succeeded)
+        {
+            TempData["StatusMessage"] = $"Dietary tag \"{newTagName!.Trim()}\" added. Customers can now choose it on their profile.";
+        }
+        else
+        {
+            TempData["ErrorMessage"] = string.Join(" ", result.Errors);
+        }
+
+        return RedirectBackToTheList();
     }
 
     /// <summary>Handles the availability switch.</summary>

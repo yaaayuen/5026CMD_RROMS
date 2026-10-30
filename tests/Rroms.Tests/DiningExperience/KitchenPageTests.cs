@@ -116,7 +116,7 @@ public class KitchenPageTests
         await factory.CreateUserAsync("alex-stats@test.local", "Test!Customer2026", RoleNames.Customer);
         using var admin = factory.CreateSecureClient();
         await FormHelper.LoginAsync(admin, TestWebApplicationFactory.AdminEmail, TestWebApplicationFactory.AdminPassword);
-        string dashboard = await admin.GetStringAsync("/Admin");
+        string dashboard = await admin.GetStringAsync("/Admin/Insights");
         Assert.Contains("/Admin/Kitchen", dashboard);
         Assert.Contains("/Admin/ChatInsights", dashboard);
         string kitchen = await admin.GetStringAsync("/Admin/Kitchen?day=2026-01-05");
@@ -150,5 +150,39 @@ public class KitchenPageTests
         db.Orders.Add(order);
         await db.SaveChangesAsync();
         return order.Id;
+    }
+
+    [Fact]
+    public async Task AdminDashboardGroupsPagesIntoStaffDeskInsightsAndOffers()
+    {
+        using var factory = new TestWebApplicationFactory();
+        using var admin = factory.CreateSecureClient();
+        await FormHelper.LoginAsync(admin, TestWebApplicationFactory.AdminEmail, TestWebApplicationFactory.AdminPassword);
+
+        string dashboard = await admin.GetStringAsync("/Admin");
+        Assert.Contains("href=\"/Admin/StaffDesk\"", dashboard);
+        Assert.DoesNotContain("href=\"/Staff/Orders\"", dashboard);
+        Assert.DoesNotContain("href=\"/Staff/Billing\"", dashboard);
+        Assert.DoesNotContain("href=\"/Staff/Reservations/History\"", dashboard);
+        Assert.Contains("href=\"/Admin/Insights\"", dashboard);
+        Assert.Contains("href=\"/Admin/OffersNews\"", dashboard);
+        Assert.DoesNotContain("href=\"/Admin/Reports\"", dashboard);
+        Assert.DoesNotContain("href=\"/Admin/DietaryTags\"", dashboard);
+
+        string offers = await admin.GetStringAsync("/Admin/OffersNews");
+        Assert.Contains("href=\"/Admin/Announcements\"", offers);
+        Assert.Contains("href=\"/Admin/Discounts\"", offers);
+
+        string menu = await admin.GetStringAsync("/Admin/Menu");
+        Assert.Contains("Dietary tags", menu);
+        Assert.Contains("name=\"newTagName\"", menu);
+
+        string desk = await admin.GetStringAsync("/Admin/StaffDesk");
+        foreach (string url in new[] { "/Staff/Reservations", "/Staff/Reservations/History", "/Staff/Orders", "/Staff/Billing" })
+        {
+            Assert.Contains($"href=\"{url}\"", desk);
+        }
+
+        Assert.DoesNotContain("href=\"/Account/Profile\" class=\"stretched-link", desk);
     }
 }

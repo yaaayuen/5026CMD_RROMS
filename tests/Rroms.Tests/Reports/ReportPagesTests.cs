@@ -50,7 +50,8 @@ public class ReportPagesTests
         Assert.Contains("&lt;script&gt;guest&lt;/script&gt;", html);
         Assert.DoesNotContain("<script>guest</script>", html);
         Assert.DoesNotContain("Demo payments", html);
-        Assert.Contains("href=\"/Admin/Reports\"", await client.GetStringAsync("/Admin"));
+        // The dashboard groups Reports under "Insights and reports".
+        Assert.Contains("href=\"/Admin/Reports\"", await client.GetStringAsync("/Admin/Insights"));
     }
     /// <summary>Malformed and unsupported filters show errors without report rows.</summary>
     [Theory]
