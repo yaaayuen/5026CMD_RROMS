@@ -78,7 +78,8 @@ public class DiscountPagesTests : IClassFixture<TestWebApplicationFactory>
     {
         HttpClient client = await SignInAsync(RoleNames.Administrator);
 
-        string html = await client.GetStringAsync("/Admin");
+        // The dashboard groups Promotions under "Offers and news".
+        string html = await client.GetStringAsync("/Admin/OffersNews");
 
         Assert.Contains("href=\"/Admin/Discounts\"", html);
     }

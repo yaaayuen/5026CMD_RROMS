@@ -22,7 +22,23 @@ public class IndexModel(Rroms.Web.Services.IBillingService billing) : PageModel
     public async Task OnGetAsync()
     {
         UnpaidBills = (await billing.GetDashboardAsync()).UnpaidCount;
-        Tiles = new List<ModuleTileViewModel>
+        List<ModuleTileViewModel> tiles = DeskTiles();
+        tiles.Add(new ModuleTileViewModel(
+            "My profile",
+            "Update your contact details and password.",
+            "users",
+            "Sprint 1 · YY",
+            "/Account/Profile"));
+        Tiles = tiles;
+    }
+
+    /// <summary>
+    /// The four daily-operations tiles. Also shown to administrators on Admin/StaffDesk, so both dashboards
+    /// always offer the same pages.
+    /// </summary>
+    public static List<ModuleTileViewModel> DeskTiles()
+    {
+        return new List<ModuleTileViewModel>
         {
             new ModuleTileViewModel(
                 "Today's reservations",
@@ -48,13 +64,7 @@ public class IndexModel(Rroms.Web.Services.IBillingService billing) : PageModel
                 "Generate bills and record cash, card or e-wallet payments.",
                 "receipt",
                 "Sprint 5 · Darren",
-                "/Staff/Billing"),
-            new ModuleTileViewModel(
-                "My profile",
-                "Update your contact details and password.",
-                "users",
-                "Sprint 1 · YY",
-                "/Account/Profile")
+                "/Staff/Billing")
         };
     }
 }

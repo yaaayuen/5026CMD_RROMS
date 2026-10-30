@@ -118,7 +118,8 @@ public class AdminMonitoringPagesTests : IDisposable
         {
             Assert.Equal(HttpStatusCode.OK, (await client.GetAsync(url)).StatusCode);
         }
-        Assert.Contains("/Admin/Monitoring/Reservations", await client.GetStringAsync("/Admin"));
+        // The dashboard groups Monitoring under "Insights and reports".
+        Assert.Contains("/Admin/Monitoring/Reservations", await client.GetStringAsync("/Admin/Insights"));
     }
     /// <summary>Voided records retain a receipt audit link but never contribute to the paid total.</summary>
     [Fact]

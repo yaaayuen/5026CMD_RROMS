@@ -1,0 +1,25 @@
+@page
+@model OffersNewsModel
+@{
+    ViewData["Title"] = "Offers and news";
+}
+
+<p class="mb-3"><a asp-page="/Index">&larr; Admin dashboard</a></p>
+
+<section class="hero hero-compact hero-photo mb-4" aria-labelledby="offers-heading">
+    <span class="hero-bubble one" aria-hidden="true"></span>
+    <div class="position-relative">
+        <span class="eyebrow">Administrator</span>
+        <h1 id="offers-heading" class="mb-2">Offers and news</h1>
+        <p class="lead mb-0">Decide which deals and notices customers see.</p>
+    </div>
+</section>
+
+<div class="row g-4">
+    @foreach (ModuleTileViewModel tile in Model.Tiles)
+    {
+        <div class="col-sm-6 col-lg-4">
+            <partial name="_ModuleTile" model="tile" />
+        </div>
+    }
+</div>

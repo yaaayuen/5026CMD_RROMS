@@ -33,7 +33,8 @@
 <div class="am-layout">
 	@* Left rail: the same GET filter as before (q, categoryId, status). Categories and status are radio buttons
 	   with the same names and values as the old drop-downs, so the page model reads them exactly the same way. *@
-	<form method="get" id="menuFilter" class="am-rail" aria-label="Filter dishes">
+	<div class="am-rail">
+	<form method="get" id="menuFilter" aria-label="Filter dishes">
 		<label for="searchBox" class="visually-hidden">Search</label>
 		<input id="searchBox" name="q" type="search" class="form-control am-search" placeholder="Name or code" value="@Model.Search" />
 
@@ -63,6 +64,24 @@
 		@* Filters apply as soon as they change (script below); the button is only needed without JavaScript. *@
 		<noscript><button type="submit" class="btn btn-outline-primary btn-sm mt-4">Filter</button></noscript>
 	</form>
+
+	@* Dietary tags (YY-8a), moved here from its own dashboard tile: a separate form, so it is not part of the filters. *@
+	<section class="am-tags mt-4" aria-labelledby="tags-heading">
+		<h2 id="tags-heading" class="am-label">Dietary tags</h2>
+		<ul class="am-tag-list" aria-label="Current dietary tags">
+			@foreach (DietaryTag tag in Model.Tags)
+			{
+				<li>@tag.Name</li>
+			}
+		</ul>
+		<form method="post" asp-page-handler="AddTag" asp-route-categoryId="@Model.CategoryId" asp-route-q="@Model.Search" asp-route-status="@Model.Status" class="am-tag-add">
+			<label for="newTagName" class="visually-hidden">New tag name</label>
+			<input id="newTagName" name="newTagName" class="form-control form-control-sm" maxlength="@DietaryTag.NameMaxLength" placeholder="New tag, e.g. Nuts" required />
+			<button type="submit" class="btn btn-outline-primary btn-sm">Add</button>
+		</form>
+		<p class="am-note mt-2 mb-0">Customers tick the tags they avoid on their profile. Tags can't be deleted.</p>
+	</section>
+	</div>
 	<script>
 		(function () {
 			var form = document.getElementById('menuFilter');
