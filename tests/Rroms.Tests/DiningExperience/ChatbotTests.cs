@@ -156,7 +156,7 @@ public class ChatbotTests
         using var scope = factory.Services.CreateScope();
         var handler = new Provider();
         await Service(scope.ServiceProvider, handler).AskAsync("Explain grilling", true);
-        Assert.Equal("meta/llama-3.2-11b-vision-instruct", handler.Model);
+        Assert.Equal("nvidia/nemotron-3.5-bolt-e4b", handler.Model);
         Assert.Equal(12, new ChatbotOptions().TimeoutSeconds);
     }
     [Fact]
